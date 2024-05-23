@@ -1,0 +1,52 @@
+substitutions:
+  device: waterproof-socket
+  name: Waterproof Socket
+  comment: "Hardened remote controlled socket"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp01_1m
+
+packages:
+  common: !include common/common.yaml
+
+# Sonoff Basic R2
+# GPIO00 - BUTTON
+# GPIO12 - RELAY
+# GPIO13 - LED1
+# GPIO03 - RX PIN
+# GPIO01 - TX PIN
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT
+      inverted: True
+    name: "${name} Button"
+    on_press:
+      - switch.toggle: relay
+
+output:
+  - platform: gpio
+    pin: GPIO13
+    id: led
+    inverted: True
+
+
+# status_led:
+#   pin:
+#     number: GPIO13
+#     inverted: yes
+
+switch:
+  - platform: gpio
+    name: "${name} Relay"
+    pin: GPIO12
+    id: relay
+    on_turn_on:
+      - output.turn_on: led
+    on_turn_off:
+      - output.turn_off: led

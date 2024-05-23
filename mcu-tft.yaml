@@ -1,0 +1,118 @@
+substitutions:
+  device: tft
+  name: TFT
+  comment: "Desk TFT Display"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platformio_options:
+    board_build.flash_mode: dio
+
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C3
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+packages:
+  common: !include common/common.yaml
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/clydebarrow/esphome
+      ref: fd15094c0860df23d532881df36cfd16c7da1091 #previous commit - wont be needed in the future
+    components: [ lvgl ]
+
+logger:
+  logs:
+    component: ERROR 
+
+# GPIO1   UART TX
+# GPIO3   UART RX
+# GPIO4   I2C SDA
+# GPIO5   I2C SCL
+# GPIO12  DISPLAY DIO
+# GPIO12  DISPLAY CLOCK
+# GPIO14  BUZZER
+# GPIO16  RGB
+
+spi:
+  clk_pin: 4
+  mosi_pin: 5
+  miso_pin: 6
+
+color:
+  - id: my_green
+    hex: 00ff00
+  - id: my_magenta
+    hex: ff00ff
+  - id: my_red
+    hex: ff0000
+  - id: my_white
+    hex: ffffff
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_default
+    size: 20
+  - file: "gfonts://B612"
+    id: b612_24
+    size: 24
+  - file: "gfonts://B612"
+    id: b612_16
+    size: 16
+  - file: "gfonts://B612"
+    id: b612_12
+    size: 12
+  - file: "gfonts://B612 Mono"
+    id: b612_24_mono
+    size: 24
+  - file: "gfonts://B612 Mono"
+    id: b612_16_mono
+    size: 16
+  - file: "gfonts://B612 Mono"
+    id: b612_12_mono
+    size: 12
+  - file: "gfonts://Roboto"
+    id: roboto_32
+    size: 32
+  - file: "gfonts://Roboto"
+    id: roboto_24
+    size: 24
+  - file: "gfonts://Roboto"
+    id: roboto_16
+    size: 16
+  - file: "gfonts://Roboto"
+    id: roboto_12
+    size: 12
+  - file: "gfonts://Roboto Mono"
+    id: roboto_32_mono
+    size: 32
+  - file: "gfonts://Roboto Mono"
+    id: roboto_24_mono
+    size: 24
+  - file: "gfonts://Roboto Mono"
+    id: roboto_16_mono
+    size: 16
+  - file: "gfonts://Roboto Mono"
+    id: roboto_12_mono
+    size: 12
+
+
+display:
+  - platform: ili9xxx
+    model: TFT 2.4
+    cs_pin: 7
+    dc_pin: 8
+    reset_pin: 10
+    lambda: |-
+      it.fill(Color::BLACK);
+      it.print(0, 0, id(b612_12), id(my_white), TextAlign::TOP_LEFT, "HELLO WORLD!");
+      it.print(0, 14, id(b612_12), id(my_green), TextAlign::TOP_LEFT, "HELLO WORLD!");
+      it.print(0, 28, id(b612_12), id(my_magenta), TextAlign::TOP_LEFT, "HELLO WORLD!");
+      it.print(0, 42, id(b612_12), id(my_red), TextAlign::TOP_LEFT, "HELLO WORLD!");

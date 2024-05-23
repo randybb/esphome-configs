@@ -1,0 +1,34 @@
+---
+<<: !include wifi.yaml
+<<: !include api.yaml
+<<: !include ota.yaml
+<<: !include logger.yaml
+# <<: !include logger_debug.yaml
+
+external_components:
+  - source: github://RoboMagus/esphome-gitref-sensor
+
+binary_sensor:
+  - <<: !include binary_sensor/status.yaml
+
+button:
+  - <<: !include button/factory_reset.yaml
+  - <<: !include button/restart.yaml
+  - <<: !include switch/safe_mode.yaml
+  - <<: !include switch/shutdown.yaml
+
+sensor:
+#  - <<: !include sensor/debug.yaml
+  - <<: !include sensor/uptime.yaml
+  - <<: !include sensor/wifi_signal.yaml
+
+#switch:
+#  - <<: !include switch/restart.yaml
+#  - <<: !include switch/safe_mode.yaml
+#  - <<: !include switch/shutdown.yaml
+
+text_sensor:
+  # - <<: !include text_sensor/debug.yaml
+  - <<: !include text_sensor/git_ref.yaml
+  - <<: !include text_sensor/version.yaml
+  - <<: !include text_sensor/wifi_info.yaml

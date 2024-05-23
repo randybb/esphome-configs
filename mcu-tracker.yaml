@@ -1,0 +1,460 @@
+substitutions:
+  device: tracker
+  name: Tracker
+  comment: "DEV | LTE GPS tracker"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: mcu-${device}
+  comment: ${comment}
+  on_boot:
+    # priority: -10
+    priority: 600 
+    then:
+      - logger.log: turning modem off
+      - binary_sensor.template.publish:
+          id: modem_ready
+          state: OFF
+      - switch.turn_on: led
+      - switch.turn_on: modem_enable
+      - delay: 1s
+      - switch.turn_on: modem_powerkey
+      - delay: 500ms
+      - switch.turn_off: modem_powerkey
+      - switch.turn_on: gnss_enable
+      - delay: 4s
+      - wait_until:
+          condition:
+            binary_sensor.is_on: modem_status
+          timeout: 30s
+      - logger.log: modem on
+      - binary_sensor.template.publish:
+          id: modem_ready
+          state: ON
+      # - switch.turn_on: cmd_gnss_enable
+  # on_boot:
+  #   priority: 600 
+  #   then:
+  #     # https://www.manualslib.com/manual/1498555/Simcom-Sim7000g.html?page=25#manual
+  #     - logger.log: turning modem off
+  #     - binary_sensor.template.publish:
+  #         id: modem_ready
+  #         state: OFF
+  #     # The doc says that pulling 'modem_power' to ground works,
+  #     # But I had to put if off for 2.6s, then on ?
+  #     - switch.turn_off: modem_powerkey  
+  #     - delay: 2.6s
+  #     - switch.turn_on: modem_powerkey
+  #     - logger.log: waiting off status
+  #     - delay: 5s
+  #     - wait_until:
+  #         condition:
+  #           binary_sensor.is_off: modem_status
+  #         timeout: 30s
+  #     - if:
+  #         condition:
+  #           binary_sensor.is_off: modem_status
+  #         then:
+  #           - logger.log: modem off
+  #         else:
+  #           #- logger.log: modem off timeout
+  #           - logger.log:
+  #               level: ERROR
+  #               format: "Timeout while waiting modem power off"
+
+      # - delay: 1s
+      # # https://github.com/Xinyuan-LilyGO/LilyGO-T-SIM7000G/issues/251
+      # - logger.log: turning modem on
+      # - switch.turn_on: modem_powerkey
+      # - delay: 10ms
+      # - switch.turn_off: modem_powerkey
+      # - delay: 1010ms
+      # - switch.turn_on: modem_powerkey
+      # - delay: 5s
+      # - wait_until:
+      #     condition:
+      #       binary_sensor.is_on: modem_status
+      #     timeout: 30s
+      # - logger.log: modem on
+      # - binary_sensor.template.publish:
+      #     id: modem_ready
+      #     state: ON
+
+esp32:
+  board: esp32dev
+  # framework:
+  #   type: arduino
+  #   version: 2.0.14
+  #   platform_version: 6.5.0
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+## TESTING
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/crossan007/esphome
+      ref: "feature/AXP192"
+    components: [ axp192 ]
+  - source: github://pr#6721
+    components: [ network, modem ]
+  - source: components
+  
+# packages:
+#   common: !include common/common.yaml
+
+logger:
+  level: VERBOSE
+
+i2c:
+  - id: system_i2c
+    sda: 21
+    scl: 22
+    scan: true
+
+modem:
+  id: atmodem
+  ready: modem_ready
+  rx_pin: 26
+  tx_pin: 27
+  model: SIM7600
+  apn: o2internet
+  username: ""
+  password: ""
+  pin_code: ""
+  init_at:
+    - AT+CGNSSMODE=15,1 # GNSS all navigation systems
+    - AT+CGPS=1         # GPS on
+
+mqtt:
+  id: mqtt_client
+  broker: !secret mqtt_ext
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: true
+
+axp192:
+  id: pmu_axp
+  address: 0x34
+  i2c_id: system_i2c
+
+binary_sensor:
+  - platform: gpio
+    id: modem_dtr
+    # name: "${name} Cellular DTR"
+    pin: 32
+  - platform: gpio
+    id: modem_ri
+    # name: "${name} Cellular RI"
+    pin: 33
+  - platform: gpio
+    id: modem_status
+    # name: "${name} Cellular Status"
+    pin: 36
+  - platform: template
+    id: modem_ready
+    # name: "${name} Cellular Ready"
+
+sensor:
+  
+switch:
+  - platform: gpio
+    id: modem_powerkey
+    # name: "${name} Cellular PowerKey"
+    pin: 4
+    # inverted: true
+  - platform: gpio
+    id: led
+    # name: "${name} LED"
+    pin: 12
+    inverted: true
+  - platform: gpio
+    id: modem_enable
+    # name: "${name} Cellular Enable"
+    pin: 25
+  - platform: axp192
+    id: gnss_enable
+    # name: "${name} GNSS Enable"
+    port: LDO3
+
+text_sensor:
+#   - platform: template
+#     name: "cgpaddr"
+#     update_interval: 25s
+#     lambda: |-
+#       esp_modem::command_result err;
+#       std::string response;
+
+#       err = id(atmodem)->dce->at("AT+CGPADDR", response, 3000);
+#       if (err != esp_modem::command_result::OK) {
+#         return { "AT+CGPADDR ERROR" };
+#       } else {
+#         return { response };
+#       }
+#   - platform: template
+#     name: "get_ccid"
+#     update_interval: 40s
+#     lambda: |-
+#       esp_modem::command_result err;
+#       std::string response;
+
+#       err = id(atmodem)->dce->at("AT+CCID", response, 3000);
+#       if (err != esp_modem::command_result::OK) {
+#         return { "AT+CCID ERROR" };
+#       } else {
+#         return { response };
+#       }
+#   - platform: template
+#     name: "get_rssi"
+#     update_interval: 42s
+#     lambda: |-
+#       esp_modem::command_result err;
+#       std::string response;
+
+#       err = id(atmodem)->dce->at("AT+CSQ", response, 3000);
+#       if (err != esp_modem::command_result::OK) {
+#         return { "AT+CSQ ERROR" };
+#       } else {
+#         return { response };
+#       }
+#   - platform: template
+#     name: "get_creg"
+#     update_interval: 44s
+#     lambda: |-
+#       esp_modem::command_result err;
+#       std::string response;
+
+#       err = id(atmodem)->dce->at("AT+CREG?", response, 3000);
+#       if (err != esp_modem::command_result::OK) {
+#         return { "AT+CGNSSINFO ERROR" };
+#       } else {
+#         return { response };
+#       }
+  # - platform: template
+  #   name: "gmap"
+  #   update_interval: 60s
+  #   lambda: |-
+  #     esp_modem::command_result err;
+  #     std::string gnss_info;
+
+  #     err = id(atmodem)->dce->at("AT+CGNSSINFO", gnss_info, 3000);
+  #     if (err != esp_modem::command_result::OK) {
+  #       return { "AT+CGNSSINFO ERROR" };
+  #     }
+
+  #     std::string data = gnss_info.substr(12);
+
+
+  #     std::vector<std::string> parts;
+  #     size_t pos = 0;
+  #     std::string delimiter = ",";
+  #     while ((pos = data.find(delimiter)) != std::string::npos) {
+  #       parts.push_back(data.substr(0, pos));
+  #       data.erase(0, pos + delimiter.length());
+  #     }
+  #     parts.push_back(data); 
+
+  #     if (parts.size() < 14) {
+  #       return { "Invalid GNSS data: " + gnss_info };
+  #     }
+    
+  #     std::string latitude = parts[4];
+  #     std::string lat_direction = parts[5];
+  #     std::string longitude = parts[6];
+  #     std::string lon_direction = parts[7];
+    
+  #     if (latitude.empty() || lat_direction.empty() || longitude.empty() || lon_direction.empty()) {
+  #       return { "Invalid GNSS data: " + gnss_info };
+  #     }
+    
+  #     double lat_deg = std::stod(latitude.substr(0, 2));
+  #     double lat_min = std::stod(latitude.substr(2));
+  #     double lat = lat_deg + (lat_min / 60.0);
+  #     if (lat_direction == "S") lat = -lat;
+    
+  #     double lon_deg = std::stod(longitude.substr(0, 3));
+  #     double lon_min = std::stod(longitude.substr(3));
+  #     double lon = lon_deg + (lon_min / 60.0);
+  #     if (lon_direction == "W") lon = -lon;
+    
+  #     std::string google_maps_link = "https://www.google.com/maps/search/?api=1&query=" + std::to_string(lat) + "," + std::to_string(lon);
+  #     return { google_maps_link };
+
+
+## WORKING ONE
+
+# external_components:
+#   - source:
+#       type: git
+#       url: https://github.com/crossan007/esphome
+#       ref: "feature/AXP192"
+#     components: [ axp192 ]
+#   # - source: github://pr#6721
+#   #   components: [ gsm ]
+#   - source:
+#       type: git
+#       url: https://github.com/ssieb/custom_components
+#     components: [ serial ]
+#   - source: components
+  
+# packages:
+#   common: !include common/common.yaml
+
+# api:
+#   services:
+#     - service: send_sms
+#       variables:
+#         recipient: string
+#         message: string
+#       then:
+#         - sim7600.send_sms:
+#             recipient: !lambda 'return recipient;'
+#             message: !lambda 'return message;'
+#     - service: send_sms_test
+#       then:
+#         - sim7600.send_sms:
+#             recipient: "+421907538553"
+#             message: TEST TEST
+#     - service: dial
+#       variables:
+#         recipient: string
+#       then:
+#         - sim7600.dial:
+#             recipient: !lambda 'return recipient;'
+#     - service: connect
+#       then:
+#         - sim7600.connect
+#     - service: disconnect
+#       then:
+#         - sim7600.disconnect
+#     - service: send_ussd
+#       variables:
+#         ussdCode: string
+#       then:
+#         - sim7600.send_ussd:
+#             ussd: !lambda 'return ussdCode;'
+#     - service: send_at_command
+#       variables:
+#         at_command: string
+#       then:
+#         - uart.write:
+#             id: modem_uart
+#             data: "AT+DT=+42197538553"
+#             # data: !lambda 'return at_command;'
+
+# i2c:
+#   - id: system_i2c
+#     sda: 21
+#     scl: 22
+#     scan: true #false
+
+# uart:
+#   # - id: usb_uart
+#   #   baud_rate: 115200
+#   #   tx_pin: 1
+#   #   rx_pin: 3
+#   - id: modem_uart
+#     baud_rate: 115200
+#     tx_pin: 27
+#     rx_pin: 26
+#     debug:
+#       sequence:
+#         - lambda: UARTDebug::log_string(direction, bytes);
+
+# # gsm:
+# #   rx_pin: 26
+# #   tx_pin: 27
+# #   power_pin: 4
+# #   flight_pin: 25
+# #   status_pin: 34
+# #   dtr_pin: 32
+# #   model: SIM7600
+# #   apn: orange
+# #   username: orange
+# #   password: orange
+# #   pin_code: "0000"
+
+# axp192:
+#   address: 0x34
+#   i2c_id: system_i2c
+
+# sim7600:
+#   uart_id: modem_uart
+#   on_sms_received:
+#     - lambda: |-
+#         id(sms_sender).publish_state(sender);
+#         id(sms_message).publish_state(message);
+#   on_incoming_call:
+#     - lambda: |-
+#         id(caller_id_text_sensor).publish_state(caller_id);
+#   on_call_connected:
+#     - logger.log:
+#         format: Call connected
+#   on_call_disconnected:
+#     - logger.log:
+#         format: Call disconnected
+#   on_ussd_received:
+#     - lambda: |-
+#         id(ussd_message).publish_state(ussd);
+
+# binary_sensor:
+#   - platform: sim7600
+#     registered:
+#       name: "${name} Cellular"
+#   - platform: gpio
+#     id: modem_status
+#     name: "${name} Cellular Status"
+#     pin: 36
+
+# sensor:
+#   - platform: sim7600
+#     rssi:
+#       name: "${name} Cellular RSSI"
+
+# switch:
+#   - platform: gpio
+#     id: modem_powerkey
+#     # name: "${name} Modem Powerkey"
+#     pin: 4
+#   - platform: gpio
+#     id: led
+#     # name: "${name} LED"
+#     pin: 12
+#     inverted: true
+#   - platform: gpio
+#     id: modem_enable
+#     # name: "${name} Modem Enable"
+#     pin: 25
+#   - platform: axp192
+#     id: gnss_enable
+#     port: LDO3
+#   - platform: template
+#     id: cmd_gnss_enable
+#     turn_on_action:
+#       - uart.write:
+#           id: modem_uart
+#           data: "AT+CGPS=on"
+#     turn_off_action:
+#       - uart.write:
+#           id: modem_uart
+#           data: "AT+CGPS=off"
+
+# text_sensor:
+#   - platform: template
+#     id: sms_sender
+#     name: "${name} SMS Sender"
+#   - platform: template
+#     id: sms_message
+#     name: "${name} SMS Message"
+#   - platform: template
+#     id: caller_id_text_sensor
+#     name: "${name} Caller ID"
+#   - platform: template
+#     id: ussd_message
+#     name: "${name} USSD Code"
+#   - platform: serial
+#     uart_id: modem_uart
+#     id: modem_read

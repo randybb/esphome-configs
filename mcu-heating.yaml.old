@@ -1,0 +1,784 @@
+substitutions:
+  device: nodemcu_heating
+  name: Heating
+  name_1: Heater
+  comment: "Basement: Hot water and Heating control"
+  
+esphome:
+  name: ${device}
+  comment: ${comment}
+  platform: ESP32
+  board: esp32doit-devkit-v1
+
+packages:
+  common: !include common/common.yaml
+
+debug:
+
+#logger:
+#  level: VERBOSE
+#  logs:
+#    dallas.component: ERROR
+#    uart.component: ERROR
+#    i2c.component: VERBOSE
+
+# Heating / Hot water Controller
+# temp_1: Solar Collector
+# temp_2: Cylinder Bottom (solar)
+# temp_3: Cylinder Top (heater)
+# temp_4: Heating OUT
+# temp_5: Heating IN
+# relay_1: Solar Pump
+# relay_2: Hot Water Heating Demand
+# relay_3: Heating Demand
+# input_1: Off Peak Status
+# input_2: Heating Thermostat Demand Overrride
+# temp_1_delta: delta temperature (= temp_2 - temp_1)
+# temp_2_set: requested temp_2
+# temp_3_set: requested temp_3
+# temp_3_delta: delta for temp_3
+#
+## RULES
+## - Hot Water Solar
+# if ((temp_1 - temp_1_delta) < temp_2_set) && ((temp_2 - temp_1) > temp_1_delta) then relay_1 ON  <<< WTF?
+# if (temp_2 > temp_2_set) || ((temp_1_delta / 2) > (temp_2 - temp_1)) then relay_1 OFF
+# The controller running this mode compares four values: source temperature at sensor A (Ta), sink temperature at sensor B (Tb), target point (Tstop) temperature and minimal starting (Tstart) temperature as follows.
+# The controller will switch relay output on, and will show Î (black triangle up) next to relay output status, when all the following three conditions are satisfied:
+# •source temperature TA is greater or equal minimal starting Tst ar t temperature,
+# • sink temperature TB is less that target Tstop temperature, and
+# •the difference between source temperature Ta and sink temperature Tb , i.e. Ta − Tb , is above or equal to ∆ON degrees.
+# When the difference Ta − Tb falls below or is equal to ∆OFF degrees (the last criterion is not satisfied), the controller displays È (black triangle down) and switches relay output off.
+# Furthermore, if temperature Tb reaches target point temperature, i.e. Tb ≥ Tstop , then the controller displays Tm and the relay switches off. When temperature Tb falls below Tstop for 42 degrees, status of output relay depends on temperature Ta as described in this paragraph.
+# When the starting temperature has not been reached, the controller displays a negative value, i.e. the difference Tstart − Ta, that is the difference between source and starting temperature.
+# Note, that relay response might be delayed due to relay delay protection.
+# Turn on ∆ON and turn off ∆OFF difference Values of ∆ON and ∆OFF are derived from 41 and 42 as minimum and maximum. For instance, if 41 < 42, then ∆OFF = 41 and ∆ON = 42. When 41 = 42, then 41 and 42 are adapted, eg. 41 lowers for 0.5 degrees and 42 increases for 0.5 degrees.
+# Solar thermocouplers KTY83 https://www.nxp.com/docs/en/data-sheet/KTY83_SER.pdf / regultor by https://www.duel-ltd.sk
+# 1303 kOhm -> 57.9 C
+#
+## - Hot Water Heater / Heating
+# set desired temperature - Day / Night + Schedule for normall day and weekend
+# real room temperature - based on one of rooms, or based on coldest room
+# very simple - if temp lower, start heater / hot water demand
+
+globals:
+  - id: temp_1 # Heating
+    type: float
+    restore_value: no
+    initial_value: '12.0'
+  - id: set_hot_water_solar_delta # Solar Collector
+    type: float
+    restore_value: no
+    initial_value: '10.0'
+  - id: set_hot_water_solar_temperature # Cylinder Bottom (solar)
+    type: float
+    restore_value: no
+    initial_value: '70.0'
+  - id: set_hot_water_heating_temperature_min # Cylinder Top (heater)
+    type: float
+    restore_value: no
+    initial_value: '40.0'
+  - id: set_hot_water_heating_temperature_max # Cylinder Top (heater)
+    type: float
+    restore_value: no
+    initial_value: '58.0'
+  - id: set_heating_temperature_min # Heating
+    type: float
+    restore_value: no
+    initial_value: '19.0'
+  - id: set_heating_temperature_max # Heating
+    type: float
+    restore_value: no
+    initial_value: '20.5'
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: 5
+        # days_of_week: MON-FRI
+        then:
+          - climate.control:
+              id: hot_water_climate
+              mode: "AUTO"
+      - seconds: 0
+        minutes: 0
+        hours: 6
+        then:
+          - climate.control:
+              id: hot_water_climate
+              mode: "OFF"
+      - seconds: 0
+        minutes: 0
+        hours: 16
+        # days_of_week: MON-FRI
+        then:
+          - climate.control:
+              id: hot_water_climate
+              mode: "AUTO"
+      - seconds: 0
+        minutes: 0
+        hours: 0
+        then:
+          - climate.control:
+              id: hot_water_climate
+              mode: "OFF"
+      - seconds: 0
+        minutes: /1
+        # hours: 5-23
+        # days_of_week: MON-FRI
+        then:
+          lambda: |-
+            if (id(hot_water_heater).state >= 67.0) {
+              id(relay_1).turn_off();
+            }
+            // ## Solar
+            // move to temp sensor?
+            // //ESP_LOGD("main", "(hot_water_solar - current_hot_water_solar_delta) > set_hot_water_solar_temperature [(%.2f - %.2f) > %.2f] == TRUE", id(hot_water_solar).state, id(set_hot_water_solar_delta), id(set_hot_water_solar_temperature));
+            //if ((id(hot_water_solar).state <= id(set_hot_water_solar_temperature)) && ((id(temp_1).state + id(set_hot_water_solar_delta)) >= id(hot_water_solar).state)) {
+            //  ESP_LOGD("main", "Water in solar tank is colder AND temperature of solar collector is higher => ON");
+            //  id(relay_1).turn_on();
+            //}
+            //if ((id(hot_water_solar).state > id(set_hot_water_solar_temperature)) || ((id(temp_1).state - id(hot_water_solar).state) < (id(set_hot_water_solar_delta) / 2))) {
+            //  ESP_LOGD("main", "Water in solar tank is higher OR temperature of solar collector is lower => OFF");
+            //  id(relay_1).turn_off();
+            //}
+
+            // ## Hot Water
+            if (!true) {
+            if ((id(ha_time).now().hour >= 5) && (id(ha_time).now().hour <= 23)) {
+              if (id(hot_water_heater).state <= id(set_hot_water_heating_temperature_min)) {
+                ESP_LOGD("main", "Water in heated tank is cold, needs to reheat => ON");
+                id(relay_1).turn_on();
+                //id(relay_3).turn_on();
+                id(relay_4).turn_on();
+              } else {
+                if (id(hot_water_heater).state >= id(set_hot_water_heating_temperature_max)) {
+                  ESP_LOGD("main", "Water in heated tank is OK => OFF");
+                  id(relay_1).turn_off();
+                  //id(relay_3).turn_off();
+                  id(relay_4).turn_off();
+                }
+              }
+            } else {
+              ESP_LOGD("main", "Night Mode, Hot water heating => OFF");
+              id(relay_1).turn_off();
+            }
+            }
+            
+            // ## Heating - TYPE 1: heat water to desired max temperature at specified times
+            // ## Heating - TYPE 2: mantain temperature in min-max range in desired time range
+            //if ( (id(relay_2).state) && (id(heating_climate).mode == 0)) {
+            if (id(heating_climate).mode == 0) {
+              id(relay_2).turn_off();
+              ESP_LOGD("main", "Climate Heating is OFF => Turn Heating OFF!");
+            } else {
+              ESP_LOGD("main", "Climate Heating state is other than OFFF => dont touch heating");
+            }
+            if (!true) {
+            //if (!id(heating_override).state) { // if not overriden from Thermosta
+              if (id(ha_time).now().hour >= 7 && id(ha_time).now().hour <= 23) { // is between 5:00-23:59
+                if ((id(current_heating_temperature_min).state <= id(set_heating_temperature_min)) && !id(heating_fireplace_status).state) { // temperature LOWER than set AND fireplace is NOT ON
+                  ESP_LOGD("main", "Is cold inside, heating => ON DISABLED");
+                  id(relay_2).turn_on();
+                } else {
+                  if (id(current_heating_temperature_min).state >= id(set_heating_temperature_max)) {
+                    ESP_LOGD("main", "Temperature is fine, heating => OFF");
+                    id(relay_2).turn_off();
+                  }
+                  if (id(heating_fireplace_status).state) {
+                    ESP_LOGD("main", "Fireplace is ON, heating => OFF");
+                    id(relay_2).turn_off();
+                  }
+                }
+              } else { // othervise night mode
+                ESP_LOGD("main", "Night Mode, heating => OFF");
+                id(relay_2).turn_off();
+              }
+            //}
+            }
+
+# climate:
+#   - platform: bang_bang
+#     name: Foo Hot Water
+#     #id: hot_water_heater_climate
+#     sensor: hot_water_heater_temperature
+#     default_target_temperature_low: 40 °C
+#     default_target_temperature_high: 60 °C
+#     away_config:
+#       default_target_temperature_low: 40 °C
+#       default_target_temperature_high: 60 °C
+#     visual:
+#       min_temperature: 40 °C
+#       max_temperature: 60 °C
+#       temperature_step: 0.1 °C
+#     heat_action:
+#       - switch.turn_on: relay_2
+#     idle_action:
+#       - switch.turn_off: relay_2
+
+climate:
+  - platform: bang_bang
+    sensor: hot_water_heater
+    name: Hot Water
+    id: hot_water_climate
+    visual:
+      min_temperature: 40 °C
+      max_temperature: 65 °C
+      temperature_step: 0.1 °C
+    default_target_temperature_low: 55 °C
+    default_target_temperature_high: 62 °C
+    heat_action:
+      - switch.turn_on: relay_1
+    idle_action:
+      - switch.turn_off: relay_1
+    cool_action:
+      - switch.turn_off: relay_1
+    away_config:
+      default_target_temperature_low: 30 °C
+      default_target_temperature_high: 40 °C
+  - platform: bang_bang
+    sensor: current_heating_temperature_min
+    name: Heating
+    id: heating_climate
+    visual:
+      min_temperature: 12 °C
+      max_temperature: 35 °C
+      temperature_step: 0.1 °C
+    default_target_temperature_low: 19 °C
+    default_target_temperature_high: 20 °C
+    heat_action:
+      - switch.turn_on: relay_2
+    idle_action:
+      - switch.turn_off: relay_2
+    cool_action:
+      - switch.turn_off: relay_2
+    away_config:
+      default_target_temperature_low: 17 °C
+      default_target_temperature_high: 18 °C
+# interval:
+#   - interval: 5s
+#     then:
+#       - display.page.show_next: display_1
+#       # - display.page.show_next: display_2
+#       - component.update: display_1
+#       # - component.update: display_2
+
+dallas:
+  - pin: 15 # D5 / GPIO14
+
+i2c:
+#   # sda: GPIO21 / 21
+#   # scl: GPIO22 / 22
+  sda: 21
+  scl: 22
+  scan: true #false
+
+modbus:
+  uart_id: uart2
+
+uart:
+  - id: uart2
+    rx_pin: GPIO16
+    tx_pin: GPIO17
+    baud_rate: 9600
+    stop_bits: 2
+
+# light:
+#   - platform: neopixelbus
+#     type: GRB
+#     pin: 4 # RX / GPIO3
+#     variant: WS2812
+#     num_leds: 8
+#     name: "${name} Light"
+#     id: neo
+#     effects:
+#       # Use default parameters:
+#       - random:
+#       # Customize parameters
+#       - random:
+#           name: "My Slow Random Effect"
+#           transition_length: 30s
+#           update_interval: 30s
+#       - random:
+#           name: "My Fast Random Effect"
+#           transition_length: 4s
+#           update_interval: 5s
+#       - strobe:
+#       - strobe:
+#           name: Strobe Effect With Custom Values
+#           colors:
+#             - state: True
+#               brightness: 100%
+#               red: 100%
+#               green: 90%
+#               blue: 0%
+#               duration: 500ms
+#             - state: False
+#               duration: 250ms
+#             - state: True
+#               brightness: 100%
+#               red: 0%
+#               green: 100%
+#               blue: 0%
+#               duration: 500ms
+#       - flicker:
+#       - flicker:
+#           name: Flicker Effect With Custom Values
+#           alpha: 95%
+#           intensity: 1.5%
+#       - addressable_rainbow:
+#       - addressable_rainbow:
+#           name: Rainbow Effect With Custom Values
+#           speed: 10
+#           width: 50
+#       - addressable_scan:
+#       - addressable_scan:
+#           name: Scan Effect With Custom Values
+#           move_interval: 100ms
+
+
+mcp23017:
+  - id: 'relay_module'
+    address: 0x20
+    
+# pcf8574:
+#   - id: 'relay_module'
+#     address: 0x20
+#     pcf8575: false
+
+switch:
+  # - platform: gpio
+  #   name: "${name} Relay 1" # Solar pump
+  #   id: relay_1
+  #   pin:
+  #     pcf8574: relay_module
+  #     number: 0
+  #     mode: OUTPUT
+  #     inverted: true
+  - platform: gpio
+    name: "${name} Relay 2" # Hot Water Heating Demand (to Heater)
+    id: relay_1
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 0
+      mode: OUTPUT
+      inverted: true
+    # on_turn_on:
+    # - light.addressable_set:
+    #     id: neo
+    #     range_from: 1
+    #     range_to: 2
+    #     red: 0%
+    #     green: 100%
+    #     blue: 0%
+    # on_turn_off:
+    # - light.addressable_set:
+    #     id: neo
+    #     range_from: 1
+    #     range_to: 2
+    #     red: 100%
+    #     green: 0%
+    #     blue: 0%
+  - platform: gpio
+    name: "${name} Relay 3" # Heating Demand (to Heater)
+    id: relay_2
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 1
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "${name_1} Power Level II"
+    id: relay_3
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 2
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "${name_1} Power Level III"
+    id: relay_4
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 3
+      mode: OUTPUT
+      inverted: true
+
+sensor:
+  - platform: dallas
+# [22:06:25][D][dallas.sensor:082]:     0x1701143E35C5AA28  Feed
+# [22:06:25][D][dallas.sensor:082]:     0x7301143F7F57AA28  Return
+# [22:06:25][D][dallas.sensor:082]:     0xF701143E397FAA28  Heater Tank
+# [22:06:25][D][dallas.sensor:082]:     0x5A041750B2C8FF28  Hot Water Tank - Bottom (Solar)
+# [22:06:25][D][dallas.sensor:082]:     0xDB041750EAE2FF28  Heating Water Return (OUT from System, TO Heater)
+# [22:06:25][D][dallas.sensor:082]:     0xB2041750CF1AFF28  Heating Water (OUT from Heater, TO System)
+# [22:06:25][D][dallas.sensor:082]:     0x960417517301FF28  Hot Water Tank - TOP (Heater)
+    # address: 0x320417500A93FF28 # 1. broken
+    # address: 0x67041750F44CFF28 # 2. broken 
+    address: 0x960417517301FF28 # Hot Water Tank - TOP (Heater)
+    name: "Hot Water - Heater"
+    id: 'hot_water_heater'
+  - platform: dallas
+    address: 0x5A041750B2C8FF28 # Hot Water Tank - Bottom (Solar)
+    name: "Hot Water - Solar"
+    id: 'hot_water_solar'
+  - platform: dallas
+    address: 0xB2041750CF1AFF28 # Heating Water Feed (OUT from Heater, TO System)
+    name: "Heating OUT"
+    id: 'heating_out'
+  - platform: dallas
+    address: 0xDB041750EAE2FF28 # Heating Water Return (OUT from System, TO Heater)
+    name: "Heating IN"
+    id: 'heating_in'
+  - platform: dallas
+    address: 0xF701143E397FAA28 # Heater Tank
+    name: "Heater"
+    id: 'heater'
+  - platform: dallas
+    address: 0x1701143E35C5AA28 # Heating Water Feed (OUT from Heater, TO System)
+    name: "Heating OUT2"
+    id: 'heating_out2'
+  - platform: dallas
+    address: 0x7301143F7F57AA28 # Heating Water Return (OUT from System, TO Heater)
+    name: "Heating IN2"
+    id: 'heating_in2'
+  # - platform: dallas
+  #   address: 0x8B0516B39804FF28
+  #   name: "${name} Temp 1"
+  #   id: temp_1
+  # - platform: dallas
+  #   address: 0x2D0516B398F4FF28
+  #   name: "${name} Temp 2"
+  #   id: temp_2
+  # - platform: dallas
+  #   address: 0xA50516B3D32AFF28
+  #   name: "${name} Temp 3"
+  #   id: temp_3
+    # on_value_range:
+    #   - above: 47.0
+    #     then:
+    #       - switch.turn_off: relay_3
+    #   - below: 43.0
+    #     then:
+    #       - switch.turn_on: relay_3
+  # - platform: dallas
+  #   address: 0x8F0516B39D87FF28
+  #   name: "${name} Temp 4"
+  #   id: temp_4
+  ## hot water
+  # - platform: homeassistant
+  #   id: current_hot_water_heater_temperature
+  #   entity_id: sensor.hot_water_heater
+  # - platform: homeassistant
+  #   id: current_hot_water_solar_temperature
+  #   entity_id: sensor.hot_water_solar
+  ## heating
+  - platform: homeassistant
+    id: current_heating_fireplace_temperature
+    entity_id: sensor.heating_fireplace
+  # - ground floor
+  - platform: homeassistant
+    id: kitchen_temperature
+    entity_id: sensor.temperature_158d0001c1b87a
+  - platform: homeassistant
+    id: room_temperature
+    entity_id: sensor.temperature_158d0001c2a1d1
+  # - first floor
+  - platform: homeassistant
+    id: room_j_temperature
+    entity_id: sensor.temperature_158d0001c2a1e9
+  - platform: homeassistant
+    id: bedroom_temperature
+    entity_id: sensor.temperature_158d0001c1a529
+  # - min/max
+  - platform: template
+    id: current_heating_temperature_min
+    lambda: |-
+      float value = 25.0;
+      value = min(value, (float) id(kitchen_temperature).state);
+      //value = min(value, (float) id(room_temperature).state);
+      //value = min(value, (float) id(room_j_temperature).state);
+      //value = min(value, (float) id(bedroom_temperature).state);
+      return value;
+    update_interval: 60s
+  - platform: template
+    id: current_heating_temperature_max
+    lambda: |-
+      float value = 20.0;
+      value = max(value, (float) id(kitchen_temperature).state);
+      value = max(value, (float) id(room_temperature).state);
+      value = max(value, (float) id(room_j_temperature).state);
+      value = max(value, (float) id(bedroom_temperature).state);
+      return value;
+    update_interval: 60s
+  - platform: template
+    name: "Heater Total Daily Energy"
+    id: heater_daily_energy
+    lambda: |-
+      return (id(heater_l1_total_daily_energy).state + id(heater_l3_total_daily_energy).state + id(heater_l3_total_daily_energy).state);
+    update_interval: 60s
+  - platform: template
+    name: 'Heater Daily Energy Price'
+    id: heater_energy_price
+    unit_of_measurement: '€'
+    lambda: |-
+      //# platba za odberne miesto        0,75
+      //# pevna mesacna zlozka tarify     0,15000000
+      
+      //## platba za systemove sluzby      0,00594340
+      //# platba za prevadzku systemu     0,02598800
+      //# variabilna zlozka tarify za distribuciu 0,00279200
+      //# platba za straty elktr.sidtr.el.        0,00687300
+      //# odvod do jadroveho fondu        0,00327000
+      //#
+      //# cena za elektrinu VT    0,06390000
+      //# cena za elektrinu NT    0,04110000
+      //# 0.00594340+0.02598800+0.00279200+0.00687300+0.00327000+0.04110000 = 0.0859664
+      return (id(heater_daily_energy).state * 0.0859664);
+  # L1
+  - platform: pzemac
+    address: 161
+    current:
+      name: "${name_1} L1 Current"
+    voltage:
+      name: "${name_1} L1 Voltage"
+    energy:
+      name: "${name_1} L1 Energy"
+    power:
+      name: "${name_1} L1 Power"
+      id: heater_l1_power
+    frequency:
+      name: "${name_1} L1 Frequency"
+    power_factor:
+      name: "${name_1} L1 Power Factor"
+    update_interval: 20s
+  - platform: total_daily_energy
+    name: "${name_1} L1 Total Daily Energy"
+    power_id: heater_l1_power
+    id: heater_l1_total_daily_energy
+    filters:
+      - multiply: 0.001
+    unit_of_measurement: kWh
+    icon: mdi:counter
+  - platform: integration
+    name: "${name_1} L1 Energy Meter" 
+    sensor: heater_l1_power
+    time_unit: h
+    filters:
+      - lambda: return x * (0.001) + 2282;
+    unit_of_measurement: kWh
+    icon: mdi:counter
+  # L2  
+  - platform: pzemac
+    address: 162
+    current:
+      name: "${name_1} L2 Current"
+    voltage:
+      name: "${name_1} L2 Voltage"
+    energy:
+      name: "${name_1} L2 Energy"
+    power:
+      name: "${name_1} L2 Power"
+      id: heater_l2_power
+    frequency:
+      name: "${name_1} L2 Frequency"
+    power_factor:
+      name: "${name_1} L2 Power Factor"
+    update_interval: 20s
+  - platform: total_daily_energy
+    name: "${name_1} L2 Total Daily Energy"
+    id: heater_l2_total_daily_energy
+    power_id: heater_l2_power
+    filters:
+      - multiply: 0.001
+    unit_of_measurement: kWh
+    icon: mdi:counter
+  - platform: integration
+    name: "${name_1} L2 Energy Meter" 
+    sensor: heater_l2_power
+    time_unit: h
+    filters:
+      - lambda: return x * (0.001) + 2282;
+    unit_of_measurement: kWh
+    icon: mdi:counter
+  # L3
+  - platform: pzemac
+    address: 163
+    current:
+      name: "${name_1} L3 Current"
+    voltage:
+      name: "${name_1} L3 Voltage"
+    energy:
+      name: "${name_1} L3 Energy"
+    power:
+      name: "${name_1} L3 Power"
+      id: heater_l3_power
+    frequency:
+      name: "${name_1} L3 Frequency"
+    power_factor:
+      name: "${name_1} L3 Power Factor"
+    update_interval: 20s
+  - platform: total_daily_energy
+    name: "${name_1} L3 Total Daily Energy"
+    power_id: heater_l3_power
+    id: heater_l3_total_daily_energy
+    filters:
+      - multiply: 0.001
+    unit_of_measurement: kWh
+    icon: mdi:counter
+  - platform: integration
+    name: "${name_1} L3 Energy Meter" 
+    sensor: heater_l3_power
+    time_unit: h
+    filters:
+      - lambda: return x * (0.001) + 2282;
+    unit_of_measurement: kWh
+    icon: mdi:counter
+
+# font:
+#   - file: 'slkscr.ttf'
+#     id: font_1
+#     size: 8
+#   - file: 'BebasNeue-Regular.ttf'
+#     id: font_2
+#     size: 48
+#   - file: 'arial.ttf'
+#     id: font_3
+#     size: 14
+#   - file: 'B612Mono-Regular.ttf'
+#     id: font_4
+#     size: 16
+
+# display:
+#   - platform: ssd1306_i2c
+#     model: "SSD1306 128x64"
+#     address: 0x3C # 0x78
+#     #address: 0x3D # 0x7A
+#     id: display_1
+#     pages:
+#       # - id: page_1
+#       #   lambda: |-
+#       #     it.print(0, 0, id(font_3), "TEMP 1");
+#       #     if (id(temp_1).has_state()) {
+#       #       it.printf(0, 16, id(font_2), TextAlign::TOP_LEFT, "%.1f°", id(temp_1).state);
+#       #     }
+#       # - id: page_2
+#       #   lambda: |-
+#       #     it.print(0, 0, id(font_3), "TEMP 2");
+#       #     if (id(temp_1).has_state()) {
+#       #       it.printf(0, 16, id(font_2), TextAlign::TOP_LEFT, "%.1f°", id(temp_2).state);
+#       #     }
+#       # - id: page_3
+#       #   lambda: |-
+#       #     it.print(0, 0, id(font_3), "TEMP 3");
+#       #     if (id(temp_1).has_state()) {
+#       #       it.printf(0, 16, id(font_2), TextAlign::TOP_LEFT, "%.1f°", id(temp_3).state);
+#       #     }
+#       # - id: page_4
+#       #   lambda: |-
+#       #     it.print(0, 0, id(font_3), "TEMP 4");
+#       #     if (id(temp_1).has_state()) {
+#       #       it.printf(0, 16, id(font_2), TextAlign::TOP_LEFT, "%.1f°", id(temp_4).state);
+#       #     }
+#       # - id: page_5
+#       #   lambda: |-
+#       #     it.printf(0,  0, id(font_1), TextAlign::TOP_LEFT, "RELAY 1: %s", id(relay_1).state ? "ON" : "OFF");
+#       #     it.printf(0,  8, id(font_1), TextAlign::TOP_LEFT, "RELAY 2: %s", id(relay_2).state ? "ON" : "OFF");
+#       #     it.printf(0, 16, id(font_1), TextAlign::TOP_LEFT, "RELAY 3: %s", id(relay_3).state ? "ON" : "OFF");
+#       #     it.printf(0, 24, id(font_1), TextAlign::TOP_LEFT, "RELAY 4: %s", id(relay_4).state ? "ON" : "OFF");
+#       - id: page_6
+#         lambda: |-
+#           it.print(0, 0, id(font_3), "Hot Water");
+#           it.printf(100,  0, id(font_3), TextAlign::TOP_LEFT, "%s", id(relay_2).state ? "ON" : "OFF");
+#           if (id(hot_water_heater).has_state()) {
+#             it.printf(0, 16, id(font_2), TextAlign::TOP_LEFT, "%.1f°", id(hot_water_heater).state);
+#           }
+
+#   - platform: ssd1306_i2c
+#     model: "SSD1306 128x64"
+#     #address: 0x3C # 0x78
+#     address: 0x3D # 0x7A
+#     id: display_2
+#     pages:
+#       - id: page_2_1
+#         lambda: |-
+#           it.print(0, 0, id(font_3), "Heating");
+#           it.printf(100,  0, id(font_3), TextAlign::TOP_LEFT, "%s", id(relay_3).state ? "ON" : "OFF");
+#           it.print(100, 32, id(font_1), TextAlign::BOTTOM_LEFT, "max");
+#           if (id(current_heating_temperature_max).has_state()) {
+#             it.printf(0, 32, id(font_4), TextAlign::BOTTOM_LEFT, "%.1f°", id(current_heating_temperature_max).state);
+#           }
+#           it.print(100, 48, id(font_1), TextAlign::BOTTOM_LEFT, "min");
+#           if (id(current_heating_temperature_min).has_state()) {
+#             it.printf(0, 48, id(font_4), TextAlign::BOTTOM_LEFT, "%.1f°", id(current_heating_temperature_min).state);
+#           }
+#           it.printf(0,  64, id(font_4), TextAlign::BOTTOM_LEFT, "%s", id(off_peak_status).state ? "OFF PEAK POWER" : "Disabled");
+
+binary_sensor:
+  - platform: gpio
+    name: "${name} Input 1" # Off Peak (HDO)
+    id: off_peak_status
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 15 #7 / 9
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 300ms
+      - delayed_off: 300ms
+  - platform: gpio
+    name: "${name} Input 2" # Heater ON
+    id: heater_on
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 14 #6 / 10
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 300ms
+      - delayed_off: 300ms
+  - platform: gpio
+    name: "${name} Input 3" # Heating Demand/Override (from Thermostat)
+    id: heating_override
+    pin:
+      mcp23017: relay_module
+      # pcf8574: relay_module
+      number: 5 #5 / 11
+      mode: INPUT_PULLUP
+    filters:
+      - delayed_on: 300ms
+      - delayed_off: 300ms
+        #    on_press:
+        #      then:
+        #        - switch.turn_on: relay_2
+        #    on_release:
+        #      then:
+        #        - switch.turn_off: relay_2
+  # - platform: gpio
+  #   name: "${name} Input 4" # Not connected
+  #   id: ###
+  #   pin:
+  #     pcf8574: relay_module
+  #     number: 7
+  #     mode: INPUT_PULLUP
+  #   filters:
+  #     - invert:
+  #     - delayed_on: 100ms
+  #     - delayed_off: 100ms
+  - platform: template
+    id: heating_fireplace_status
+    lambda: |-
+      if (id(current_heating_fireplace_temperature).state > 37.5) {
+        return true;
+      } else {
+        return false;
+      }

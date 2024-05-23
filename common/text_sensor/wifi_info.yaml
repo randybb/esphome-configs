@@ -1,0 +1,13 @@
+---
+platform: wifi_info
+ip_address:
+  name: ${name} IP Address
+  icon: mdi:ip-network
+#ssid:
+#  name: ${name} SSID
+#bssid:
+#  name: ${name} BSSID
+mac_address:
+  name: ${name} MAC
+#scan_results:
+#  name: ${name} Latest Scan Results

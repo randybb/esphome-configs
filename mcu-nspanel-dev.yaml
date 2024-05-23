@@ -1,0 +1,300 @@
+substitutions:
+  device: nspanel-dev
+  name: NSPanel DEV
+  name_short: DevPanel
+  comment: "DEV | NSPanel"
+  panel_recv_topic: "tele/${device}/RESULT"
+  panel_send_topic: "cmnd/${device}/CustomSend"
+  tft_url: !secret tft_url
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  # on_boot:
+  #   priority: -100
+  #   then:
+  #     - wait_until:
+  #         api.connected
+  #     - delay: 10s
+  #     - homeassistant.service:
+  #         service: automation.trigger
+  #         data:
+  #           entity_id: automation.nspanel_send_weather_to_nspanel
+
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: esp-idf
+    # version: 5.1.2
+    # platform_version: 6.5.0
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/sairon/esphome-nspanel-lovelace-ui
+  #     ref: dev
+      ref: add-esp-idf-support
+    refresh: 0s
+    components: [nspanel_lovelace]
+  - source: components
+  
+packages:
+  common: !include common/common.yaml
+  # common: !include common/common_dev.yaml
+
+# web_server:
+#   port: 80
+#   local: true
+
+api:
+  services:
+    # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+
+    - service: notify
+      variables:
+        heading: string
+        message: string
+        song: string
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("notify~" + heading + "~" + message);'
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+        - delay: 10s
+        - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
+
+    - service: update_tft
+      then:
+        - lambda: |-
+            id(nspanel_id).upload_tft("${tft_url}");
+            
+    - service: upload_tft
+      variables:
+        url: string
+      then:
+        - lambda: |-
+            id(nspanel_id).upload_tft(url);
+
+    # Service to send a command directly to the display. Useful for testing
+    - service: send_command
+      variables:
+        cmd: string
+      then:
+        - lambda: "id(nspanel_id).send_custom_command(cmd.c_str());"
+
+    # Service to pusblish to mqtt used for refreshin the panel
+    - service: publish_to_recv_topic
+      variables:
+        cmd: string
+      then:
+        - mqtt.publish:
+            topic: $panel_recv_topic
+            payload: !lambda "return cmd;"
+
+    # Service to send a command wake the screen
+    - service: wake
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("wake");'
+
+    # Service to send a command to show screensaver (some of the values are hardcoded)
+    - service: show_screensaver
+      then:
+        - mqtt.publish:
+            topic: $panel_recv_topic
+            payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+
+    # Service to navigate to screen
+    - service: navigate_to_page
+      variables:
+        page: string
+      then:
+        - mqtt.publish_json:
+            topic: $panel_recv_topic
+            payload: |-
+              root["CustomRecv"] = "event,buttonPress2,navigate." + page + ",button";
+
+    # Service to send a command disable screensaver
+    - service: disable_screensaver
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("timeout~0");'
+
+    # Service to send a command enabled screensaver
+    - service: enable_screensaver
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("timeout~20");'
+
+    # Service to send a command wake the screen
+    - service: dim_0_to_100
+      variables:
+        intensity: string
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("dimmode~"+intensity+"~100");'
+
+    # Service to send a command To show the screen of a specific like
+    - service: show_entity
+      variables:
+        entity: string
+        title: string
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~" + title + "~" + entity);'
+
+    # Service to send a command To show the screen of a specific like
+    - service: notify_on_screensaver
+      variables:
+        line1: string
+        line2: string
+      then:
+        - lambda: 'id(nspanel_id).send_custom_command("notify~" + line1 + "~" + line2);'
+        # - rtttl.play: "short:d=4,o=5,b=100:16e6"
+
+    # Service to send a command To show the screen of a specific like
+    # interaction of the buttons are on implemented yet
+    - service: notify_fullscreen
+      variables:
+        title: string
+        description: string
+        button1: string
+        button2: string
+        timeout: string
+        icon: string
+      then:
+        # show notification screen
+        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupNotify");'
+        # set values on notification screen
+        # color defined as number created in binary and converted to decimal (rrrrggggbbbbaaaa)
+        - lambda: 'id(nspanel_id).send_custom_command("entityUpdateDetail~id~"+ title + "~65535~" + button1 +"~3840~" + button2 + "~61440~" + description + "~65535~" + timeout + "~3~" + icon + "~65535~");'
+        - rtttl.play: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"
+
+uart:
+  id: display_uart
+  tx_pin: 16
+  rx_pin: 17
+  baud_rate: 115200
+
+mqtt:
+  id: mqtt_client
+  broker: !secret mqtt_ip
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  discovery: false
+
+nspanel_lovelace:
+  id: nspanel_id
+  mqtt_recv_topic: $panel_recv_topic
+  mqtt_send_topic: $panel_send_topic
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+binary_sensor:
+  - platform: gpio
+    name: ${name} Left Button
+    pin:
+      number: 14
+      inverted: true
+    on_press:
+      - switch.toggle: relay_1
+      # - homeassistant.service:
+      #     service: switch.toggle
+      #     data:
+      #       entity_id: switch.gate_open
+
+  - platform: gpio
+    name: ${name} Right Button
+    pin:
+      number: 27
+      inverted: true
+    on_press:
+      - switch.toggle: relay_1
+      # - homeassistant.service:
+      #     service: switch.toggle
+      #     data:
+      #       entity_id: switch.gate_close
+
+output:
+  - platform: ledc
+    id: buzzer_out
+    pin:
+      number: 21
+
+switch:
+  - platform: gpio
+    name: ${name} Relay 1
+    id: relay_1
+    pin:
+      number: 22
+    on_turn_on:
+      # show a light on the panel when we swich on the light
+      # - lambda: 'id(nspanel).send_custom_command("pageType~popupLight~[TITLE TO SHOW ON SCREEN]~[ENTITY NAME]");'
+      - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~Light 1~light.bed_light");'
+    on_turn_off:
+      # send to screensaver when switch off the light
+      - mqtt.publish:
+          topic: $panel_recv_topic
+          payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+
+  - platform: gpio
+    name: ${name} Relay 2
+    id: relay_2
+    pin:
+      number: 19
+    on_turn_on:
+      # show a light on the panel when we swich on the light
+      - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~Light 2~light.bed_light2");'
+    on_turn_off:
+      # send to screensaver when switch off the light
+      - mqtt.publish:
+          topic: $panel_recv_topic
+          payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+
+  # Turn screen power on/off. Easy way to configure the screen power control, but this should not be used from HA, as all components must be re-initialized afterwards. For lights, names of lights etc. this practically means that the state must change once to happen.
+  - platform: gpio
+    name: ${name} Screen Power
+    id: screen_power
+    entity_category: config
+    pin:
+      number: 4
+      inverted: true
+    restore_mode: ALWAYS_ON
+
+rtttl:
+  id: buzzer
+  output: buzzer_out
+
+sensor:
+  - platform: adc
+    id: ntc_source
+    pin: 38
+    update_interval: 5min
+    attenuation: 12db
+
+  - platform: resistance
+    id: resistance_sensor
+    sensor: ntc_source
+    configuration: DOWNSTREAM
+    resistor: 11.2kOhm
+
+  - platform: ntc
+    id: temperature
+    sensor: resistance_sensor
+    calibration:
+      b_constant: 3950
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    name: "Living Room Temperature Entry"
+    
+  - platform: template
+    id: room_temperature_id
+
+# esp32_ble_tracker:
+#   scan_parameters:
+#     duration: 1min
+
+# bluetooth_proxy:

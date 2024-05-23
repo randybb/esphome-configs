@@ -1,0 +1,4 @@
+---
+platform: ethernet_info
+ip_address:
+  name: ${name} IP Address

@@ -1,0 +1,116 @@
+substitutions:
+  device: fireplace
+  name: Heating Fireplace
+  comment: "Ground floor, Kitchen: Fireplace monitoring for heating"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+external_components:
+  - source: github://mknjc/esphome@ds248x
+    components: ds248x
+
+packages:
+  common: !include common/common.yaml
+
+
+# PINOUTS: M5ATOM+Atom Hub Switch
+# IR        G12
+# NEO       G27 1x
+# BUTTON    G39
+# I2C0 SDA  G26 - white
+# I2C0 SCL  G32
+# I2C1 SDA  G25 - red
+# I2C1 SCL  G21
+# UART0 RX  G3
+# UART0 TX  G1
+# RS485 Rx  G33
+# RS485 Tx  G23
+# Relay1    G22
+# Relay2    G19
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+i2c:
+  # - id: i2c0
+  #   sda: 26
+  #   scl: 32
+  #   scan: true #false
+  # - id: i2c1
+  sda: 25
+  scl: 21
+  scan: true #false
+
+ds248x:
+  # i2c_id: i2c_main
+  address: 0x18 # should be the default
+  # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
+  active_pullup: true # adds a active pullup which should improve signal integrity
+  strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
+  bus_sleep: true # power down the bus when no transaction is in progres
+
+pca9554:
+  - id: pca9554_module
+    address: 0x27
+
+# modbus:
+#   uart_id: uart1
+
+# uart:
+#   - id: uart1
+#     rx_pin: 33
+#     tx_pin: 32
+#     baud_rate: 9600
+#     stop_bits: 2
+
+binary_sensor:
+  - platform: gpio
+    name: "${name} Status Button"
+    filters:
+      - invert:
+    pin: 39
+  - platform: template
+    name: "${name} Fire"
+    lambda: |-
+      if (id(heating_fireplace_temperature).state > 37.5) {
+        return true;
+      } else {
+        return false;
+      }
+  - platform: gpio
+    name: "${name} Pump"
+    id: off_peak_status
+    pin:
+      pca9554: pca9554_module
+      number: 0
+    filters:
+      - delayed_on: 300ms
+      - delayed_off: 300ms
+
+sensor:
+  - platform: ds248x
+    address: 0x6203168B32A7FF28
+    # index: 0
+    name: "${name}"
+    id: 'heating_fireplace_temperature'
+#   - platform: dht
+#     pin: 14
+#     temperature:
+#       name: "Kitchen Temperature"
+#       id: 'kitchen_temperature'
+#     humidity:
+#       name: "Kitchen Humidity"
+#       id: 'kitchen_humidity'
+#     update_interval: 60s
+#     model: si7021

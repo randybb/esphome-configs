@@ -1,0 +1,122 @@
+substitutions:
+  device: air-office-r
+  name: Office R Air Quality Monitor
+  name_short: Office R
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  
+esp32:
+  board: m5stack-atom
+  # board: m5stamp-pico
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+external_components:
+  - source: components
+
+packages:
+  common: !include common/common.yaml
+  
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+i2c:
+  # - id: i2c0
+  sda: 32
+  scl: 33
+  scan: true #false
+  frequency: 100kHz
+  # - id: i2c1
+  # sda: 25
+  # scl: 22
+  # scan: true #false
+
+uart:
+  id: particle_uart
+  tx_pin: 21
+  rx_pin: 22
+  baud_rate: 9600
+
+# binary_sensor:
+#   - platform: gpio
+#     # name: ${name} Button
+#     pin:
+#       number: 39
+#       inverted: true
+
+light:
+  - platform: esp32_rmt_led_strip
+    # name: "${name} LED"
+    id: neo
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+  - platform: esp32_rmt_led_strip
+    name: "${name} NEO"
+    id: neo_strip
+    rgb_order: GRB
+    pin: 25
+    num_leds: 7
+    rmt_channel: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      - random:
+      - random:
+          name: "My Slow Random Effect"
+          transition_length: 30s
+          update_interval: 30s
+      - random:
+          name: "My Fast Random Effect"
+          transition_length: 4s
+          update_interval: 5s
+      - strobe:
+      - strobe:
+          name: Strobe Effect With Custom Values
+          colors:
+            - state: True
+              brightness: 100%
+              red: 100%
+              green: 90%
+              blue: 0%
+              duration: 500ms
+            - state: False
+              duration: 250ms
+            - state: True
+              brightness: 100%
+              red: 0%
+              green: 100%
+              blue: 0%
+              duration: 500ms
+      - flicker:
+      - flicker:
+          name: Flicker Effect With Custom Values
+          alpha: 95%
+          intensity: 1.5%
+      - addressable_rainbow:
+      - addressable_rainbow:
+          name: Rainbow Effect With Custom Values
+          speed: 10
+          width: 50
+      - addressable_scan:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 100ms
+
+sensor:
+# https://blissair.com/what-is-pm-2-5.htm
+  - platform: pm1006
+    uart_id: particle_uart
+    update_interval: 20s
+    pm_2_5:
+      name: "${name_short} Particulate Matter 2.5µm Concentration"

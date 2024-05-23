@@ -1,0 +1,166 @@
+substitutions:
+  device: clock-1
+  name: Clock 1
+  comment: "First floor: Clock"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+packages:
+  common: !include common/common.yaml
+
+# GPIO21  UART TX
+# GPIO20  UART RX
+# GPIO0   I2C SCL
+# GPIO1   I2C SDA
+# GPIO2   RGB
+# GPIO1   BUTTON
+# GPIO4   DISPLAY CLOCK
+# GPIO5   DISPLAY DIO
+# GPIO6   GPIO
+# GPIO7   GPIO
+# GPIO8   GPIO
+# GPIO10   GPIO
+#
+# GPIO9   GPIO (BUZZER?)
+
+
+# https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+api:
+  services:
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+
+# light:
+#   - platform: neopixelbus
+#     type: GRB
+#     pin: 2
+#     variant: WS2812
+#     method: ESP8266_UART1
+#     num_leds: 1
+#     name: "${name} Light"
+#     id: neo
+#     effects:
+#       # Use default parameters:
+#       - random:
+#       # Customize parameters
+#       - random:
+#           name: "My Slow Random Effect"
+#           transition_length: 30s
+#           update_interval: 30s
+#       - random:
+#           name: "My Fast Random Effect"
+#           transition_length: 4s
+#           update_interval: 5s
+#       - strobe:
+#       - strobe:
+#           name: Strobe Effect With Custom Values
+#           colors:
+#             - state: True
+#               brightness: 100%
+#               red: 100%
+#               green: 90%
+#               blue: 0%
+#               duration: 500ms
+#             - state: False
+#               duration: 250ms
+#             - state: True
+#               brightness: 100%
+#               red: 0%
+#               green: 100%
+#               blue: 0%
+#               duration: 500ms
+#       - flicker:
+#       - flicker:
+#           name: Flicker Effect With Custom Values
+#           alpha: 95%
+#           intensity: 1.5%
+#       - addressable_rainbow:
+#       - addressable_rainbow:
+#           name: Rainbow Effect With Custom Values
+#           speed: 10
+#           width: 50
+#       - addressable_scan:
+#       - addressable_scan:
+#           name: Scan Effect With Custom Values
+#           move_interval: 100ms
+
+globals:
+  - id: alarm_id
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+display:
+  - platform: tm1637
+    id: tm1637_display
+    clk_pin: 4
+    dio_pin: 5
+    update_interval: 500ms
+    # intensity: 0
+    lambda: |-
+      static int i = 0;
+      i++;
+      if (id(alarm_id)) {
+        if ((i % 2) == 0)
+          it.print("8 8 ");
+        else
+          it.print(" 8 8");      
+      } else {
+        if (((i / 10) % 2) == 0) {
+          //it.set_intensity(7);
+          if ((i % 2) == 0)
+            it.strftime("%H.%M", id(ha_time).now());
+          else
+            it.strftime("%H%M", id(ha_time).now());
+        } else {
+          //it.set_intensity(1);
+          it.printf("%.0f~C", id(temperature).state);
+        }
+      }
+
+output:
+  - platform: ledc
+    pin: 9
+    id: rtttl_out
+
+rtttl:
+  output: rtttl_out
+
+sensor:
+  - platform: homeassistant
+    id: temperature
+    entity_id: sensor.zigbee_outside_temperature
+
+switch:
+  - platform: template
+    name: "${name} Alarm"
+    optimistic: true
+    turn_on_action:
+      - globals.set:
+          id: alarm_id
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: alarm_id
+          value: 'false'

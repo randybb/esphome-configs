@@ -1,0 +1,147 @@
+substitutions:
+  device: basement
+  name: Basement
+  comment: "Basement: Sockets"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp01_1m
+
+packages:
+  common: !include common/common.yaml
+  
+# Sonoff Dual R2
+# Pin 	  Function
+# GPIO10	Push Button
+# GPIO00	Pin "button 0" on expansion header
+# GPIO09	Pin "button 1" on expansion header
+# GPIO12	Relay #1 and red color on LED
+# GPIO05	Relay #2 and green color on LED
+# GPIO13	Blue Status LED
+
+globals:
+  - id: blower_auto
+    type: bool
+    restore_value: true
+    initial_value: "true"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 0
+      mode: INPUT_PULLUP
+      inverted: True
+    name: ${name} Light Switch
+    device_class: light
+    on_click:
+    - min_length: 50ms
+      max_length: 350ms
+      then:
+        - homeassistant.service:
+            service: light.toggle
+            data:
+              entity_id: light.basement_light
+    - min_length: 351ms
+      max_length: 1000ms
+      then:
+        - homeassistant.service:
+            service: light.toggle
+            data:
+              entity_id: light.exercise_room
+    - min_length: 1001ms
+      max_length: 10000ms
+      then:
+        # - homeassistant.service:
+        #     service: light.turn_off
+        #     data:
+        #       entity_id: light.basement_light
+        - homeassistant.service:
+            service: light.turn_off
+            data:
+              entity_id: light.exercise_room
+        - homeassistant.service:
+            service: light.turn_off
+            data:
+              entity_id: light.exercise_room_fan
+  - platform: gpio
+    pin:
+      number: 10
+      mode: INPUT_PULLUP
+      inverted: true
+    name: ${name} Socket 1 Switch
+    on_press:
+      - switch.toggle: relay_2
+  - platform: gpio
+    pin:
+      number: 9
+      mode: INPUT_PULLUP
+      inverted: true
+    name: ${name} Door
+    device_class: door
+    filters:
+      invert:
+    on_press:
+      - homeassistant.service:
+          service: light.turn_on
+          data:
+            entity_id: light.basement_light
+
+select:
+  - platform: template
+    name: "Sewage Treatment Blower"
+    icon: mdi:hair-dryer-outline
+    optimistic: true
+    options:
+      - "ON"
+      - "AUTO"
+      - "OFF"
+    initial_option: "AUTO"
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            switch (i) {
+              case 0: {
+                id(relay_1).turn_on();
+              } break;
+              case 1: {
+                //;
+              } break;
+              case 2:
+                id(relay_1).turn_off();
+            }
+      
+status_led:
+  pin:
+    number: 13
+    inverted: yes
+
+switch:
+  - platform: gpio
+    name: "Sewage Treatment Blower"
+    icon: mdi:hair-dryer-outline
+    pin: 12
+    id: relay_1
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    name: ${name} Socket 1
+    icon: mdi:power-socket-fr
+    pin: 5
+    id: relay_2
+    
+time:
+  - platform: homeassistant
+    timezone: Europe/Bratislava
+    on_time:
+      - seconds: 0
+        minutes: /15
+        then:
+          - if:
+              condition:
+                lambda: 'return id(blower_auto);'
+              then:
+                - switch.turn_on: relay_1
+                - delay: 12min
+                - switch.turn_off: relay_1

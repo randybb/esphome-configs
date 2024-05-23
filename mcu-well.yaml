@@ -1,0 +1,291 @@
+substitutions:
+  device: well
+  name: Well
+  comment: "Outside, Well: Irrigation A"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  # friendly_name: mcu-well
+  # on_boot:
+  #   priority: -10
+  #   then:
+  #     - switch.turn_off: irrigation_relay_1
+  #     - delay: 2s
+  #     - switch.turn_off: irrigation_relay_2
+  #     - delay: 2s
+  #     - switch.turn_off: irrigation_relay_3
+  #     - delay: 2s
+  #     - switch.turn_off: irrigation_relay_4
+  #     - delay: 2s
+  #     - switch.turn_off: irrigation_relay_5
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+packages:
+  common: !include common/common.yaml
+
+api:
+  services:
+    - service: irrigation_morning
+      then:
+        - switch.turn_on: irrigation_relay_1
+        - delay: 10minutes
+        - switch.turn_off: irrigation_relay_1
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_2
+        - delay: 10minutes
+        - switch.turn_off: irrigation_relay_2
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_3
+        - delay: 3minutes
+        - switch.turn_off: irrigation_relay_3
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_3
+        - delay: 3minutes
+        - switch.turn_off: irrigation_relay_3
+        # - switch.turn_on: irrigation_relay_4
+        # - delay: 40minutes
+        # - switch.turn_off: irrigation_relay_4
+    - service: irrigation_grass
+      then:
+        - switch.turn_on: irrigation_relay_1
+        - delay: 5minutes
+        - switch.turn_off: irrigation_relay_1
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_2
+        - delay: 5minutes
+        - switch.turn_off: irrigation_relay_2
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_3
+        - delay: 2minutes
+        - switch.turn_off: irrigation_relay_3
+    - service: irrigation_patio
+      then:
+        - switch.turn_on: irrigation_relay_5
+        - delay: 30sec
+        - switch.turn_off: irrigation_relay_5
+
+i2c:
+  sda: 25
+  scl: 21
+  scan: true
+
+pca9554:
+  - id: relay_module
+    address: 0x27
+
+sprinkler:
+  - id: lawn_sprinkler_ctrlr
+    main_switch: "Irrigation A"
+    auto_advance_switch: "Irrigation A Auto Advance"
+    # reverse_switch: "Lawn Sprinklers Reverse"
+    multiplier_number: "Irrigation A Multiplier"
+    repeat_number: "Irrigation A Repeat"
+    valve_open_delay: 2min
+    valves:
+      - valve_switch: "Irrigation A1"
+        enable_switch: "Irrigation A1 Enable"
+        run_duration_number: "Irrigation A1 Run Duration"
+        valve_switch_id: irrigation_relay_1
+      - valve_switch: "Irrigation A2"
+        enable_switch: "Irrigation A2 Enable"
+        run_duration_number: "Irrigation A2 Run Duration"
+        valve_switch_id: irrigation_relay_2
+      - valve_switch: "Irrigation A3"
+        enable_switch: "Irrigation A3 Enable"
+        run_duration_number: "Irrigation A3 Run Duration"
+        valve_switch_id: irrigation_relay_3
+      - valve_switch: "Irrigation A4"
+        enable_switch: "Irrigation A4 Enable"
+        run_duration_number: "Irrigation A4 Run Duration"
+        valve_switch_id: irrigation_relay_4
+      - valve_switch: "Irrigation A5"
+        enable_switch: "Irrigation A5 Enable"
+        run_duration_number: "Irrigation A5 Run Duration"
+        valve_switch_id: irrigation_relay_5
+
+switch:
+  - platform: gpio
+    name: "Irrigation Valve A1"
+    id: irrigation_relay_1
+    interlock: &interlock_group [irrigation_relay_1, irrigation_relay_2, irrigation_relay_3, irrigation_relay_4, irrigation_relay_5, irrigation_relay_6, irrigation_relay_7, irrigation_relay_8]
+    pin:
+      pca9554: relay_module
+      number: 0
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A2"
+    id: irrigation_relay_2
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 1
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A3"
+    id: irrigation_relay_3
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 2
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A4"
+    id: irrigation_relay_4
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 3
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A5"
+    id: irrigation_relay_5
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 4
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A6"
+    id: irrigation_relay_6
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 5
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A7"
+    id: irrigation_relay_7
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 6
+      mode: OUTPUT
+  - platform: gpio
+    name: "Irrigation Valve A8"
+    id: irrigation_relay_8
+    interlock: *interlock_group
+    pin:
+      pca9554: relay_module
+      number: 7
+      mode: OUTPUT
+  # - platform: gpio
+  #   name: "${name} Relay 1"
+  #   id: relay_1
+  #   pin:
+  #     number: 22
+  #     mode: OUTPUT
+  # - platform: gpio
+  #   name: "${name} Relay 2"
+  #   id: relay_2
+  #   interlock: *interlock_group
+  #   pin:
+  #     number: 19
+  #     mode: OUTPUT
+
+valve:
+  - platform: template
+    name: "Irrigation Valve A1"
+    lambda: |-
+      if (id(irrigation_relay_1).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_1
+    close_action:
+      - switch.turn_off: irrigation_relay_1
+  - platform: template
+    name: "Irrigation Valve A2"
+    lambda: |-
+      if (id(irrigation_relay_2).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_2
+    close_action:
+      - switch.turn_off: irrigation_relay_2
+  - platform: template
+    name: "Irrigation Valve A3"
+    lambda: |-
+      if (id(irrigation_relay_3).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_3
+    close_action:
+      - switch.turn_off: irrigation_relay_3
+  - platform: template
+    name: "Irrigation Valve A4"
+    lambda: |-
+      if (id(irrigation_relay_4).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_4
+    close_action:
+      - switch.turn_off: irrigation_relay_4
+  - platform: template
+    name: "Irrigation Valve A5"
+    lambda: |-
+      if (id(irrigation_relay_5).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_5
+    close_action:
+      - switch.turn_off: irrigation_relay_5
+  - platform: template
+    name: "Irrigation Valve A6"
+    lambda: |-
+      if (id(irrigation_relay_6).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_6
+    close_action:
+      - switch.turn_off: irrigation_relay_6
+  - platform: template
+    name: "Irrigation Valve A7"
+    lambda: |-
+      if (id(irrigation_relay_7).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_7
+    close_action:
+      - switch.turn_off: irrigation_relay_7
+  - platform: template
+    name: "Irrigation Valve A8"
+    lambda: |-
+      if (id(irrigation_relay_8).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: irrigation_relay_8
+    close_action:
+      - switch.turn_off: irrigation_relay_8
+
+time:
+  - !include common/time/homeassistant.yaml

@@ -1,0 +1,133 @@
+substitutions:
+  device: socket-02
+  device_id: socket_02
+  name: Socket 02
+  current_res: "0.00290"
+  voltage_div: "940"
+  comment: "First floor, Bedroom: Repelent"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp01_1m
+
+packages:
+  common: !include common/common.yaml
+
+# BlitzWolf BW-SHP2 and BW-SHP6 (ESP8285 - BL0937 or HJL-01 Energy Monitoring)
+# Pin 	  Name              Function
+# GPIO15 	GPIO_REL1         Relay
+# GPIO13 	GPIO_KEY1         Button
+# GPIO00 	GPIO_LED1_INV     Red LED (inverted), Power Status
+# GPIO02 	GPIO_LEDLNK_INV   Blue LED (inverted), Link Status
+# GPIO05  GPIO_HJL_CF       BL0937 or HJL-01 CF power
+# GPIO12  GPIO_NRG_SEL_INV  BL0937 or HJL-01 Sel output (0 = Voltage)
+# GPIO14  GPIO_NRG_CF1      BL0937 or HJL-01 CF1 current / voltage
+# GPIO01 	GPIO_USER         RXD, Optional sensor
+# GPIO03 	GPIO_USER         TXD, Optional sensor
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode: INPUT_PULLUP
+      inverted: yes
+    name: "${name} Button"
+    # filters:
+    #   invert:
+    on_press:
+      # min_length: 50ms
+      # max_length: 350ms
+      then:
+        - switch.toggle: relay
+    on_double_click:
+      # min_length: 50ms
+      # max_length: 350ms
+      then:
+        - switch.turn_on: relay
+        - light.turn_on: light_blue
+        - delay: 4h
+        - switch.turn_off: relay
+        - light.turn_off: light_blue
+
+light:
+  - platform: binary
+    name: "${name} Red LED"
+    id: light_red
+    output: led_red
+  - platform: binary
+    name: "${name} Blue LED"
+    id: light_blue
+    output: led_blue
+
+output:
+  - platform: gpio
+    pin: GPIO00
+    id: led_red
+    inverted: True
+  - platform: gpio
+    pin: GPIO02
+    id: led_blue
+    inverted: True
+    
+sensor:
+  - platform: hlw8012
+    sel_pin:
+      number: GPIO12
+      inverted: true
+    cf_pin: GPIO05
+    cf1_pin: GPIO14
+    current_resistor: ${current_res}
+    voltage_divider: ${voltage_div}
+    current:
+      name: "${name} Current"
+      icon: mdi:flash-circle
+      accuracy_decimals: 3
+    voltage:
+      name: "${name} Voltage"
+      icon: mdi:current-ac
+    power:
+      name: "${name} Power"
+      id: "${device_id}_power"
+      icon: mdi:flash-outline
+    update_interval: 30s
+    change_mode_every: 4
+  - platform: total_daily_energy
+    name: "${name} Total Daily Power"
+    power_id: "${device_id}_power"
+    filters:
+        # Multiplication factor from W to kW is 0.001
+        - multiply: 0.001
+    unit_of_measurement: kWh
+    icon: mdi:circle-slice-3
+
+# status_led:
+#   pin:
+#     number: GPIO00
+#     inverted: True
+
+switch:
+  - platform: gpio
+    name: "${name} Relay"
+    # icon: mdi:power-socket-eu
+    pin: GPIO15
+    id: relay
+    on_turn_on:
+      - light.turn_on: light_red
+    on_turn_off:
+      - light.turn_off: light_red
+
+time:
+  - !include common/time/homeassistant.yaml
+#   - platform: homeassistant
+#     timezone: Europe/Bratislava
+#     on_time:
+#       # Switch on on the hour
+#       - seconds: 0
+#         minutes: /15
+#         hours: "*"
+#         then:
+#           - switch.turn_on: relay_1
+#           - delay: 12min
+#           - switch.turn_off: relay_1

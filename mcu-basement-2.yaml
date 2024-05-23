@@ -1,0 +1,48 @@
+substitutions:
+  device: basement-2
+  name_short: Basement
+  name: Basement 2
+  comment: "Basement: Lights"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp01_1m
+
+
+packages:
+  common: !include common/common.yaml
+  
+# Sonoff Dual R2
+# GPIO10	Push Button
+# GPIO00	Pin "button 0" on expansion header
+# GPIO09	Pin "button 1" on expansion header
+# GPIO12	Relay #1 and red color on LED
+# GPIO05	Relay #2 and green color on LED
+# GPIO13	Blue Status LED
+
+status_led:
+  pin:
+    number: 13
+    inverted: yes
+
+light:
+  - platform: binary
+    name: "${name_short} Light"
+    id: light_1
+    output: relay_1
+    restore_mode: ALWAYS_ON
+  - platform: binary
+    name: "${name_short} Workbench Light"
+    id: light_2
+    output: relay_2
+    restore_mode: ALWAYS_ON
+
+output:
+  - platform: gpio
+    pin: 12
+    id: relay_1
+  - platform: gpio
+    pin: 5
+    id: relay_2

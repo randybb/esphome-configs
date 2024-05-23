@@ -1,0 +1,125 @@
+substitutions:
+  device: dimmer
+  name: Dimmer
+  comment: "Pain cave: Fan"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  on_loop:
+    then:
+      lambda: |-
+        static uint32_t last_state = 0;
+        auto state = App.get_app_state();
+        if (state != last_state) {
+          if (state & STATUS_LED_ERROR) {
+            auto call = id(led).turn_on();
+            call.set_effect("ERROR");
+            call.perform();
+          } else if (state & STATUS_LED_WARNING) {
+            auto call = id(led).turn_on();
+            call.set_effect("BOOT");
+            call.perform();
+          } else {
+            auto call = id(led).turn_off();
+            call.perform();
+          }
+          last_state = state;
+        }
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: arduino
+    version: 2.0.14
+    platform_version: 6.5.0
+    # type: esp-idf
+
+external_components:
+  # - source: github://pr#3564
+  #   refresh: 0s
+  #   components: 
+  #     - esp32
+  #     - wifi
+  # - source: github://pr#4057
+  #   components: [fastled_base]
+  - source: components
+  
+packages:
+  common: !include common/common.yaml
+
+light:
+  - platform: monochromatic
+    output: dimmer1
+    name: Exercise Room Fan
+    default_transition_length: 10s
+  - platform: esp32_rmt_led_strip
+    name: "${name} LED"
+    id: led
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      - strobe:
+          name: "BEACON"
+          colors:
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 200ms
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 10s
+      - lambda:
+          name: "ERROR"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(1, 0, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;
+      - lambda:
+          name: "BOOT"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(0, 1, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;
+
+output:
+  - platform: ac_dimmer
+    id: dimmer1
+    # min_power: 0.60
+    # zero_means_zero: true
+    gate_pin: 22
+    zero_cross_pin:
+      number: 25
+      mode: INPUT
+      inverted: yes

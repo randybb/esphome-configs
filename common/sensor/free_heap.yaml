@@ -1,0 +1,9 @@
+---
+platform: template
+name: ${name} Free heap
+lambda: return heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+icon: "mdi:memory"
+entity_category: diagnostic
+state_class: measurement
+unit_of_measurement: "b"
+update_interval: 60s

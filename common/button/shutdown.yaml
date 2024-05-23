@@ -1,0 +1,3 @@
+---
+platform: shutdown
+name: ${name} Shutdown

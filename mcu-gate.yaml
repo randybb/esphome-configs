@@ -1,0 +1,308 @@
+substitutions:
+  device: gate
+  name: Gate
+  comment: "Outside: Gate"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+external_components:
+  - source: components
+  
+packages:
+  common: !include common/common.yaml
+
+# PINOUTS: M5ATOM
+# IR        G12
+# NEO       G27
+# BUTTON    G39
+# I2C0 SDA  G26 white
+# I2C0 SCL  G32
+# I2C1 SDA  G25 red
+# I2C1 SCL  G21
+# UART0 RX  G3
+# UART0 TX  G1
+# RS485 RX  G33
+# RS485 TX  G23
+# RELAY-1   G22
+# RELAY-2   G19
+
+button:
+  - platform: output
+    name: "${name} Open"
+    id: gate_open
+    output: relay_1
+    duration: 200ms
+  - platform: output
+    name: "${name} Close"
+    id: gate_close
+    output: relay_2
+    duration: 200ms
+
+output:
+  - platform: gpio
+    pin: 22
+    id: relay_1
+  - platform: gpio
+    pin: 19
+    id: relay_2
+
+switch:
+  - platform: template
+    name: "${name} Open"
+    turn_on_action:
+      - button.press: gate_open
+  - platform: template
+    name: "${name} Close"
+    turn_on_action:
+      - button.press: gate_close
+  - platform: template
+    name: "${name} Auto Open"
+    id: auto_open
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "${name} Auto Close"
+    id: auto_close
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "${name} Enable Auris"
+    id: enable_auris
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "${name} Enable Yaris"
+    id: enable_yaris
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "${name} Enable Honda PCX125"
+    id: enable_pcx125
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    name: "${name} Enable Suzuki DL650"
+    id: enable_dl650
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+# Bluetooth related stuff
+esp32_ble_tracker:
+  scan_parameters:
+    duration: 1min
+
+# bluetooth_proxy:
+
+binary_sensor:
+  - platform: ble_presence
+    id: ibeacon_auris
+    ibeacon_uuid: !secret ble_beacon_toyota_auris_uuid
+    name: "Vehicle iBeacon Auris"
+    # filters:
+    #   - delayed_off: 30s
+    on_press:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_auris
+              - switch.is_on: auto_open
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_pcx125
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_open
+    on_release:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_auris
+              - switch.is_on: auto_close
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_pcx125
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_close
+  - platform: ble_presence
+    id: ibeacon_yaris
+    ibeacon_uuid: !secret ble_beacon_toyota_yaris_uuid
+    name: "Vehicle iBeacon Yaris"
+    on_press:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_yaris
+              - switch.is_on: auto_open
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_pcx125
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_open
+    on_release:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_yaris
+              - switch.is_on: auto_close
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_pcx125
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_close
+  - platform: ble_presence
+    id: ibeacon_pcx125
+    ibeacon_uuid: !secret ble_beacon_honda_uuid
+    name: "Vehicle iBeacon Honda PCX125"
+    on_press:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_pcx125
+              - switch.is_on: auto_open
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_open
+    on_release:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_pcx125
+              - switch.is_on: auto_close
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_dl650
+          then: 
+            - button.press: gate_close
+  - platform: ble_presence
+    id: ibeacon_dl650
+    ibeacon_uuid: !secret ble_beacon_suzuki_uuid
+    name: "Vehicle iBeacon Suzuki DL650"
+    on_press:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_dl650
+              - switch.is_on: auto_open
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_pcx125
+          then: 
+            - button.press: gate_open
+    on_release:
+      - if:
+          condition:
+            and:
+              - switch.is_on: enable_dl650
+              - switch.is_on: auto_close
+              - binary_sensor.is_off: ibeacon_auris
+              - binary_sensor.is_off: ibeacon_yaris
+              - binary_sensor.is_off: ibeacon_pcx125
+          then: 
+            - button.press: gate_close
+  # - platform: gpio
+  #   id: gate_flash
+  #   pin:
+  #     number: 26
+  #     inverted: true
+  #     mode:
+  #       input: true
+  #   filters:
+  #     - delayed_on: 10ms
+  - platform: gpio
+    id: gate_ogi
+    pin:
+      number: 32
+      inverted: true
+      mode:
+        input: true
+    filters:
+      - delayed_on: 10ms
+    entity_category: diagnostic
+    on_multi_click:
+    - timing:
+        - OFF for at least 1500ms
+      then:
+        - select.set:
+            id: gate_state
+            option: Closed
+        - logger.log: "OGI OFF => GATE CLOSED"
+      invalid_cooldown: 100ms
+    - timing:
+        - ON for at least 400ms
+        - OFF for at least 400ms
+        - ON for at least 400ms
+        - OFF for at least 400ms
+      then:
+        - select.set:
+            id: gate_state
+            option: Opening
+        - logger.log: "OGI SLOW BLINK => GATE OPENING"
+      invalid_cooldown: 100ms
+    - timing:
+        - ON for at most 300ms
+        - OFF for at most 300ms
+        - ON for at most 300ms
+        - OFF for at most 300ms
+      then:
+        - select.set:
+            id: gate_state
+            option: Closing
+        - logger.log: "OGI FAST BLINK => GATE CLOSING"
+      invalid_cooldown: 100ms
+    - timing:
+        - ON for at least 1500ms
+      then:
+        - select.set:
+            id: gate_state
+            option: Open
+        - logger.log: "OGI ON => GATE OPEN"
+      invalid_cooldown: 100ms
+
+select:
+  - platform: template
+    name: Gate
+    id: gate_state
+    options:
+     - Open
+     - Closed
+     - Opening
+     - Closing
+    initial_option: Closed
+    optimistic: true
+#     set_action:
+#       - lambda: |-
+#           // Update the text sensor state
+#           id(gate_state).publish_state(x);
+
+#           // Update the cover state
+#           if (x == "Opening") {
+#             id(gate_cover).current_operation = COVER_OPERATION_OPENING;
+#           } else if (x == "Closing") {
+#             id(gate_cover).current_operation = COVER_OPERATION_CLOSING;
+#           } else {
+#             id(gate_cover).current_operation = COVER_OPERATION_IDLE;
+#           }
+#           id(gate_cover).publish_state();
+
+# cover:
+#   - platform: template
+#     id: gate_cover
+#     name: "Gate"
+#     device_class: gate
+#     lambda: |-
+#       if (id(gate_state).state == "Closed") {
+#         return COVER_CLOSED;
+#       } else {
+#         return COVER_OPEN;
+#       }
+#     optimistic: true

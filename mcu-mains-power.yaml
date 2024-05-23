@@ -1,0 +1,209 @@
+substitutions:
+  device: mains-power
+  name: Mains Power
+  name_1: Mains
+  comment: "Room: Mains Power Monitoring"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+  
+packages:
+  common: !include common/common.yaml
+
+# PINOUTS: M5ATOM
+# IR        G12
+# NEO       G27
+# BUTTON    G39
+# I2C0 SDA  G26
+# I2C0 SCL  G32
+# I2C1 SDA  G25
+# I2C1 SCL  G21
+# UART0 RX  G3
+# UART0 TX  G1
+# UART1 RX  G23
+# UART1 TX  G33
+# 1-WIRE    G22
+# NC        G19
+
+modbus:
+  uart_id: uart_modbus
+
+uart:
+  - id: uart_modbus
+    rx_pin: 26
+    tx_pin: 32
+    baud_rate: 9600
+    stop_bits: 2
+    # debug:
+
+sensor:
+  # - platform: template
+  #   name: "${name_1} Total Daily Energy"
+  #   id: mains_daily_energy
+  #   lambda: |-
+  #     return (id(mains_l1_total_daily_energy).state + id(mains_l3_total_daily_energy).state + id(mains_l3_total_daily_energy).state);
+  #   update_interval: 60s
+  # L1
+  - platform: pzemac
+    address: 10
+    id: pzemac_l1
+    current:
+      name: "${name_1} L1 Current"
+    voltage:
+      name: "${name_1} L1 Voltage"
+    energy:
+      name: "${name_1} L1 Energy"
+      id: mains_l1_energy
+    power:
+      name: "${name_1} L1 Power"
+      id: mains_l1_power
+    frequency:
+      name: "${name_1} L1 Frequency"
+    power_factor:
+      name: "${name_1} L1 Power Factor"
+    update_interval: 20s
+  # - platform: total_daily_energy
+  #   name: "${name_1} L1 Total Daily Energy"
+  #   power_id: mains_l1_power
+  #   id: mains_l1_total_daily_energy
+  #   filters:
+  #     - multiply: 0.001
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # - platform: integration
+  #   name: "${name_1} L1 Energy Meter" 
+  #   sensor: mains_l1_power
+  #   time_unit: h
+  #   filters:
+  #     - lambda: return x * (0.001) + 2282;
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # L2  
+  - platform: pzemac
+    address: 11
+    id: pzemac_l2
+    current:
+      name: "${name_1} L2 Current"
+    voltage:
+      name: "${name_1} L2 Voltage"
+    energy:
+      name: "${name_1} L2 Energy"
+      id: mains_l2_energy
+    power:
+      name: "${name_1} L2 Power"
+      id: mains_l2_power
+    frequency:
+      name: "${name_1} L2 Frequency"
+    power_factor:
+      name: "${name_1} L2 Power Factor"
+    update_interval: 20s
+  # - platform: total_daily_energy
+  #   name: "${name_1} L2 Total Daily Energy"
+  #   id: mains_l2_total_daily_energy
+  #   power_id: mains_l2_power
+  #   filters:
+  #     - multiply: 0.001
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # - platform: integration
+  #   name: "${name_1} L2 Energy Meter" 
+  #   sensor: mains_l2_power
+  #   time_unit: h
+  #   filters:
+  #     - lambda: return x * (0.001) + 2282;
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # L3
+  - platform: pzemac
+    address: 12
+    id: pzemac_l3
+    current:
+      name: "${name_1} L3 Current"
+    voltage:
+      name: "${name_1} L3 Voltage"
+    energy:
+      name: "${name_1} L3 Energy"
+      id: mains_l3_energy
+    power:
+      name: "${name_1} L3 Power"
+      id: mains_l3_power
+    frequency:
+      name: "${name_1} L3 Frequency"
+    power_factor:
+      name: "${name_1} L3 Power Factor"
+    update_interval: 20s
+  # - platform: total_daily_energy
+  #   name: "${name_1} L3 Total Daily Energy"
+  #   power_id: mains_l3_power
+  #   id: mains_l3_total_daily_energy
+  #   filters:
+  #     - multiply: 0.001
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # - platform: integration
+  #   name: "${name_1} L3 Energy Meter" 
+  #   sensor: mains_l3_power
+  #   time_unit: h
+  #   filters:
+  #     - lambda: return x * (0.001) + 2282;
+  #   unit_of_measurement: kWh
+  #   icon: mdi:counter
+  # TOTAL: L1+L2+L3
+  - platform: template
+    name: "${name_1} Power"
+    id: "total_mains_power"
+    device_class: power
+    state_class: measurement
+    unit_of_measurement: W
+    accuracy_decimals: 1
+    lambda: |-
+      return id(mains_l1_power).state + id(mains_l2_power).state + id(mains_l3_power).state ;
+  # - platform: template
+  #   name: "${name_1} Total Daily Energy"
+  #   id: "mains_total_daily_energy"
+  #   icon: mdi:counter
+  #   device_class: energy
+  #   # state_class: measurement
+  #   state_class: total_increasing
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 1
+  #   lambda: |-
+  #     return id(mains_l1_total_daily_energy).state + id(mains_l2_total_daily_energy).state + id(mains_l3_total_daily_energy).state ;
+  - platform: template
+    name: "${name_1} Energy"
+    icon: mdi:counter
+    device_class: energy
+    state_class: total_increasing
+    unit_of_measurement: kWh
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.001
+    lambda: |-
+      return id(mains_l1_energy).state + id(mains_l2_energy).state + id(mains_l3_energy).state;
+
+button:
+  - platform: template
+    name: "${name_1} Energy Zero"
+    on_press:
+      - pzemac.reset_energy: pzemac_l1
+      - pzemac.reset_energy: pzemac_l2
+      - pzemac.reset_energy: pzemac_l3
+  
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+    on_time:
+      - cron: '0 0 0 * * *'
+        then:
+          - pzemac.reset_energy: pzemac_l1
+          - pzemac.reset_energy: pzemac_l2
+          - pzemac.reset_energy: pzemac_l3

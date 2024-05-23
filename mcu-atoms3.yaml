@@ -1,0 +1,423 @@
+substitutions:
+  device: atoms3
+  name: AtomS3
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platformio_options:
+    board_build.flash_mode: dio
+  # on_boot:
+  #   - priority: 800
+  #     then:
+  #       - lambda: |-
+  #           id(display_tft).enable();
+  #           id(display_tft).transfer_byte(0x11);
+  #           id(display_tft).disable();
+
+esp32:
+  board: esp32-s3-devkitc-1
+  # board: m5stack-atoms3
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    # version: dev
+    version: 5.1.2
+    platform_version: 6.5.0
+    # version: 5.2.1
+    # platform_version: 6.6.0
+    # type: arduino
+  
+animation:
+  - file: "blinky.gif"
+    id: blinky
+    resize: 128x128
+  - file: "vault_boy_walking.gif"
+    id: vaultboy
+    resize: 168x121
+
+network:
+  enable_ipv6: true
+
+logger:
+  logs:
+    component: ERROR 
+
+web_server:
+  port: 80
+  version: 3
+
+text:
+  - platform: template
+    name: "${name} Test Text"
+    # id: "it_2"
+    icon: "mdi:text"
+    optimistic: true
+    internal: false
+    initial_value: "Welcome ESPHOME"
+    restore_value: true
+    mode: text
+    # max_restore_data_length: 24
+
+# logger:
+#   hardware_uart: USB_SERIAL_JTAG
+
+external_components:
+  - source: github://pr#4786
+    components: m5stack4relay
+    refresh: 0s
+  - source: github://pr#5586
+    components: [ http_request ]
+  # - source: github://mknjc/esphome@ds248x
+  #   components: ds248x
+  # - source: github://bekriebel/esphome@sh1107_fix
+  #   components:
+  #     - ssd1306_base
+  #     - ssd1306_i2c
+  #     - ssd1306_spi
+  # - source: github://pr#5096
+  #   refresh: 0s
+  # - source: github://pr#3500
+  #   refresh: 0s
+  #   components:
+  #     - web_server
+  #     - web_server_idf
+  #     - web_server_base
+  #     - captive_portal
+
+ota:
+  - platform: http_request
+
+# web_server:
+# captive_portal:
+
+packages:
+  common: !include common/common.yaml
+  # common: !include common/common_wo_debug.yaml
+  # common: !include common/common_dev.yaml
+
+canbus:
+  - platform: esp32_can
+    rx_pin: 6
+    tx_pin: 5
+    can_id: 4
+    # bit_rate: 500kbps
+    bit_rate: 1000KBPS
+    use_extended_id: true
+    on_frame:
+    - can_id: 0x123
+      use_extended_id: true
+      then:
+      - lambda: |-
+          std::string b(x.begin(), x.end());
+          ESP_LOGD("can extended id 0x123", "%s", &b[0] );
+    - can_id: 0x123
+      then:
+      - lambda: |-
+          std::string b(x.begin(), x.end());
+          ESP_LOGD("can standard id 0x123", "%s", &b[0] );
+    - can_id: 0x3f1
+      can_id_mask: 0x7ff
+      use_extended_id: false
+      then:
+      - lambda: |-
+          std::string b(x.begin(), x.end());
+          ESP_LOGD("can id 0x03f1", "%s", &b[0] );
+    - can_id: 0x108
+      use_extended_id: false
+      then:
+      - lambda: |-
+          std::string b(x.begin(), x.end());
+          ESP_LOGD("can id 0x108", "%s", &b[0] );
+    - can_id: 0x109
+      use_extended_id: false
+      then:
+      - lambda: |-
+          std::string b(x.begin(), x.end());
+          ESP_LOGD("can id 0x109", "%s", &b[0] );
+
+i2c:
+  - id: i2c_groove
+    sda: 2
+    scl: 1
+    scan: true
+  - id: i2c_main
+    sda: 38
+    scl: 39
+    scan: true
+    frequency: 800kHz
+
+# mcp23017:
+#   - id: mcp23017_hub
+#     i2c_id: i2c_groove
+#     address: 0x20
+
+# ds248x:
+#   i2c_id: i2c_main
+#   address: 0x18 # should be the default
+#   # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
+#   active_pullup: true # adds a active pullup which should improve signal integrity
+#   strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
+#   bus_sleep: true # power down the bus when no transaction is in progres
+
+m5stack4relay:
+  id: m5stack_relay_1
+  i2c_id: i2c_groove
+
+# mqtt:
+#   id: mqtt_client
+#   broker: !secret mqtt_ip
+#   # broker: 10.10.10.10
+#   username: !secret mqtt_username
+#   password: !secret mqtt_password
+#   discovery: true
+
+# mdns:
+#   disabled: false
+
+# wifi:
+#   use_address: 10.17.240.52
+
+switch:
+  - platform: m5stack4relay
+    name: ${name} Relay 1
+    id: relay_1
+    channel: 1
+    interlock: &interlock_group_1 [relay_1, relay_2]
+    interlock_wait_time: 1s
+    m5stack4relay_id: m5stack_relay_1
+  - platform: m5stack4relay
+    name: ${name} Relay 2
+    id: relay_2
+    channel: 2
+    interlock: *interlock_group_1
+    interlock_wait_time: 1s
+    m5stack4relay_id: m5stack_relay_1
+  - platform: m5stack4relay
+    name: ${name} Relay 3
+    id: relay_3
+    channel: 3
+    interlock: &interlock_group_2 [relay_3, relay_4]
+    m5stack4relay_id: m5stack_relay_1
+  - platform: m5stack4relay
+    name: ${name} Relay 4
+    id: relay_4
+    channel: 4
+    interlock: *interlock_group_2
+    m5stack4relay_id: m5stack_relay_1
+
+spi:
+  clk_pin: 17
+  mosi_pin: 21
+
+binary_sensor:
+  - platform: gpio
+    name: ${name} Button
+    pin:
+      number: 41
+      inverted: true
+  - platform: status
+    id: system_status
+  # - platform: gpio
+  #   id: test_sensor_1
+  #   pin:
+  #     mcp23xxx: mcp23017_hub
+  #     number: 4
+  #     mode:
+  #       input: true
+  #       pullup: true
+  #     inverted: false
+  #   filters:
+  #     - delayed_on_off: 50ms #Debounce
+  # - platform: gpio
+  #   id: test_sensor_2
+  #   pin:
+  #     mcp23xxx: mcp23017_hub
+  #     number: 5
+  #     mode:
+  #       input: true
+  #       pullup: true
+  #     inverted: false
+  #   filters:
+  #     - delayed_on_off: 50ms #Debounce
+  # - platform: gpio
+  #   id: test_sensor_3
+  #   pin:
+  #     mcp23xxx: mcp23017_hub
+  #     number: 6
+  #     mode:
+  #       input: true
+  #       pullup: true
+  #     inverted: false
+  #   filters:
+  #     - delayed_on_off: 50ms #Debounce
+  # - platform: gpio
+  #   id: test_sensor_4
+  #   pin:
+  #     mcp23xxx: mcp23017_hub
+  #     number: 7
+  #     mode:
+  #       input: true
+  #       pullup: true
+  #     inverted: false
+  #   filters:
+  #     - delayed_on_off: 50ms #Debounce
+
+color:
+  - id: my_red
+    red: 100%
+    green: 0%
+    blue: 0%
+  - id: my_yellow
+    red: 100%
+    green: 100%
+    blue: 0%
+  - id: my_green
+    red: 0%
+    green: 100%
+    blue: 0%
+  - id: my_blue
+    red: 0%
+    green: 0%
+    blue: 100%
+  - id: my_gray
+    red: 50%
+    green: 50%
+    blue: 50%
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_default
+    size: 20
+  - file: "gfonts://Roboto"
+    id: roboto_32
+    size: 32
+  - file: "gfonts://Roboto"
+    id: roboto_24
+    size: 24
+  - file: "gfonts://Roboto"
+    id: roboto_12
+    size: 12
+
+display:
+  - platform: st7789v
+    id: display_tft
+    model: Custom
+    height: 128
+    width: 128
+    offset_height: 2
+    offset_width: 1
+    backlight_pin: 16
+    cs_pin: 15
+    dc_pin: 33
+    reset_pin: 34
+    eightbitcolor: true
+    update_interval: 1s
+    lambda: |-
+      //Ingress shown animation Frame.
+      id(blinky).next_frame();
+      // Draw the animation my_animation at position [x=0,y=0]
+      it.image(0, 0, id(blinky), COLOR_ON, COLOR_OFF);
+  
+      // // it.print(0, 0, id(font_default), "Hello World!");
+      // // it.strftime(0, 0, id(font_default), TextAlign::TOP_LEFT, "%H:%M", id(ha_time).now());
+      // it.rectangle(0,  0, it.get_width(), it.get_height(), id(my_blue));
+      // it.rectangle(0, 20, it.get_width(), it.get_height(), id(my_blue));   // header bar
+
+      // it.strftime((128 / 2), (128 / 3) * 1 + 5, id(roboto_24), id(my_gray), TextAlign::CENTER, "%Y-%m-%d", id(ha_time).now());
+      // it.strftime((128 / 2), (128 / 3) * 2 + 5, id(roboto_32), id(my_gray), TextAlign::CENTER, "%H:%M:%S", id(ha_time).now());
+      // it.print(5, 5, id(roboto_12), id(my_yellow), TextAlign::TOP_LEFT, "ESPHome");
+
+      // // Comment out the above lines to see the image without text overlaid
+      // // it.image(0, 0, id(my_image));
+
+      // if (id(system_status).state) {
+      //   it.print(115, 5, id(roboto_12), id(my_green), TextAlign::TOP_RIGHT, "Online");
+      // }
+      // else {
+      //   it.print(115, 5, id(roboto_12), id(my_red), TextAlign::TOP_RIGHT, "Offline");
+      // }
+
+  - platform: ssd1306_i2c
+    model: "SH1107 128x64"
+    # model: "SSD1306 128x64"
+    id: "lcd"
+    address: 0x3C
+    i2c_id: i2c_groove
+    rotation: 90
+    flip_x: false
+    flip_y: false
+    offset_y: 0
+    offset_x: 0
+    # lambda: |-
+    #   it.line(0, 0, 128, 64);
+    #   it.rectangle(5, 5, 10, 10);
+    #   it.circle(118, 54, 5);
+    #   it.rectangle(0, 0, 128, 64);
+
+sensor:
+  - platform: sht3xd
+    i2c_id: i2c_groove
+    address: 0x44
+    temperature:
+      name: "TEST Temperature"
+    humidity:
+      name: "TEST Humidity"
+    update_interval: 10s
+  - platform: mpu6886
+    address: 0x68
+    i2c_id: i2c_main
+    # accel_x:
+    #   name: "${name} MPU6886 Accel X"
+    # accel_y:
+    #   name: "${name} MPU6886 Accel Y"
+    # accel_z:
+    #   name: "${name} MPU6886 Accel z"
+    # gyro_x:
+    #   name: "${name} MPU6886 Gyro X"
+    # gyro_y:
+    #   name: "${name} MPU6886 Gyro Y"
+    # gyro_z:
+    #   name: "${name} MPU6886 Gyro z"
+    temperature:
+      name: "${name} Temperature"
+      id: blabla
+  - platform: homeassistant
+    id: test_humidity
+    entity_id: sensor.humidity_158d0001c2a1d1
+  # - platform: ds248x
+  #   address: 0x8b0516b39804ff28
+  #   name: "${name} Dallas Temp 1"
+  #   resolution: 12
+  # - platform: ds248x
+  #   address: 0xa50516b3d32aff28
+  #   name: "${name} Dallas Temp 2"
+  #   resolution: 12
+  # - platform: ds248x
+  #   address: 0x8f0516b39d87ff28
+  #   name: "${name} Dallas Temp 3"
+  #   resolution: 12
+  # - platform: ds248x
+  #   address: 0x810516b3c69fff28
+  #   name: "${name} Dallas Temp 4"
+  #   resolution: 12
+
+time:
+  - !include common/time/homeassistant.yaml
+  # - platform: sntp
+  #   id: sntp_time
+  #   timezone: Europe/Bratislava
+  #   servers:
+  #    - 0.pool.ntp.org
+  #    - 1.pool.ntp.org
+  #    - 2.pool.ntp.org
+
+esp32_ble_tracker:
+#   scan_parameters:
+#     interval: 1100ms
+#     window: 1100ms
+#     active: true
+
+bluetooth_proxy:
+  active: true

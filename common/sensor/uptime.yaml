@@ -1,0 +1,9 @@
+---
+platform: uptime
+name: ${name} Uptime
+unit_of_measurement: "days"
+accuracy_decimals: 2
+update_interval: 60s
+filters:
+  - lambda: return x / 86400;
+

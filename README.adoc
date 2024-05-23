@@ -1,0 +1,3 @@
+= My ESPHome Configs
+Roman Priesol <roman@priesol.net>
+It is a mess, don't use it!

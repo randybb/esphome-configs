@@ -1,0 +1,74 @@
+substitutions:
+  device: air-office-r
+  name: Office R Air Quality Monitor
+  name_short: Office R
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  # name_add_mac_suffix: true
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: arduino
+#     type: esp-idf
+
+external_components:
+  - source: components
+
+packages:
+  common: !include common/common.yaml
+  
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+i2c:
+  # - id: i2c0
+  sda: 32
+  scl: 33
+  scan: true #false
+  frequency: 100kHz
+  # - id: i2c1
+  # sda: 25
+  # scl: 22
+  # scan: true #false
+
+uart:
+  id: particle_uart
+  tx_pin: 21
+  rx_pin: 22
+  baud_rate: 9600
+
+# binary_sensor:
+#   - platform: gpio
+#     # name: ${name} Button
+#     pin:
+#       number: 39
+#       inverted: true
+
+light:
+  - platform: neopixelbus
+    type: GRB
+    pin: 27
+    variant: WS2812
+    num_leds: 1
+    # name: "${name} LED"
+    id: neo_buildin
+  # - platform: neopixelbus
+  #   type: GRB
+  #   pin: 25
+  #   variant: WS2812
+  #   num_leds: 5
+  #   # name: "${name} LED"
+  #   id: neo
+
+sensor:
+  - platform: pm1006
+    uart_id: particle_uart
+    update_interval: 20s
+    pm_2_5:
+      name: "${name_short} Particulate Matter 2.5µm Concentration"

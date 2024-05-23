@@ -1,0 +1,7 @@
+---
+platform: git_ref
+name: "${name} Git Ref"
+long: true
+all: true
+abbrev: 16
+dirty: "-dirty"

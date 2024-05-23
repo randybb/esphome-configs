@@ -1,0 +1,4 @@
+api:
+  encryption:
+    key: !secret api_key
+  reboot_timeout: 0s

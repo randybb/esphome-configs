@@ -1,0 +1,10 @@
+---
+wifi:
+  networks:
+    - ssid: TEST
+      password: test'test
+#  enable_btm: true
+#  enable_rrm: true
+  ap:
+    ssid: TEST
+    password: testtest

@@ -1,0 +1,72 @@
+substitutions:
+  device: rf433
+  name: RF433 Bridge
+  comment: "Ground floor, Kitchen: RF433 Gateway"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp01_1m
+
+packages:
+  common: !include common/common.yaml
+
+remote_receiver:
+  pin: 4
+  dump: rc_switch
+  filter: 100us
+  idle: 2ms
+  tolerance: 50%
+
+remote_transmitter:
+  pin: 5
+  carrier_duty_percent: 100%
+
+binary_sensor:
+# Key Fob remote
+# A: 011110110011101010100010
+# B: 011110110011101010101000
+# C: 011110110011101010100001
+# D: 011110110011101010100100
+  - platform: remote_receiver
+    name: "Keyfob Remote Button A"
+    rc_switch_raw:
+      code: '011110110011101010100010'
+      protocol: 1
+    filters:
+      - delayed_off: 500ms
+  - platform: remote_receiver
+    name: "Keyfob Remote Button B"
+    rc_switch_raw:
+      code: '011110110011101010101000'
+      protocol: 1
+    filters:
+      - delayed_off: 500ms
+  - platform: remote_receiver
+    name: "Keyfob Remote Button C"
+    rc_switch_raw:
+      code: '011110110011101010100001'
+      protocol: 1
+    filters:
+      - delayed_off: 500ms
+  - platform: remote_receiver
+    name: "Keyfob Remote Button D"
+    rc_switch_raw:
+      code: '011110110011101010100100'
+      protocol: 1
+    filters:
+      - delayed_off: 500ms
+
+status_led:
+  pin:
+    number: GPIO13
+    inverted: yes
+
+# switch:
+  # - platform: remote_transmitter
+  #   name: "Remote Fan Control"
+  #   rc_switch_raw:
+  #     code: '100000000001010000000010'
+  #     protocol: 1
+  #   repeat: 3

@@ -1,0 +1,67 @@
+substitutions:
+  device: staircase-light
+  name: Staircase Light
+  comment: "Staircase"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp8266:
+  board: esp01_1m
+
+packages:
+  common: !include common/common.yaml
+
+# wifi:
+#   use_address: mcu-mini-04.local
+
+binary_sensor:
+  # - platform: gpio
+  #   pin:
+  #     number: GPIO4
+  #     mode: INPUT_PULLUP
+  #     inverted: yes
+  #   name: "${name} PIR"
+  #   device_class: motion
+    # filters:
+    #   invert:
+    # on_press:
+    #   # min_length: 50ms
+    #   # max_length: 350ms
+    #   then:
+    #     - switch.toggle: relay
+    # on_double_click:
+    #   # min_length: 50ms
+    #   # max_length: 350ms
+    #   then:
+    #     - switch.turn_on: relay
+    #     - light.turn_on: light_blue
+    #     - delay: 2h
+    #     - switch.turn_off: relay
+    #     - light.turn_off: light_blue
+  - platform: homeassistant
+    id: motion
+    entity_id: binary_sensor.zigbee_staircase_pir_motion
+    on_state:
+      if:
+        condition:
+          binary_sensor.is_off: motion
+        then:
+          - light.turn_off: light_relay
+
+output:
+  - platform: gpio
+    pin: GPIO13
+    id: led_blue
+    inverted: True
+  - platform: gpio
+    pin: GPIO12
+    id: relay
+
+light:
+  - platform: binary
+    name: "${name}"
+    id: light_relay
+    output: relay
+    restore_mode: ALWAYS_ON

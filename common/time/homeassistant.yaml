@@ -1,0 +1,4 @@
+---
+platform: homeassistant
+id: ha_time
+timezone: Europe/Bratislava

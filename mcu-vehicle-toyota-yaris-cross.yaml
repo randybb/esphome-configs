@@ -1,0 +1,133 @@
+substitutions:
+  device: vehicle-toyota-yaris-cross
+  name: Vehicle Toyota Yaris Cross
+  comment: "BEACON | Toyota Yaris Cross"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  on_loop:
+    then:
+      lambda: |-
+        static uint32_t last_state = 0;
+        auto state = App.get_app_state();
+        if (state != last_state) {
+          if (state & STATUS_LED_ERROR) {
+            auto call = id(led).turn_on();
+            call.set_effect("ERROR");
+            call.perform();
+          } else if (state & STATUS_LED_WARNING) {
+            auto call = id(led).turn_on();
+            call.set_effect("BOOT");
+            call.perform();
+          } else {
+            //auto call = id(led).turn_off();
+            //call.perform();
+            auto call = id(led).turn_on();
+            call.set_effect("BEACON");
+            call.perform();
+          }
+          last_state = state;
+        }
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+api:
+  reboot_timeout: 0s
+
+wifi:
+  reboot_timeout: 0s
+
+external_components:
+  - source: components
+
+packages:
+  common: !include common/logger.yaml
+  # common: !include common/common.yaml
+  
+# debug:
+
+# PINOUTS: M5ATOM
+# IR        G12
+# NEO       G27
+# BUTTON    G39
+# I2C0 SDA  G26
+# I2C0 SCL  G32
+# I2C1 SDA  G25
+# I2C1 SCL  G21
+# UART0 RX  G3
+# UART0 TX  G1
+# UART1 RX  G23
+# UART1 TX  G33
+# 1-WIRE    G22
+# NC        G19
+
+esp32_ble_beacon:
+  type: iBeacon
+  uuid: !secret ble_beacon_toyota_yaris_uuid
+  major: !secret ble_beacon_toyota_yaris_major
+  minor: !secret ble_beacon_toyota_yaris_minor
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: "${name} LED"
+    id: led
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      - strobe:
+          name: "BEACON"
+          colors:
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 200ms
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 10s
+      - lambda:
+          name: "ERROR"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(1, 0, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;
+      - lambda:
+          name: "BOOT"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(0, 1, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;

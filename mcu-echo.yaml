@@ -1,0 +1,171 @@
+substitutions:
+  device: echo
+  name: Echo
+  name_short: Echo
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: arduino
+    # type: esp-idf
+    # version: 5.1.2
+    # platform_version: 6.5.0
+
+external_components:
+  - source: components
+  # - source:
+  #     type: git
+  #     url: https://github.com/gnumpi/esphome_audio
+  #     ref: dev-next
+  #   components: [ adf_pipeline, i2s_audio ]
+  #   refresh: 0s
+
+packages:
+  common: !include common/common.yaml
+
+# api:
+  # services:
+  #   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+  #   - service: play_rtttl
+  #     variables:
+  #       song: string
+  #     then:
+  #       - rtttl.play:
+  #           rtttl: !lambda 'return song;'
+
+i2c:
+  sda: 32
+  scl: 26
+  scan: true #false
+  frequency: 100kHz
+
+binary_sensor:
+  # - platform: gpio
+  #   name: ${name} On-Board Button
+  #   id: button_buildin
+  #   pin:
+  #     number: 39
+  #     inverted: true
+  - platform: gpio
+    name: ${name} Button
+    id: button_ext
+    pin:
+      number: 12
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_click:
+      - media_player.toggle: media_out
+
+light:
+  # - platform: neopixelbus
+  #   type: GRB
+  #   pin: 27
+  #   variant: WS2812
+  #   num_leds: 1
+  #   name: "${name} On-Board LED"
+  #   id: neo_buildin
+  - platform: rgb
+    name: "${name} Light"
+    id: led_light
+    red: led_red
+    green: led_green
+    blue: led_blue
+  - platform: status_led
+    id: led_status
+    pin:
+      number: 23
+      allow_other_uses: true
+
+output:
+  - platform: ledc
+    id: led_red
+    pin: 21
+  - platform: ledc
+    id: led_green
+    pin: 25
+  - platform: ledc
+    id: led_blue
+    pin:
+      number: 23
+      allow_other_uses: true
+
+# i2s_audio:
+#   - id: i2s_out
+#     i2s_lrclk_pin: 33
+#     i2s_bclk_pin: 19
+
+# adf_pipeline:
+#   - platform: i2s_audio
+#     type: audio_out
+#     id: adf_i2s_out
+#     i2s_audio_id: i2s_out
+#     i2s_dout_pin: 22
+
+# media_player:
+#   - platform: adf_pipeline
+#     keep_pipeline_alive: true
+#     id: media_out
+#     name: ${name} Player
+#     on_play:
+#       - light.turn_on: led_light
+#     on_idle:
+#       - light.turn_off: led_light
+#     pipeline:
+#       - self
+#       - adf_i2s_out
+
+
+i2s_audio:
+  i2s_lrclk_pin: 33
+  i2s_bclk_pin: 19
+
+media_player:
+  - platform: i2s_audio
+    id: media_out
+    name: ${name} Player
+    dac_type: external
+    i2s_dout_pin:
+      number: 22
+      # allow_other_uses: true
+    mode: mono
+    on_play:
+      - light.turn_on: led_light
+    on_idle:
+      - light.turn_off: led_light
+
+# speaker:
+#   - platform: i2s_audio
+#     id: echo_speaker
+#     dac_type: external
+#     i2s_dout_pin:
+#       number: 22
+#       allow_other_uses: true
+#     mode: mono
+
+# rtttl:
+#   id: my_rtttl
+#   speaker: echo_speaker
+
+# microphone:
+#   - platform: i2s_audio
+#     i2s_din_pin: 23
+
+# http_request:
+#   useragent: esphome/${device}
+#   timeout: 5s
+  
+# # Example configuration entry
+# interval:
+#   - interval: 1min
+#     then:
+#       # - script.execute: say_hello_server
+#       - http_request.get: 
+#           url: https://esphome.io
+#           verify_ssl: false

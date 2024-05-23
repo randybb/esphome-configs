@@ -1,0 +1,59 @@
+substitutions:
+  device: office-r
+  name: Office R
+  comment: "MS Teams presence"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platformio_options:
+    board_build.flash_mode: dio
+
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    # type: arduino
+    # version: 2.0.14
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+packages:
+  common: !include common/common.yaml
+
+# GPIO21   UART TX
+# GPIO20   UART RX
+# GPIO0   I2C SDA
+# GPIO1   I2C SCL
+# GPIO2  NEO
+# GPIO3  BUTTON
+
+light:
+  - platform: rgb
+    name: "MS Teams Presence Light"
+    red: led_red
+    green: led_green
+    blue: led_blue
+    effects:
+      - pulse:
+      - pulse:
+          name: "Fast Pulse"
+          transition_length: 1s
+          update_interval: 1s
+      - pulse:
+          name: "Slow Pulse"
+          transition_length: 2s      # defaults to 1s
+          update_interval: 2s
+
+output:
+  - platform: ledc
+    id: led_red
+    pin: 4
+  - platform: ledc
+    id: led_green
+    pin: 5
+  - platform: ledc
+    id: led_blue
+    pin: 6

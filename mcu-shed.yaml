@@ -1,0 +1,108 @@
+substitutions:
+  device: shed
+  name: Shed
+  comment: "Outside, Shed: Irrigation B"
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+
+packages:
+  common: !include common/common.yaml
+
+i2c:
+  sda: 25
+  scl: 21
+  scan: true
+
+pca9554:
+  - id: pca9554_module
+    address: 0x27
+
+binary_sensor:
+  - platform: gpio
+    id: btn
+    pin:
+      pca9554: pca9554_module
+      number: 6
+      inverted: true
+    on_click:
+    - min_length: 50ms
+      max_length: 350ms
+      then:
+        - switch.toggle: shed_light_relay
+    - min_length: 351ms
+      max_length: 1000ms
+      then:
+        - switch.toggle: garden_light_relay
+    - min_length: 1001ms
+      max_length: 10000ms
+      then:
+        - switch.toggle: socket_relay
+
+switch:
+  - platform: gpio
+    name: "Irrigation Valve B1"
+    id: irrigation_relay_1
+    interlock: &interlock_group [irrigation_relay_1, irrigation_relay_2, irrigation_relay_3, irrigation_relay_4]
+    pin:
+      pca9554: pca9554_module
+      number: 0
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "Irrigation Valve B2"
+    id: irrigation_relay_2
+    interlock: *interlock_group
+    pin:
+      pca9554: pca9554_module
+      number: 1
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "Irrigation Valve B3"
+    id: irrigation_relay_3
+    interlock: *interlock_group
+    pin:
+      pca9554: pca9554_module
+      number: 2
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "Irrigation Valve B4"
+    id: irrigation_relay_4
+    interlock: *interlock_group
+    pin:
+      pca9554: pca9554_module
+      number: 3
+      mode: OUTPUT
+      inverted: true
+  - platform: gpio
+    name: "${name} Socket"
+    id: socket_relay
+    pin:
+      pca9554: pca9554_module
+      number: 4
+      mode: OUTPUT
+  - platform: gpio
+    name: "Garden Light"
+    id: garden_light_relay
+    pin:
+      number: 22
+      mode: OUTPUT
+  - platform: gpio
+    name: "${name} Light"
+    id: shed_light_relay
+    pin:
+      number: 19
+      mode: OUTPUT
+
+time:
+  - !include common/time/homeassistant.yaml

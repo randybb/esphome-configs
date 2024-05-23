@@ -1,0 +1,143 @@
+substitutions:
+  device: desk-lamp
+  name: Mi Desk Lamp
+  comment: ""
+
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+  
+packages:
+  common: !include common/common.yaml
+
+# Mi Desk Lamp
+# Pin 	  Function (Name)
+# GPIO18: Warm White (GPIO_PWM2)
+# GPIO19: Cold White (GPIO_PWM1)
+# GPIO21: Rotary switch A pin (GPIO_ROT_A)
+# GPIO26: Rotary switch B pin (GPIO_ROT_B)
+# GPIO36: Button (GPIO_KEY1)
+
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 36
+      inverted: yes
+    id: rotary_button
+    # filters:
+    #   invert:
+    on_click:
+      - light.toggle: mi_desk_light
+    # on_double_click:
+    #   - switch.toggle: relay_2
+
+light:
+  - platform: cwww
+    name: "${name} Light"
+    id: mi_desk_light
+    gamma_correct: 1
+    default_transition_length: 100ms
+    restore_mode: ALWAYS_OFF
+    cold_white: cold_white
+    warm_white: warm_white
+    cold_white_color_temperature: 153 mireds
+    warm_white_color_temperature: 370 mireds
+
+output:
+  - platform: ledc
+    pin: 18
+    max_power: 0.85
+    id: warm_white
+  - platform: ledc
+    pin: 19
+    max_power: 0.85
+    id: cold_white
+
+sensor:
+  - platform: rotary_encoder
+    id: rotary
+    pin_a: 21
+    pin_b: 26
+    resolution: "2"
+    # min_value: 128
+    # max_value: 255
+    # on_value:
+    #   - while:
+    #     condition:
+    #       binary_sensor.is_off: button
+    #     then:
+    #       - light.dim_relative:
+    #         id: mi_desk_light
+    #         relative_brightness: 5%
+    #         transition_length: 0.1s
+    #       - delay: 0.1s
+    # filters:
+    #   - or:
+    #     - debounce: 0.1s
+    #     - delta: 10
+    #   - lambda: |-
+    #       if (x < 0.0) return 0.0;
+    #       if (x > 255.0) return 255.0;
+    #       return x;
+    # on_value:
+    #   then:
+    #     # - output.set_level:
+    #     #     id: warm_white
+    #     #     level: !lambda "return x/256.0;"
+    #     - output.set_level:
+    #         id: warm_white
+    #         level: !lambda |-
+    #           return x / 255;
+    on_value:
+      then:
+        - lambda: |-
+            float brightness;
+            float temp = id(mi_desk_light).remote_values.get_color_temperature();
+            auto call = id(mi_desk_light).turn_on();
+            id(mi_desk_light).remote_values.as_brightness( &brightness );
+
+            // positive rotation
+            if (id(rotary).state > 0) {
+              // 
+              if (id(rotary_button).state) {
+                temp -= 5.0f;
+              } else {
+                brightness -= 0.05f;
+              }
+              id(rotary).set_value(0);
+            // negative rotation
+            } else if (id(rotary).state < 0) {
+              if (id(rotary_button).state) {
+                temp += 5.0f;
+              } else {
+                brightness += 0.05f;
+              }
+              id(rotary).set_value(0);
+            }
+
+            // out of bounds check for brightness
+            if (brightness < 0.1f) {
+              brightness = 0.1f;
+            } else if (brightness > 1.0f) {
+              brightness = 1.0f;
+            }
+
+            // out of bounds check for color temp
+            if (temp < 153.0f) {
+              temp = 153.0f;
+            } else if (temp > 370.0f) {
+              temp = 370.0f;
+            }
+
+            // apply new settings
+            call.set_brightness(brightness);
+            call.set_color_temperature(temp);
+            call.perform();

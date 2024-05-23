@@ -1,0 +1,21 @@
+---
+<<: !include wifi.yaml
+<<: !include api.yaml
+<<: !include ota.yaml
+<<: !include logger.yaml
+
+#binary_sensor:
+#  - <<: !include binary_sensor/status.yaml
+
+#button:
+#  - <<: !include button/restart.yaml
+#  - <<: !include switch/safe_mode.yaml
+#  - <<: !include switch/shutdown.yaml
+
+#sensor:
+#  - <<: !include sensor/uptime.yaml
+#  - <<: !include sensor/wifi_signal.yaml
+
+#text_sensor:
+#  - <<: !include text_sensor/version.yaml
+#  - <<: !include text_sensor/wifi_info.yaml

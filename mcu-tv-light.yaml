@@ -1,0 +1,78 @@
+substitutions:
+  device: tv-light
+  name: TV Light
+  comment: "Ground floor, Living room: TV Rack Light"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  platform: ESP8266
+  board: esp8285
+
+packages:
+  common: !include common/common.yaml
+  
+# Module type 	18 Generic 	Module type
+# D2 GPIO4 	51 IRRecv 	IR Remote (optional, view console for debugging!)
+# D1 GPIO5 	38 PWM2 	BLUE
+# D6 GPIO12 	37 PWM1 	RED
+# D7 GPIO13 	39 PWM3 	GREEN
+# D8 GPIO15 	40 PWM4 	WHITE
+
+## H801 LED module
+# Function 	Pin 	  Channel
+# R 	      GPIO15 	PWM1
+# G 	      GPIO13 	PWM2
+# B 	      GPIO12 	PWM3
+# W1 	      GPIO14 	PWM4
+# W2 	      GPIO04 	PWM5
+# LED D1 R 	GPIO05 	
+# LED D2 G 	GPIO01
+
+light:
+  - platform: status_led
+    id: status_led_id
+    pin: 5
+  # - platform: rgbww
+  #   name: "${name}"
+  #   red: pwm_red
+  #   green: pwm_green
+  #   blue: pwm_blue
+  #   cold_white: pwm_cold_white
+  #   warm_white: pwm_warm_white
+  #   cold_white_color_temperature: 6536 K
+  #   warm_white_color_temperature: 2000 K
+  - platform: monochromatic
+    name: "${name}"
+    output: pwm_cold_white
+    effects:
+      - flicker:
+          name: Flicker
+          alpha: 95%
+          intensity: 1.5%
+      - strobe:
+          name: Slow Strobe
+      - strobe:
+          name: Fast Strobe
+          colors: 
+            - state: true
+              duration: 100ms
+            - state: false
+              duration: 100ms
+
+output:
+  - platform: esp8266_pwm
+    id: pwm_blue
+    pin: GPIO12
+  - platform: esp8266_pwm
+    id: pwm_red
+    pin: GPIO15
+  - platform: esp8266_pwm
+    id: pwm_green
+    pin: GPIO13
+  - platform: esp8266_pwm
+    id: pwm_cold_white
+    pin: GPIO14
+  - platform: esp8266_pwm
+    id: pwm_warm_white
+    pin: GPIO04

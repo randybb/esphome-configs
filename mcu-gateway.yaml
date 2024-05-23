@@ -1,0 +1,216 @@
+substitutions:
+  device: gateway
+  name: Gateway
+  comment: "DEV | BLE Proxy, Modbus"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: esp32doit-devkit-v1
+  framework:
+    #type: arduino
+    type: esp-idf
+
+# external_components:
+  # - source: github://pr#4062
+  #   components: ethernet
+  # - source: github://pr#4080
+  #   components: [lcd_pcf8574, lcd_base]
+  # - source: github://pr#3564
+  #   refresh: 0s
+  #   components: 
+  #     - esp32
+  #     - ethernet_info
+  #     - ethernet
+  #     # - wifi
+  # - source: github://pr#2112
+  #   components: ["m5stack_4relay"]
+  #   refresh: 1h
+  # - source: components
+
+packages:
+  # common: !include common/common.yaml
+  common_eth: !include common/common_eth.yaml
+
+## UEXT
+#    3V3    1 2   GND
+#  GPIO4    3 4   GPIO36  U1TXD/U1RXD
+# GPIO16    5 6   GPIO13  I2C-SCL/I2C-SDA
+# GPIO15    7 8   GPIO2   HS2_CMD/HS2_DATA0
+# GPIO14    9 10  GPIO5   HS2_CLK/SPI_CS
+#
+# SD/MMC; shared with UEXT, no CS!!!
+# GPIO15  HS2_CMD
+# GPIO14  HS2_CLK
+# GPIO2   HS2_DATA0
+
+# GPIO34  BUT1
+# GPIO35  Battery Measurment ADC
+# GPIO39  Ext Power Sense ADC
+
+i2c:
+  sda: 13
+  scl: 16
+  scan: true
+
+# ethernet:
+#   type: LAN8720
+#   mdc_pin: 23
+#   mdio_pin: 18
+#   clk_mode: GPIO17_OUT
+#   phy_addr: 0
+#   power_pin: 12
+  # use_address: 10.17.240.245
+
+  # # Optional manual IP
+  # manual_ip:
+  #   static_ip: 10.17.240.254
+  #   gateway: 10.17.240.1
+  #   subnet: 255.255.255.0
+
+uart:
+  id: uart_modbus
+  tx_pin: 4
+  rx_pin: 36
+  baud_rate: 9600
+  # stop_bits: 1
+  # data_bits: 8
+  # parity: NONE
+  # debug:
+
+modbus:
+  id: modbus_id
+
+modbus_controller:
+  - id: modbus_temp_1
+    address: 101
+    modbus_id: modbus_id
+    # update_interval: 10s
+  - id: modbus_temp_2
+    address: 102
+    modbus_id: modbus_id
+    # update_interval: 10s
+  - id: modbus_adc_1
+    address: 1
+    modbus_id: modbus_id
+    update_interval: 10s
+
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: modbus_temp_1
+    id: temp_1
+    name: "${name} Temperature 1"
+    address: 0
+    unit_of_measurement: "°C"
+    register_type: read
+    value_type: U_WORD
+    accuracy_decimals: 1
+    register_count: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: modbus_temp_1
+    id: hum_1
+    name: "${name} Humidity 1"
+    address: 1
+    unit_of_measurement: "%"
+    register_type: read
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: modbus_temp_2
+    id: temp_2
+    name: "${name} Temperature 2"
+    address: 0
+    unit_of_measurement: "°C"
+    register_type: read
+    value_type: U_WORD
+    accuracy_decimals: 1
+    register_count: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: modbus_temp_2
+    id: hum_2
+    name: "${name} Humidity 2"
+    address: 1
+    unit_of_measurement: "%"
+    register_type: read
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  # - platform: bmp085
+  #   temperature:
+  #     name: "BMP180 Temperature"
+  #   pressure:
+  #     name: "BMP180 Pressure"
+  #   address: 0x77
+  #   update_interval: 60s
+  # - platform: bme280
+  #   temperature:
+  #     name: "BME280 Temperature"
+  #     oversampling: 16x
+  #   pressure:
+  #     name: "BME280 Pressure"
+  #   humidity:
+  #     name: "BME280 Humidity"
+  #   address: 0x76
+  #   update_interval: 60s
+  - platform: modbus_controller
+    modbus_controller_id: modbus_adc_1
+    id: adc_1_1
+    name: "Solar Pressure"
+    address: 0
+    unit_of_measurement: "MPa"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    register_count: 2
+    filters:
+      - calibrate_linear:
+        - 50 -> 0
+        - 450 -> 5
+
+switch:
+- platform: modbus_controller
+  modbus_controller_id: modbus_adc_1
+  name: "Readress MODBUS"
+  register_type: holding
+  address: 0x00FD
+  entity_category: config
+  icon: "mdi:toggle-switch"
+
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1100ms
+    window: 1100ms
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 34
+      inverted: true
+    id: user_button
+    on_press:
+      then:
+        - button.press: safe
+
+button:
+  - platform: safe_mode
+    id: safe
+
+# display:
+#   - platform: lcd_pcf8574
+#     dimensions: 20x4
+#     address: 0x27
+#     lambda: |-
+#       it.print(0, 3, "10°C or 10~C");

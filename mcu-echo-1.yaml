@@ -1,0 +1,149 @@
+substitutions:
+  device: echo-1
+  name: Echo 1
+  name_short: Echo 1
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: arduino
+    version: 2.0.14
+    platform_version: 6.5.0
+    # type: esp-idf
+    # version: 5.1.2
+    # platform_version: 6.5.0
+    
+
+external_components:
+  - source: components
+  # - source: 
+  #     type: git
+  #     url: https://github.com/nielsnl68/esphome
+  #     ref: nvds-RTTTL_I2S
+  #   components: [ speaker, rtttl ]
+  #   refresh: 0s
+  - source: github://pr#5177
+    components: [ rtttl ]
+    refresh: 0s
+
+packages:
+  common: !include common/common.yaml
+
+api:
+  services:
+    # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+
+# i2c:
+#   sda: 32
+#   scl: 26
+#   scan: true #false
+#   frequency: 100kHz
+
+# uart:
+#   id: particle_uart
+#   tx_pin: 21
+#   rx_pin: 22
+#   baud_rate: 9600
+
+binary_sensor:
+  - platform: gpio
+    name: ${name} Button
+    pin:
+      number: 39
+      inverted: true
+    # on_press:
+    #   - voice_assistant.start:
+    # on_release:
+    #   - voice_assistant.stop:
+    on_double_click:
+      - logger.log: Button Pressed
+      - rtttl.play: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"
+
+light:
+  # - platform: status_led
+  #   id: status_led_id
+  #   output: status_led_output
+  - platform: esp32_rmt_led_strip
+    name: "${name} LED"
+    id: neo_buildin
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812
+
+# output:
+#   - platform: template
+#     id: status_led_output
+#     type: binary
+#     write_action:
+#       - if:
+#           condition:
+#              lambda: return state > 0;
+#           then:
+#             - light.turn_on: 
+#                 id: neo_buildin
+#                 red: 1.0
+#                 green: 0.0
+#                 blue: 0.0
+#                 brightness: 100%
+#           else:
+#             - light.turn_off: 
+#                 id: neo_buildin
+#                 # green: 0.0
+#                 # red: 0.0
+#                 # blue: 0.0
+#                 # brightness: 30%
+
+i2s_audio:
+    i2s_lrclk_pin: 33
+    i2s_bclk_pin: 19
+
+media_player:
+  - platform: i2s_audio
+    id: media_out
+    name: ${name} Player
+    dac_type: external
+    i2s_dout_pin:
+      number: 22
+      allow_other_uses: true
+    mode: mono
+
+speaker:
+  - platform: i2s_audio
+    id: echo_speaker
+    dac_type: external
+    i2s_dout_pin:
+      number: 22
+      allow_other_uses: true
+    mode: mono
+
+rtttl:
+  id: my_rtttl
+  speaker: echo_speaker
+  
+microphone:
+  - platform: i2s_audio
+    id: echo_microphone
+    i2s_din_pin: 23
+    adc_type: external
+    pdm: true
+
+# voice_assistant:
+#   microphone: echo_microphone
+#   on_tts_end:
+#     - media_player.play_media:
+#         id: media_out
+#         media_url: !lambda |-
+#           return x;
