@@ -104,12 +104,14 @@ select:
         - lambda: |-
             switch (i) {
               case 0: {
+                id(blower_auto) = false;
                 id(relay_1).turn_on();
               } break;
               case 1: {
-                //;
+                id(blower_auto) = true;
               } break;
               case 2:
+                id(blower_auto) = false;
                 id(relay_1).turn_off();
             }
       
