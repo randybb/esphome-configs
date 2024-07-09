@@ -107,8 +107,7 @@ binary_sensor:
     id: ibeacon_auris
     ibeacon_uuid: !secret ble_beacon_toyota_auris_uuid
     name: "Vehicle iBeacon Auris"
-    # filters:
-    #   - delayed_off: 30s
+    timeout: 2min
     on_press:
       - if:
           condition:
@@ -135,6 +134,7 @@ binary_sensor:
     id: ibeacon_yaris
     ibeacon_uuid: !secret ble_beacon_toyota_yaris_uuid
     name: "Vehicle iBeacon Yaris"
+    timeout: 2min
     on_press:
       - if:
           condition:
@@ -161,6 +161,7 @@ binary_sensor:
     id: ibeacon_pcx125
     ibeacon_uuid: !secret ble_beacon_honda_uuid
     name: "Vehicle iBeacon Honda PCX125"
+    timeout: 2min
     on_press:
       - if:
           condition:
@@ -187,6 +188,7 @@ binary_sensor:
     id: ibeacon_dl650
     ibeacon_uuid: !secret ble_beacon_suzuki_uuid
     name: "Vehicle iBeacon Suzuki DL650"
+    timeout: 2min
     on_press:
       - if:
           condition:
@@ -279,30 +281,3 @@ select:
      - Closing
     initial_option: Closed
     optimistic: true
-#     set_action:
-#       - lambda: |-
-#           // Update the text sensor state
-#           id(gate_state).publish_state(x);
-
-#           // Update the cover state
-#           if (x == "Opening") {
-#             id(gate_cover).current_operation = COVER_OPERATION_OPENING;
-#           } else if (x == "Closing") {
-#             id(gate_cover).current_operation = COVER_OPERATION_CLOSING;
-#           } else {
-#             id(gate_cover).current_operation = COVER_OPERATION_IDLE;
-#           }
-#           id(gate_cover).publish_state();
-
-# cover:
-#   - platform: template
-#     id: gate_cover
-#     name: "Gate"
-#     device_class: gate
-#     lambda: |-
-#       if (id(gate_state).state == "Closed") {
-#         return COVER_CLOSED;
-#       } else {
-#         return COVER_OPEN;
-#       }
-#     optimistic: true
