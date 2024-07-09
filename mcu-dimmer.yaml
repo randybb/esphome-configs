@@ -32,7 +32,8 @@ esp32:
   framework:
     type: arduino
     version: 2.0.14
-    platform_version: 6.5.0
+    # version: 5.1.2
+    platform_version: 6.6.0
     # type: esp-idf
 
 external_components:

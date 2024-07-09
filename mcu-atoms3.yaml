@@ -23,12 +23,12 @@ esp32:
   framework:
     type: esp-idf
     # version: dev
-    version: 5.1.2
-    platform_version: 6.5.0
-    # version: 5.2.1
+    # version: 5.1.2
     # platform_version: 6.6.0
+    version: 5.2.1
+    platform_version: 6.6.0
     # type: arduino
-  
+
 animation:
   - file: "blinky.gif"
     id: blinky
@@ -67,8 +67,14 @@ external_components:
   - source: github://pr#4786
     components: m5stack4relay
     refresh: 0s
-  - source: github://pr#5586
-    components: [ http_request ]
+  # - source: github://pr#5586
+  #   components: [ http_request ]
+  - source:
+      type: git
+      url: https://github.com/ssieb/esphome
+      ref: onewire
+    components: [ gpio ]
+    refresh: 1min
   # - source: github://mknjc/esphome@ds248x
   #   components: ds248x
   # - source: github://bekriebel/esphome@sh1107_fix
@@ -86,8 +92,8 @@ external_components:
   #     - web_server_base
   #     - captive_portal
 
-ota:
-  - platform: http_request
+# ota:
+#   - platform: http_request
 
 # web_server:
 # captive_portal:
@@ -138,10 +144,10 @@ canbus:
           ESP_LOGD("can id 0x109", "%s", &b[0] );
 
 i2c:
-  - id: i2c_groove
-    sda: 2
-    scl: 1
-    scan: true
+  # - id: i2c_groove
+  #   sda: 2
+  #   scl: 1
+  #   scan: true
   - id: i2c_main
     sda: 38
     scl: 39
@@ -150,7 +156,7 @@ i2c:
 
 # mcp23017:
 #   - id: mcp23017_hub
-#     i2c_id: i2c_groove
+#     i2c_id: i2c_main
 #     address: 0x20
 
 # ds248x:
@@ -161,9 +167,17 @@ i2c:
 #   strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
 #   bus_sleep: true # power down the bus when no transaction is in progres
 
+one_wire:
+  - platform: gpio
+    pin: 1
+    id: hub_1
+  # - platform: gpio
+  #   pin: 2
+  #   id: hub_2
+
 m5stack4relay:
   id: m5stack_relay_1
-  i2c_id: i2c_groove
+  i2c_id: i2c_main
 
 # mqtt:
 #   id: mqtt_client
@@ -344,7 +358,7 @@ display:
     # model: "SSD1306 128x64"
     id: "lcd"
     address: 0x3C
-    i2c_id: i2c_groove
+    i2c_id: i2c_main
     rotation: 90
     flip_x: false
     flip_y: false
@@ -358,7 +372,7 @@ display:
 
 sensor:
   - platform: sht3xd
-    i2c_id: i2c_groove
+    i2c_id: i2c_main
     address: 0x44
     temperature:
       name: "TEST Temperature"
@@ -402,6 +416,25 @@ sensor:
   #   address: 0x810516b3c69fff28
   #   name: "${name} Dallas Temp 4"
   #   resolution: 12
+  - platform: dallas_temp
+    address: 0xdb041750eae2ff28
+    name: "${name} Dallas Temp 1"
+    one_wire_id: hub_1
+    update_interval: 10s
+  - platform: dallas_temp
+    address: 0xb2041750cf1aff28
+    name: "${name} Dallas Temp 2"
+    one_wire_id: hub_1
+    update_interval: 30s
+  - platform: dallas_temp
+    address: 0xcd01191eb8b07128
+    name: "${name} Dallas Temp 3"
+    one_wire_id: hub_1
+    update_interval: 45s
+  - platform: dallas_temp
+    address: 0x5a01191ef3375b28
+    name: "${name} Dallas Temp 4"
+    one_wire_id: hub_1
 
 time:
   - !include common/time/homeassistant.yaml

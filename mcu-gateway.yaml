@@ -10,7 +10,8 @@ esphome:
 esp32:
   board: esp32doit-devkit-v1
   framework:
-    #type: arduino
+    version: 5.1.2
+    platform_version: 6.6.0
     type: esp-idf
 
 # external_components:
