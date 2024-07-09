@@ -121,6 +121,8 @@ api:
 # to 100%), the light will flash red when the upgrade fails or green when the
 # upgrade succeeds.
 ota:
+  platform: esphome
+  password: !secret ota_password
   on_begin:
     then:
       - light.disco_on:
