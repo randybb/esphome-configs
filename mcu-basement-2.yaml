@@ -12,7 +12,7 @@ esphome:
 
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
   
 # Sonoff Dual R2
 # GPIO10	Push Button

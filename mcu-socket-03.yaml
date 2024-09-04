@@ -20,7 +20,7 @@ esphome:
   board: esp01_1m
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
 
 # BlitzWolf BW-SHP2 and BW-SHP6 (ESP8285 - BL0937 or HJL-01 Energy Monitoring)
 # Pin 	  Name              Function

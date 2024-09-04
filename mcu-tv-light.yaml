@@ -10,7 +10,7 @@ esphome:
   board: esp8285
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
   
 # Module type 	18 Generic 	Module type
 # D2 GPIO4 	51 IRRecv 	IR Remote (optional, view console for debugging!)

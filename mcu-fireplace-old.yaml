@@ -13,7 +13,7 @@ esphome:
 #   use_address: mcu-fireplace.local
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
 
 dallas:
   - pin: 4

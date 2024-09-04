@@ -11,7 +11,7 @@ esp8266:
   board: esp01_1m
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
 
 # wifi:
 #   use_address: mcu-mini-04.local

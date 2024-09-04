@@ -22,7 +22,7 @@ esphome:
   #     - switch.turn_off: relay_5
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
   
 # api:
 #   services:
