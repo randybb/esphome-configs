@@ -37,9 +37,6 @@ animation:
     id: vaultboy
     resize: 168x121
 
-network:
-  enable_ipv6: true
-
 logger:
   logs:
     component: ERROR 
@@ -64,8 +61,8 @@ text:
 #   hardware_uart: USB_SERIAL_JTAG
 
 external_components:
-  - source: github://pr#4786
-    components: m5stack4relay
+  - source: github://pr#7234
+    components: m5stack_4relay
     refresh: 0s
   # - source: github://pr#5586
   #   components: [ http_request ]
@@ -175,7 +172,7 @@ one_wire:
   #   pin: 2
   #   id: hub_2
 
-m5stack4relay:
+m5stack_4relay:
   id: m5stack_relay_1
   i2c_id: i2c_main
 
@@ -194,32 +191,32 @@ m5stack4relay:
 #   use_address: 10.17.240.52
 
 switch:
-  - platform: m5stack4relay
+  - platform: m5stack_4relay
     name: ${name} Relay 1
     id: relay_1
     channel: 1
-    interlock: &interlock_group_1 [relay_1, relay_2]
-    interlock_wait_time: 1s
-    m5stack4relay_id: m5stack_relay_1
-  - platform: m5stack4relay
+    # interlock: &interlock_group_1 [relay_1, relay_2]
+    # interlock_wait_time: 1s
+    m5stack_4relay_id: m5stack_relay_1
+  - platform: m5stack_4relay
     name: ${name} Relay 2
     id: relay_2
     channel: 2
-    interlock: *interlock_group_1
-    interlock_wait_time: 1s
-    m5stack4relay_id: m5stack_relay_1
-  - platform: m5stack4relay
+    # interlock: *interlock_group_1
+    # interlock_wait_time: 1s
+    m5stack_4relay_id: m5stack_relay_1
+  - platform: m5stack_4relay
     name: ${name} Relay 3
     id: relay_3
     channel: 3
-    interlock: &interlock_group_2 [relay_3, relay_4]
-    m5stack4relay_id: m5stack_relay_1
-  - platform: m5stack4relay
+    # interlock: &interlock_group_2 [relay_3, relay_4]
+    m5stack_4relay_id: m5stack_relay_1
+  - platform: m5stack_4relay
     name: ${name} Relay 4
     id: relay_4
     channel: 4
-    interlock: *interlock_group_2
-    m5stack4relay_id: m5stack_relay_1
+    # interlock: *interlock_group_2
+    m5stack_4relay_id: m5stack_relay_1
 
 spi:
   clk_pin: 17
