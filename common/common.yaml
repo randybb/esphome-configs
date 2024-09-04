@@ -20,3 +20,6 @@ sensor:
 text_sensor:
   - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/wifi_info.yaml
+
+network:
+  enable_ipv6: true

@@ -3,6 +3,10 @@ platform: wifi_info
 ip_address:
   name: ${name} IP Address
   icon: mdi:ip-network
+  address_1:
+    name: ${name} IP Address 1
+  address_2:
+    name: ${name} IP Address 2
 #ssid:
 #  name: ${name} SSID
 #bssid:

@@ -2,3 +2,7 @@
 platform: ethernet_info
 ip_address:
   name: ${name} IP Address
+  address_1:
+    name: ${name} IP Address 1
+  address_2:
+    name: ${name} IP Address 2

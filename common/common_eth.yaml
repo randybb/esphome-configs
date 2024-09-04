@@ -1,7 +1,7 @@
 ---
 <<: !include api.yaml
 <<: !include ota.yaml
-# <<: !include logger_debug.yaml
+<<: !include logger_debug.yaml
 <<: !include ethernet.yaml
 
 binary_sensor:
@@ -25,3 +25,6 @@ text_sensor:
 #  - <<: !include text_sensor/debug.yaml
   # - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/ethernet_info.yaml
+
+network:
+  enable_ipv6: true
