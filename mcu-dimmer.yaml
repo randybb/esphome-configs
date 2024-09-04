@@ -30,20 +30,17 @@ esphome:
 esp32:
   board: m5stack-atom
   framework:
-    type: arduino
-    version: 2.0.14
+    # type: arduino
+    # version: 2.0.14
+    type: esp-idf
     # version: 5.1.2
+    version: 5.2.1
     platform_version: 6.6.0
-    # type: esp-idf
 
 external_components:
-  # - source: github://pr#3564
-  #   refresh: 0s
-  #   components: 
-  #     - esp32
-  #     - wifi
-  # - source: github://pr#4057
-  #   components: [fastled_base]
+  - source: github://pr#7072
+    components: ac_dimmer
+    refresh: 0s
   - source: components
   
 packages:
