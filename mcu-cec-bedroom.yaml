@@ -10,8 +10,8 @@ esphome:
 esp32:
   board: m5stack-atom
   framework:
-    type: arduino
-    # type: esp-idf
+    # type: arduino
+    type: esp-idf
 
 external_components:
   # - source: github://pr#3017
@@ -61,13 +61,14 @@ binary_sensor:
       inverted: true
 
 light:
-  - platform: neopixelbus
-    type: GRB
-    pin: 27
-    variant: WS2812
-    num_leds: 1
+  - platform: esp32_rmt_led_strip
     name: "${name} LED"
-    id: neo
+    id: led
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
     effects:
       # Use default parameters:
       - random:
