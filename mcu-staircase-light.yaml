@@ -42,7 +42,7 @@ binary_sensor:
     #     - light.turn_off: light_blue
   - platform: homeassistant
     id: motion
-    entity_id: binary_sensor.zigbee_staircase_pir_motion
+    entity_id: binary_sensor.zigbee_staircase_pir_occupancy
     on_state:
       if:
         condition:
