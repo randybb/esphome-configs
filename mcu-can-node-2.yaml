@@ -1,0 +1,91 @@
+substitutions:
+  device: can-node-2
+  name: CAN Node 2
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+
+esp32:
+  board: esp32dev
+  framework:
+    # type: arduino
+    type: esp-idf
+    # version: 5.1.2
+    # platform_version: 6.5.0
+
+external_components:
+  - source: github://mrk-its/esphome-canopen@dev
+    refresh: 1h
+
+packages:
+  common: !include common/common.yaml
+  
+canbus:
+  - platform: esp32_can
+    id: can_bus
+    rx_pin: 22
+    tx_pin: 23
+    can_id: 0
+    bit_rate: 125kbps
+
+canopen:
+  id: can_gate
+  canbus_id: can_bus
+  node_id: 2
+  entities:
+    - id: boot
+      index: 1
+      tpdo: 0
+    - id: blue_led
+      index: 2
+      tpdo: 0
+    - id: uptime_sensor
+      index: 3
+      tpdo: 0
+    - id: cover1
+      index: 4
+      tpdo: 1
+    # - id: cover2
+    #   index: 5
+    #   tpdo: 1
+
+sensor:
+  - platform: uptime
+    id: uptime_sensor
+    name: "${name} Uptime"
+    update_interval: 5sec
+    internal: true
+
+binary_sensor:
+  - platform: gpio
+    name: "${name} Boot"
+    id: boot
+    internal: true
+    pin:
+      number: 0
+      inverted: true
+
+switch:
+  - platform: gpio
+    name: "${name} Led"
+    id: blue_led
+    internal: true
+    pin: 2
+
+cover:
+  - platform: time_based
+    name: "${name} Cover"
+    id: cover1
+    internal: true
+    device_class: shutter
+    has_built_in_endstop: true
+    open_action:
+      - logger.log: open_action
+    open_duration: 10s
+    close_action:
+      - logger.log: close_action
+    close_duration: 10s
+    stop_action:
+      - logger.log: stop_action
