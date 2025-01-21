@@ -2,7 +2,8 @@
 <<: !include wifi_esp8266.yaml
 <<: !include api.yaml
 <<: !include ota.yaml
-<<: !include logger.yaml
+# <<: !include logger.yaml
+<<: !include logger_debug.yaml
 
 binary_sensor:
   - <<: !include binary_sensor/status.yaml
@@ -18,9 +19,9 @@ sensor:
   - <<: !include sensor/wifi_signal.yaml
 
 text_sensor:
+  - <<: !include text_sensor/debug.yaml
   - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/wifi_info.yaml
 
 network:
   enable_ipv6: true
-#   min_ipv6_addr_count: 2
