@@ -6,7 +6,8 @@ substitutions:
 esphome:
   name: mcu-${device}
   comment: ${comment}
-  platform: ESP8266
+
+esp8266:
   board: esp01_1m
 
 # wifi:
@@ -15,8 +16,9 @@ esphome:
 packages:
   common: !include common/common_esp8266.yaml
 
-dallas:
-  - pin: 4
+one_wire:
+  - platform: gpio
+    pin: 4
 
 binary_sensor:
   - platform: template
@@ -29,7 +31,7 @@ binary_sensor:
       }
 
 sensor:
-  - platform: dallas
+  - platform: dallas_temp
     address: 0x6203168B32A7FF28
     # index: 0
     name: "${name}"
