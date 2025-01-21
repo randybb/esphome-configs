@@ -1,0 +1,204 @@
+substitutions:
+  device: pow-1
+  name: POW 1
+  comment: "DEV"
+  update_interval: 10s
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  on_boot: # Set the initial state of the template switch to the actual relay state. This will NOT change the state.
+    priority: 250.0 # Wait until WiFi is connected to allow the sensor some time to settle
+    then:
+      - if:
+          condition:
+            lambda: 'return id(v_sensor).state > 10;'
+          then:
+            - switch.turn_on: relay_1
+          else:
+            - switch.turn_off: relay_1
+
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: esp-idf
+
+interval:
+  - interval: 30s
+    then:
+      if:
+        condition:
+          wifi.connected:
+        then:
+          - light.turn_on: wifi_status_led
+        else:
+          - light.turn_off: wifi_status_led
+
+packages:
+  common: !include common/common.yaml
+
+uart:
+  rx_pin: 16
+  baud_rate: 4800
+  parity: EVEN
+
+binary_sensor:
+  - platform: gpio
+    pin: 0
+    id: reset
+    internal: true
+    filters:
+      - invert:
+      - delayed_off: 10ms
+    on_click:
+      - max_length: 350ms # short press to toggle the relay
+        then:
+          switch.toggle: relay_1
+      - min_length: 360ms # long press to cycle display info
+        max_length: 3s
+        then:
+          - if:
+              condition:
+                binary_sensor.is_on: page
+              then:
+                binary_sensor.template.publish:
+                  id: page
+                  state: OFF
+              else:
+                binary_sensor.template.publish:
+                  id: page
+                  state: ON
+  - platform: template # this is a fake sensor to tell the screen which info to show on display
+    id: page
+    publish_initial_state: true
+    internal: true
+  - platform: template
+    name: "${name} Load"
+    id: load_on
+    lambda: |-
+      if (isnan(id(w_sensor).state)) {
+        return {};
+      } else if (id(w_sensor).state > 4) {
+        // Running
+        return true;
+      } else {
+        // Not running
+        return false;
+      }
+
+display:
+  platform: tm1621
+  id: tm1621_display
+  cs_pin: 25
+  data_pin: 14
+  read_pin: 26
+  write_pin: 27
+  lambda: |-
+    if (id(page).state) {
+      it.display_voltage(true);
+      it.display_kwh(false);
+      it.printf(0, "%.1f", id(v_sensor).state);
+      it.printf(1, "%.1f", id(a_sensor).state);
+    } else {  
+      it.display_voltage(false);
+      it.display_kwh(true);
+      it.printf(0, "%.1f", id(wh_sensor).state);
+      it.printf(1, "%.1f", id(w_sensor).state);
+    }
+
+light:
+  - platform: monochromatic
+    id: switch_led
+    output: led
+    internal: True
+  - platform: status_led
+    id: wifi_status_led
+    internal: True
+    pin:
+      number: 5
+      inverted: True
+
+output:
+  - platform: ledc
+    id: led
+    pin:
+      number: 18
+      inverted: True
+
+sensor:
+  - platform: cse7766
+    current:
+      name: "${name} Current"
+      id: a_sensor
+      filters:
+        - throttle_average: ${update_interval}
+    voltage:
+      name: "${name} Voltage"
+      id: v_sensor
+      filters:
+        - throttle_average: ${update_interval}
+    power:
+      name: "${name} Power"
+      id: w_sensor
+      filters:
+        - throttle_average: ${update_interval}
+      on_value_range:
+        - above: 4.0
+          then:
+            - light.turn_on: switch_led
+        - below: 3.0
+          then:
+            - light.turn_off: switch_led
+    energy:
+      name: "${name} Energy"
+      id: wh_sensor
+      filters:
+        - throttle_average: ${update_interval}
+
+  - platform: total_daily_energy
+    name: "${name} Total Daily Energy"
+    power_id: w_sensor
+    filters:
+      - multiply: 0.001
+    unit_of_measurement: kWh
+
+  - platform: template
+    name: "${name} Power Factor"
+    device_class: power_factor
+    id: power_factor
+    lambda: return id(w_sensor).state / id(v_sensor).state / id(a_sensor).state;
+
+switch:
+  - platform: template
+    name: "${name} Relay"
+    optimistic: true
+    id: relay_1
+    turn_off_action:
+      - switch.turn_on: relay_off
+    turn_on_action:
+      - switch.turn_on: relay_on
+  - platform: gpio
+    restore_mode: ALWAYS_OFF
+    internal: true
+    id: relay_off
+    pin: 4
+    on_turn_on:
+      - delay: 500ms
+      - switch.turn_off: relay_off # bi-stable relay so no need to keep on
+      - light.turn_off: switch_led
+    interlock: [relay_on]
+  - platform: gpio
+    restore_mode: ALWAYS_OFF
+    internal: true
+    id: relay_on
+    pin: 2
+    on_turn_on:
+      - delay: 500ms
+      - switch.turn_off: relay_on  # bi-stable relay so no need to keep on
+      - light.turn_on: switch_led
+    interlock: [relay_off]
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
