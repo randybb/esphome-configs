@@ -9,9 +9,9 @@ esphome:
 
 esp32:
   board: esp32doit-devkit-v1
-  # framework:
+  framework:
   #   type: arduino
-  #   # type: esp-idf
+    type: esp-idf
 
 external_components:
   - source: components
@@ -25,12 +25,12 @@ switch:
     id: sensor_power
     restore_mode: ALWAYS_ON
 
-dallas:
-  - pin: GPIO25
-    update_interval: 10s
+one_wire:
+  - platform: gpio
+    pin: GPIO25
 
 sensor:
-  - platform: dallas
-    index: 0
+  - platform: dallas_temp
     name: $name Dallas
     id: temp
+    update_interval: 10 s

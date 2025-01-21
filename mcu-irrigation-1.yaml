@@ -6,8 +6,6 @@ substitutions:
 esphome:
   name: mcu-${device}
   comment: ${comment}
-  platform: ESP8266
-  board: esp01_1m
   # on_boot:
   #   priority: -10
   #   then:
@@ -20,6 +18,9 @@ esphome:
   #     - switch.turn_off: relay_4
   #     - delay: 2s
   #     - switch.turn_off: relay_5
+
+esp8266:
+  board: esp01_1m
 
 packages:
   common: !include common/common_esp8266.yaml
