@@ -10,7 +10,12 @@ substitutions:
 esphome:
   name: mcu-${device}
   comment: ${comment}
-  # on_boot:
+  on_boot:
+    then:
+      - switch.turn_off: screen_power
+      - delay: 1s
+      - switch.turn_on: screen_power
+
   #   priority: -100
   #   then:
   #     - wait_until:
@@ -35,6 +40,9 @@ external_components:
       ref: dev
     refresh: 0s
     components: [nspanel_lovelace]
+  - source: github://pr#7942
+    components: adc
+    refresh: 0s
   - source: components
   
 packages:

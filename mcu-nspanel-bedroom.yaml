@@ -10,6 +10,11 @@ substitutions:
 esphome:
   name: mcu-${device}
   comment: ${comment}
+  on_boot:
+    then:
+      - switch.turn_off: screen_power
+      - delay: 1s
+      - switch.turn_on: screen_power
 
 esp32:
   board: nodemcu-32s
@@ -22,6 +27,9 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
+  - source: github://pr#7942
+    components: adc
+    refresh: 0s
   - source: components
   
 packages:
