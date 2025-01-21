@@ -11,13 +11,6 @@ esphome:
 
 packages:
   common: !include common/common_esp8266.yaml
-  
-# Module type 	18 Generic 	Module type
-# D2 GPIO4 	51 IRRecv 	IR Remote (optional, view console for debugging!)
-# D1 GPIO5 	38 PWM2 	BLUE
-# D6 GPIO12 	37 PWM1 	RED
-# D7 GPIO13 	39 PWM3 	GREEN
-# D8 GPIO15 	40 PWM4 	WHITE
 
 ## H801 LED module
 # Function 	Pin 	  Channel
@@ -33,15 +26,6 @@ light:
   - platform: status_led
     id: status_led_id
     pin: 5
-  # - platform: rgbww
-  #   name: "${name}"
-  #   red: pwm_red
-  #   green: pwm_green
-  #   blue: pwm_blue
-  #   cold_white: pwm_cold_white
-  #   warm_white: pwm_warm_white
-  #   cold_white_color_temperature: 6536 K
-  #   warm_white_color_temperature: 2000 K
   - platform: monochromatic
     name: "${name}"
     output: pwm_cold_white
