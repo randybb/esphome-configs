@@ -14,8 +14,8 @@ esp32:
     type: esp-idf
     sdkconfig_options:
       CONFIG_FREERTOS_UNICORE: y
-      ESP_MAC_IGNORE_MAC_CRC_ERROR: y
     advanced:
+      ignore_efuse_custom_mac: true
       ignore_efuse_mac_crc: true
 
 external_components:
