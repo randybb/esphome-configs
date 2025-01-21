@@ -26,7 +26,7 @@ external_components:
   #   refresh: 0s
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml
 
 # api:
   # services:
@@ -39,8 +39,8 @@ packages:
   #           rtttl: !lambda 'return song;'
 
 i2c:
-  sda: 32
-  scl: 26
+  sda: 26
+  scl: 32
   scan: true #false
   frequency: 100kHz
 
@@ -133,25 +133,25 @@ media_player:
     dac_type: external
     i2s_dout_pin:
       number: 22
-      # allow_other_uses: true
+      allow_other_uses: true
     mode: mono
     on_play:
       - light.turn_on: led_light
     on_idle:
       - light.turn_off: led_light
 
-# speaker:
-#   - platform: i2s_audio
-#     id: echo_speaker
-#     dac_type: external
-#     i2s_dout_pin:
-#       number: 22
-#       allow_other_uses: true
-#     mode: mono
+speaker:
+  - platform: i2s_audio
+    id: echo_speaker
+    dac_type: external
+    i2s_dout_pin:
+      number: 22
+      allow_other_uses: true
+    channel: mono
 
-# rtttl:
-#   id: my_rtttl
-#   speaker: echo_speaker
+rtttl:
+  id: my_rtttl
+  speaker: echo_speaker
 
 # microphone:
 #   - platform: i2s_audio

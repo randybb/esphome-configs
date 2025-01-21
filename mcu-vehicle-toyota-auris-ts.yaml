@@ -34,8 +34,8 @@ esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    # version: 5.1.2
+    # platform_version: 6.5.0
 
 external_components:
   - source: components
@@ -43,12 +43,12 @@ external_components:
 packages:
   wifi: !include common/wifi.yaml
   logger: !include common/logger.yaml
-  api: !include common/api.yaml
+  # api: !include common/api.yaml
   ota: !include common/ota.yaml
 #   common: !include common/common.yaml
 
-api:
-  reboot_timeout: 0s
+# api:
+#   reboot_timeout: 0s
 
 wifi:
   reboot_timeout: 0s

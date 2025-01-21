@@ -13,8 +13,8 @@ esp32:
   # board: m5stamp-pico
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    # version: 5.1.2
+    # platform_version: 6.5.0
 
 external_components:
   - source: components

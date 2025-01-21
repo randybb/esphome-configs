@@ -13,8 +13,8 @@ esp32:
   # board: m5stamp-pico
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.6.0
+    # version: 5.2.1
+    # platform_version: 6.6.0
 
 external_components:
   - source: components
@@ -58,7 +58,7 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
+    # rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
   - platform: esp32_rmt_led_strip
@@ -67,7 +67,7 @@ light:
     rgb_order: GRB
     pin: 25
     num_leds: 7
-    rmt_channel: 1
+    # rmt_channel: 1
     chipset: ws2812
     restore_mode: ALWAYS_OFF
     effects:

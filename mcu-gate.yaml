@@ -11,8 +11,8 @@ esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    # version: 5.1.2
+    # platform_version: 6.5.0
 
 external_components:
   - source: components
@@ -97,6 +97,7 @@ switch:
 
 # Bluetooth related stuff
 esp32_ble_tracker:
+  id: ${name}_ble_tracker
   scan_parameters:
     duration: 1min
 

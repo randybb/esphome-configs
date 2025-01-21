@@ -8,6 +8,7 @@ esphome:
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
+  includes: ota.h
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -15,8 +16,8 @@ esp32:
   flash_size: 16MB
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    # version: 5.1.2
+    # platform_version: 6.5.0
     # Required to achieve sufficient PSRAM bandwidth
     sdkconfig_options:
       CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
@@ -30,13 +31,6 @@ psram:
 
 packages:
   common: !include common/common.yaml
-
-external_components:
-  - source:
-      type: git
-      url: https://github.com/clydebarrow/esphome
-      ref: fd15094c0860df23d532881df36cfd16c7da1091 #previous commit - wont be needed in the future
-    components: [ lvgl ]
 
 # PINOUTS: ESP32 Cheap Yellow Display, 4.3", IPS, Capacitive 
 ## Display
@@ -177,8 +171,8 @@ number:
     step: 1
     optimistic: True
 
-debug:
-  update_interval: 5s
+# debug:
+#   update_interval: 5s
 
 sensor:
   - platform: uptime
@@ -194,15 +188,15 @@ sensor:
             id: counting_number
             cycle: True
         - script.execute: update_display
-  - platform: debug
-    free:
-      name: "${name} Heap Free"
-    block:
-      name: "${name} Heap Max Block"
-    loop_time:
-      name: "${name} Loop Time"
-    psram:
-      name: "${name} Free PSRAM"
+  # - platform: debug
+  #   free:
+  #     name: "${name} Heap Free"
+  #   block:
+  #     name: "${name} Heap Max Block"
+  #   loop_time:
+  #     name: "${name} Loop Time"
+  #   psram:
+  #     name: "${name} Free PSRAM"
   - platform: uptime
     # name: Uptime Sensor
     internal: True
@@ -231,9 +225,9 @@ sensor:
 script:
   - id: update_display
     then:
-      - lvgl.indicator.line.update:
-          id: power_meter_input
-          value: !lambda return id(counting_number).state;
+      # - lvgl.indicator.line.update:
+      #     id: power_meter_input
+      #     value: !lambda return id(counting_number).state;
       - lvgl.label.update:
           id: battery_kw
           text: !lambda |-
@@ -257,15 +251,15 @@ script:
             static char buf[8];
             snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
             return buf;
-      - lvgl.img.update:
-          id: img_solar_power
-          src: solar_power_icon
-          img_recolor: 0xFFF000 #mixes this color with the base image
-          #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-          #bg_color: 0xFFFFFF          
-      - lvgl.indicator.line.update:
-          id: power_meter_input2
-          value: !lambda return id(counting_number).state;
+      # - lvgl.img.update:
+      #     id: img_solar_power
+      #     src: solar_power_icon
+      #     img_recolor: 0xFFF000 #mixes this color with the base image
+      #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
+      #     #bg_color: 0xFFFFFF          
+      # # - lvgl.indicator.line.update:
+      # #     id: power_meter_input2
+      # #     value: !lambda return id(counting_number).state;
       - lvgl.label.update:
           id: battery_kw2
           text: !lambda |-
@@ -289,12 +283,12 @@ script:
             static char buf[8];
             snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
             return buf;
-      - lvgl.img.update:
-          id: img_solar_power2
-          src: solar_power_icon
-          img_recolor: 0xFFF000 #mixes this color with the base image
-          #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-          #bg_color: 0xFFFFFF   
+      # - lvgl.img.update:
+      #     id: img_solar_power2
+      #     src: solar_power_icon
+      #     img_recolor: 0xFFF000 #mixes this color with the base image
+      #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
+      #     #bg_color: 0xFFFFFF   
 
 image:
   - file: mdi:sun-wireless-outline

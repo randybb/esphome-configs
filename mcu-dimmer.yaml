@@ -33,9 +33,8 @@ esp32:
     # type: arduino
     # version: 2.0.14
     type: esp-idf
-    # version: 5.1.2
-    version: 5.2.1
-    platform_version: 6.6.0
+    # version: 5.2.1
+    # platform_version: 6.6.0
 
 external_components:
   - source: github://pr#7072
@@ -57,7 +56,7 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
+    # rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
     effects:

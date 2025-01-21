@@ -10,10 +10,10 @@ esphome:
 esp32:
   board: esp32cam
   framework:
-    type: arduino
-    # type: esp-idf
-    version: 2.0.14
-    platform_version: 6.5.0
+    # type: arduino
+    type: esp-idf
+    # version: 2.0.14
+    # platform_version: 6.5.0
 
 packages:
   common: !include common/common.yaml

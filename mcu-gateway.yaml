@@ -10,8 +10,8 @@ esphome:
 esp32:
   board: esp32doit-devkit-v1
   framework:
-    version: 5.1.2
-    platform_version: 6.6.0
+    # version: 5.1.2
+    # platform_version: 6.6.0
     type: esp-idf
 
 # external_components:
@@ -70,6 +70,12 @@ i2c:
   #   static_ip: 10.17.240.254
   #   gateway: 10.17.240.1
   #   subnet: 255.255.255.0
+
+
+ethernet:
+  # use_address: 10.17.241.254
+  # use_address: 10.17.241.98
+  use_address: mcu-gateway.local
 
 uart:
   id: uart_modbus

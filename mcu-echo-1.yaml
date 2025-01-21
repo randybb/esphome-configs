@@ -12,8 +12,8 @@ esp32:
   board: m5stack-atom
   framework:
     type: arduino
-    version: 2.0.14
-    platform_version: 6.5.0
+    # version: 2.0.14
+    # platform_version: 6.5.0
     # type: esp-idf
     # version: 5.1.2
     # platform_version: 6.5.0
@@ -32,7 +32,7 @@ external_components:
     refresh: 0s
 
 packages:
-  common: !include common/common.yaml
+  common: !include common/common_esp8266.yaml # this profile is without fancy features that are not supported by arduino
 
 api:
   services:
@@ -45,8 +45,8 @@ api:
             rtttl: !lambda 'return song;'
 
 # i2c:
-#   sda: 32
-#   scl: 26
+  # sda: 26
+  # scl: 32
 #   scan: true #false
 #   frequency: 100kHz
 
@@ -127,7 +127,7 @@ speaker:
     i2s_dout_pin:
       number: 22
       allow_other_uses: true
-    mode: mono
+    channel: mono
 
 rtttl:
   id: my_rtttl
@@ -140,10 +140,10 @@ microphone:
     adc_type: external
     pdm: true
 
-# voice_assistant:
-#   microphone: echo_microphone
-#   on_tts_end:
-#     - media_player.play_media:
-#         id: media_out
-#         media_url: !lambda |-
-#           return x;
+voice_assistant:
+  microphone: echo_microphone
+  on_tts_end:
+    - media_player.play_media:
+        id: media_out
+        media_url: !lambda |-
+          return x;
