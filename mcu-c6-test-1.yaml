@@ -1,0 +1,115 @@
+substitutions:
+  device: c6-test-1
+  name: C6 TEST 1
+  comment: "DEV"
+  
+esphome:
+  name: mcu-${device}
+  comment: ${comment}
+  # platformio_options:
+  #   board_build.flash_mode: dio
+  on_loop:
+    then:
+      lambda: |-
+        static uint32_t last_state = 0;
+        auto state = App.get_app_state();
+        if (state != last_state) {
+          if (state & STATUS_LED_ERROR) {
+            auto call = id(led).turn_on();
+            call.set_effect("ERROR");
+            call.perform();
+          } else if (state & STATUS_LED_WARNING) {
+            auto call = id(led).turn_on();
+            call.set_effect("BOOT");
+            call.perform();
+          } else {
+            //auto call = id(led).turn_off();
+            //call.perform();
+            auto call = id(led).turn_on();
+            call.set_effect("BEACON");
+            call.perform();
+          }
+          last_state = state;
+        }
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: 5.2.1
+    platform_version: 6.6.0
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+  logs:
+    component: ERROR 
+
+# web_server:
+#   port: 80
+#   version: 3
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: "${name} LED"
+    id: led
+    rgb_order: GRB
+    pin: 8
+    num_leds: 1
+    # rmt_channel: 0
+    chipset: sk6812 #ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      - strobe:
+          name: "BEACON"
+          colors:
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 200ms
+            - state: true
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 200ms
+            - state: false
+              duration: 10s
+      - lambda:
+          name: "ERROR"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(1, 0, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;
+      - lambda:
+          name: "BOOT"
+          update_interval: 0.5s
+          lambda: |-
+            static bool state = false;
+            auto call = id(led).turn_on();
+            call.set_transition_length(500);
+            call.set_rgb(0, 1, 0);
+            if (!state) {
+              call.set_brightness(1);
+            } else {
+              // If using 0, it freaks Home Assistant UI.
+              call.set_brightness(0.01);
+            }
+            call.perform();
+            state = !state;
+
+packages:
+  common: !include common/common.yaml
