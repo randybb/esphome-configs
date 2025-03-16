@@ -1,10 +1,12 @@
 substitutions:
   device: lvgl
   name: LVGL
-  comment: "DEV"
-  
+  area: DEV
+  comment: "${area} | LVGL"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio

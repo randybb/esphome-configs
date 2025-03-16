@@ -2,19 +2,21 @@ substitutions:
   device: echo
   name: Echo
   name_short: Echo
-  comment: "DEV"
-  
+  area: Office R
+  comment: "${area} | Speaker"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:
   board: m5stack-atom
   framework:
-    type: arduino
-    # type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.5.0
+    # type: arduino
+    type: esp-idf
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: components
@@ -61,7 +63,8 @@ binary_sensor:
         input: true
         pullup: true
     on_click:
-      - media_player.toggle: media_out
+      - media_player.toggle:
+          id: media_out
 
 light:
   # - platform: neopixelbus
@@ -96,62 +99,50 @@ output:
       number: 23
       allow_other_uses: true
 
-# i2s_audio:
-#   - id: i2s_out
-#     i2s_lrclk_pin: 33
-#     i2s_bclk_pin: 19
-
-# adf_pipeline:
-#   - platform: i2s_audio
-#     type: audio_out
-#     id: adf_i2s_out
-#     i2s_audio_id: i2s_out
-#     i2s_dout_pin: 22
-
-# media_player:
-#   - platform: adf_pipeline
-#     keep_pipeline_alive: true
-#     id: media_out
-#     name: ${name} Player
-#     on_play:
-#       - light.turn_on: led_light
-#     on_idle:
-#       - light.turn_off: led_light
-#     pipeline:
-#       - self
-#       - adf_i2s_out
-
-
 i2s_audio:
   i2s_lrclk_pin: 33
   i2s_bclk_pin: 19
 
-media_player:
+speaker:
   - platform: i2s_audio
+    id: speaker_id
+    dac_type: external
+    i2s_dout_pin: 22
+    channel: mono
+    sample_rate: 48000
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+      - id: rtttl_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input
+  - platform: resampler
+    id: rtttl_spk_resampling_input
+    output_speaker: rtttl_spk_mixer_input
+
+media_player:
+  - platform: speaker
     id: media_out
     name: ${name} Player
-    dac_type: external
-    i2s_dout_pin:
-      number: 22
-      allow_other_uses: true
-    mode: mono
+    media_pipeline:
+        speaker: media_spk_resampling_input
+    announcement_pipeline:
+        speaker: announcement_spk_resampling_input
     on_play:
       - light.turn_on: led_light
     on_idle:
       - light.turn_off: led_light
 
-speaker:
-  - platform: i2s_audio
-    id: echo_speaker
-    dac_type: external
-    i2s_dout_pin:
-      number: 22
-      allow_other_uses: true
-    channel: mono
-
 rtttl:
   id: my_rtttl
-  speaker: echo_speaker
+  speaker: rtttl_spk_resampling_input
 
 # microphone:
 #   - platform: i2s_audio

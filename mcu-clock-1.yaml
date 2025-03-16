@@ -1,10 +1,12 @@
 substitutions:
   device: clock-1
   name: Clock 1
-  comment: "First floor: Clock"
-  
+  area: Office R
+  comment: "${area} | Clock"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
@@ -14,8 +16,8 @@ esp32:
   variant: esp32c3
   framework:
     type: esp-idf
-    # version: 5.2.1
-    # platform_version: 6.6.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 packages:
   common: !include common/common.yaml
@@ -34,7 +36,6 @@ packages:
 # GPIO10   GPIO
 #
 # GPIO9   GPIO (BUZZER?)
-
 
 # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
 api:

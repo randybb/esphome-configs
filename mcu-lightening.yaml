@@ -2,10 +2,12 @@ substitutions:
   device: lightening
   name: Lightening detector
   name_short: Lightening
-  comment: "DEV"
-  
+  area: DEV
+  comment: "${area} | Lightening"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   
 esp32:
@@ -13,8 +15,8 @@ esp32:
   # board: m5stamp-pico
   framework:
     type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: components
@@ -53,7 +55,6 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
 

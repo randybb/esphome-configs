@@ -1,10 +1,12 @@
 substitutions:
   device: vehicle-suzuki-dl650
   name: Vehicle Suzuki DL650
-  comment: "BEACON | Suzuki DL650"
-  
+  area: Outside
+  comment: "${area}, Beacon | Suzuki DL650"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   on_loop:
     then:

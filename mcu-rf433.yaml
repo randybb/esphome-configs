@@ -1,10 +1,12 @@
 substitutions:
   device: rf433
   name: RF433 Bridge
-  comment: "Ground floor, Kitchen: RF433 Gateway"
-  
+  area: Living Room / Kitchen
+  comment: "${area}, Fireplace | RF433 Gateway"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

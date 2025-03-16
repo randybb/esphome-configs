@@ -1,10 +1,12 @@
 substitutions:
   device: tft
   name: TFT
-  comment: "Desk TFT Display"
-  
+  area: DEV
+  comment: "${area} | Desk TFT Display"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
@@ -15,18 +17,18 @@ esp32:
   variant: ESP32C3
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 packages:
   common: !include common/common.yaml
 
-external_components:
-  - source:
-      type: git
-      url: https://github.com/clydebarrow/esphome
-      ref: fd15094c0860df23d532881df36cfd16c7da1091 #previous commit - wont be needed in the future
-    components: [ lvgl ]
+# external_components:
+#   - source:
+#       type: git
+#       url: https://github.com/clydebarrow/esphome
+#       ref: fd15094c0860df23d532881df36cfd16c7da1091 #previous commit - wont be needed in the future
+#     components: [ lvgl ]
 
 logger:
   logs:
@@ -110,6 +112,7 @@ display:
     cs_pin: 7
     dc_pin: 8
     reset_pin: 10
+    invert_colors: false
     lambda: |-
       it.fill(Color::BLACK);
       it.print(0, 0, id(b612_12), id(my_white), TextAlign::TOP_LEFT, "HELLO WORLD!");

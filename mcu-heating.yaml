@@ -2,18 +2,20 @@ substitutions:
   device: heating
   name: Heating
   name_1: Heater
-  comment: "Basement: Hot water and Heating control"
-  
+  area: Basement
+  comment: "${area} | Hot water and Heating control"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.6.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: github://mknjc/esphome@ds248x
@@ -127,15 +129,6 @@ time:
               id(hot_water_demand).turn_off();
             }
 
-            // ## Heating - TYPE 1: heat water to desired max temperature at specified times
-            // ## Heating - TYPE 2: mantain temperature in min-max range in desired time range
-            if (id(heating_climate).mode == 0) {
-              id(heating_demand).turn_off();
-              ESP_LOGD("main", "Climate Heating is OFF => Turn Heating OFF!");
-            } else {
-              ESP_LOGD("main", "Climate Heating state is other than OFF => dont touch heating");
-            }
-
 climate:
   - platform: bang_bang
     sensor: hot_water_heater
@@ -155,23 +148,6 @@ climate:
     away_config:
       default_target_temperature_low: 30 °C
       default_target_temperature_high: 40 °C
-  - platform: bang_bang
-    sensor: current_heating_temperature_min
-    name: Heating
-    id: heating_climate
-    visual:
-      min_temperature: 12
-      max_temperature: 35
-      temperature_step: 0.1
-    default_target_temperature_low: 19 °C
-    default_target_temperature_high: 20 °C
-    heat_action:
-      - switch.turn_on: heating_demand
-    idle_action:
-      - switch.turn_off: heating_demand
-    away_config:
-      default_target_temperature_low: 17 °C
-      default_target_temperature_high: 18 °C
 
 i2c:
   # - id: i2c0
@@ -207,6 +183,10 @@ pca9554:
     address: 0x27
 
 switch:
+  - platform: template
+    name: "Heating Enabled"
+    id: heating_enabled
+    optimistic: True
   - platform: gpio
     name: "Hot Water Demand" # Hot Water Heating Demand (to Heater)
     id: hot_water_demand
@@ -265,48 +245,6 @@ sensor:
     address: 0x7301143F7F57AA28 # Heating Water Return (OUT from System, TO Heater)
     name: "Heating IN2"
     id: 'heating_in'
-  ## heating
-  - platform: homeassistant
-    id: current_heating_fireplace_temperature
-    entity_id: sensor.heating_fireplace
-  # - ground floor
-  - platform: homeassistant
-    id: kitchen_temperature
-    entity_id: sensor.zigbee_living_room_kitchen_temperature
-  - platform: homeassistant
-    id: room_temperature
-    entity_id: sensor.zigbee_room_temperature
-  # - first floor
-  - platform: homeassistant
-    id: bedroom_temperature
-    entity_id: sensor.zigbee_bedroom_temperature
-  - platform: homeassistant
-    id: office_j_temperature
-    entity_id: sensor.zigbee_office_j_temperature
-  - platform: homeassistant
-    id: office_r_temperature
-    entity_id: sensor.zigbee_office_r_temperature
-  # - min/max
-  - platform: template
-    id: current_heating_temperature_min
-    lambda: |-
-      float value = 25.0;
-      value = min(value, (float) id(kitchen_temperature).state);
-      //value = min(value, (float) id(room_temperature).state);
-      //value = min(value, (float) id(office_j_temperature).state);
-      //value = min(value, (float) id(bedroom_temperature).state);
-      return value;
-    update_interval: 60s
-  - platform: template
-    id: current_heating_temperature_max
-    lambda: |-
-      float value = 20.0;
-      value = max(value, (float) id(kitchen_temperature).state);
-      value = max(value, (float) id(room_temperature).state);
-      value = max(value, (float) id(office_j_temperature).state);
-      value = max(value, (float) id(bedroom_temperature).state);
-      return value;
-    update_interval: 60s
   - platform: template
     name: "Heater Total Daily Energy"
     id: heater_daily_energy
@@ -319,22 +257,22 @@ sensor:
     unit_of_measurement: '€'
     lambda: |-
       //# platba za odberne miesto        0,75          1,1
-      //# pevna mesacna zlozka tarify     0,15000000    0,1508 * 75 A
+      //# pevna mesacna zlozka tarify     0,15080000    0,1508 * 75 A
       
-      //## platba za systemove sluzby      0,00594340
-      //# platba za prevadzku systemu     0,02598800
-      //# variabilna zlozka tarify za distribuciu 0,00279200
-      //# platba za straty elktr.sidtr.el.        0,00687300
+      //## platba za systemove sluzby      0,00629760
+      //# platba za prevadzku systemu     0,01590000
+      //# variabilna zlozka tarify za distribuciu 0,00398400
+      //# platba za straty elktr.sidtr.el.        0,01146600
       //# odvod do jadroveho fondu        0,00327000
       //#
-      //# cena za elektrinu VT    0,06390000            0,10070000
-      //# cena za elektrinu NT    0,04110000            0,06700000
+      //# cena za elektrinu VT    0,06390000            0,10380000
+      //# cena za elektrinu NT    0,04110000            0,06900000
       //# 0.00594340+0.02598800+0.00279200+0.00687300+0.00327000+0.04110000 = 0.0859664
       //# prenos mesacne = 0,15080000*75
       //# prenos spotreba * (0,00398400+0,01146600+0,00327000+0,00629760+0,01590000) = spotreba * 0,0409176
 
-      // # 1,1 + (VT * 0,1007) + (NT * 0,067) + (75 * 0,1508) + ((VT+NT) * (0,00398400+0,01146600+0,00327000+0,00629760+0,01590000))
-      return (id(heater_daily_energy).state * (0.0409176 + 0.067));
+      // # 1,1 + (VT * 0,1038) + (NT * 0,069) + (75 * 0,1508) + ((VT+NT) * (0,00398400+0,01146600+0,00327000+0,00629760+0,01590000))
+      return (id(heater_daily_energy).state * (0.0409176 + 0.069));
   # L1
   - platform: pzemac
     #address: 161
@@ -499,14 +437,6 @@ binary_sensor:
       - delayed_on: 300ms
       - delayed_off: 300ms
   - platform: template
-    id: heating_fireplace_status
-    lambda: |-
-      if (id(current_heating_fireplace_temperature).state > 37.5) {
-        return true;
-      } else {
-        return false;
-      }
-  - platform: template
     id: heater_alarm
     name: "Heater Alarm"
     lambda: |-
@@ -515,3 +445,24 @@ binary_sensor:
       } else {
         return false;
       }
+  - platform: homeassistant
+    id: trv_heating_demand
+    entity_id: binary_sensor.trv_heating_demand
+  - platform: homeassistant
+    id: heating_fireplace_fire
+    entity_id: binary_sensor.heating_fireplace_fire
+  - platform: template
+    id: request_heating_demand
+    name: "Request Heating Demand"
+    lambda: |-
+      if (id(trv_heating_demand).state && id(heating_enabled).state && !id(heating_fireplace_fire).state) {
+        return true;
+      } else {
+        return false;
+      }
+    on_press:
+      then:
+        - switch.turn_on: heating_demand
+    on_release:
+      then:
+        - switch.turn_off: heating_demand

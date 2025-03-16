@@ -1,18 +1,20 @@
 substitutions:
   device: gate
   name: Gate
-  comment: "Outside: Gate"
-  
+  area: Outside
+  comment: "${area} | Gate"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: components

@@ -2,12 +2,14 @@ substitutions:
   device: socket-02
   device_id: socket_02
   name: Socket 02
+  area: Bedroom
+  comment: "${area} | Bug Repelent Socket"
   current_res: "0.00290"
   voltage_div: "940"
-  comment: "First floor, Bedroom: Repelent"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

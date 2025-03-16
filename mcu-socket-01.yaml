@@ -2,12 +2,14 @@ substitutions:
   device: socket-01
   device_id: socket_01
   name: Socket 01
+  area: Bedroom
+  comment: "${area} | TV Socket"
   current_res: "0.00290"
   voltage_div: "940"
-  comment: "First floor, Bedroom: TV"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

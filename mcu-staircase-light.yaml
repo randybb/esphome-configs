@@ -1,10 +1,12 @@
 substitutions:
   device: staircase-light
   name: Staircase Light
-  comment: "Staircase"
+  area: Staircase
+  comment: "${area} | Light"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

@@ -1,10 +1,12 @@
 substitutions:
   device: vehicle-toyota-auris-ts
   name: Vehicle Toyota Auris TS
-  comment: "BEACON | Toyota Auris TS"
-  
+  area: Outside
+  comment: "${area}, Beacon | Toyota Auris TS"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   on_loop:
     then:
@@ -34,8 +36,8 @@ esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: components

@@ -1,10 +1,12 @@
 substitutions:
   device: atoms3
   name: AtomS3
-  comment: "DEV"
-  
+  area: DEV
+  comment: "${area} | --"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
@@ -15,7 +17,7 @@ esphome:
   #           id(display_tft).enable();
   #           id(display_tft).transfer_byte(0x11);
   #           id(display_tft).disable();
-
+  
 esp32:
   board: esp32-s3-devkitc-1
   # board: m5stack-atoms3
@@ -25,17 +27,24 @@ esp32:
     # version: dev
     # version: 5.1.2
     # platform_version: 6.6.0
-    version: 5.2.1
-    platform_version: 6.6.0
+    version: 5.3.1
+    platform_version: 6.9.0
     # type: arduino
+
+pcf8574:
+  - id: 'pcf8574_hub'
+    address: 0x21
+    pcf8575: true
 
 animation:
   - file: "blinky.gif"
     id: blinky
     resize: 128x128
+    type: RGB565
   - file: "vault_boy_walking.gif"
     id: vaultboy
     resize: 168x121
+    type: RGB565
 
 logger:
   logs:
@@ -44,6 +53,17 @@ logger:
 web_server:
   port: 80
   version: 3
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: "${name} LED"
+    id: neo
+    rgb_order: GRB
+    pin: 2
+    num_leds: 1
+    # rmt_channel: 0
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
 
 text:
   - platform: template
@@ -66,12 +86,6 @@ external_components:
     refresh: 0s
   # - source: github://pr#5586
   #   components: [ http_request ]
-  - source:
-      type: git
-      url: https://github.com/ssieb/esphome
-      ref: onewire
-    components: [ gpio ]
-    refresh: 1min
   # - source: github://mknjc/esphome@ds248x
   #   components: ds248x
   # - source: github://bekriebel/esphome@sh1107_fix
@@ -217,7 +231,15 @@ switch:
     channel: 4
     # interlock: *interlock_group_2
     m5stack_4relay_id: m5stack_relay_1
-
+  - platform: gpio
+    name: "PCF8574 Pin #8"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 17
+      # One of INPUT or OUTPUT
+      mode:
+        output: true
+      inverted: false
 spi:
   clk_pin: 17
   mosi_pin: 21
@@ -443,11 +465,12 @@ time:
   #    - 1.pool.ntp.org
   #    - 2.pool.ntp.org
 
-esp32_ble_tracker:
+# esp32_ble_tracker:
 #   scan_parameters:
-#     interval: 1100ms
-#     window: 1100ms
 #     active: true
 
-bluetooth_proxy:
-  active: true
+# bluetooth_proxy:
+#   active: true
+
+# esp32_improv:
+#   authorizer: none

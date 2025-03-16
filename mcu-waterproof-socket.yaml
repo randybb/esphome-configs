@@ -1,10 +1,12 @@
 substitutions:
   device: waterproof-socket
   name: Waterproof Socket
-  comment: "Hardened remote controlled socket"
+  area: Basement
+  comment: "${area} | Hardened remote controlled socket"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

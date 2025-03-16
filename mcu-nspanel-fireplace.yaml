@@ -2,13 +2,15 @@ substitutions:
   device: nspanel-fireplace
   name: Fireplace NSPanel
   name_short: Fireplace
-  comment: "Fireplace NSPanel"
+  area: Living Room / Kitchen
+  comment: "${area}, Fireplace | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   on_boot:
     then:

@@ -2,13 +2,16 @@ substitutions:
   device: nspanel-office-r
   name: Office R NSPanel
   name_short: Office R
-  comment: "Office R NSPanel"
+  area: Office R
+  comment: "${area} | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url
-  
+
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   on_boot:
     then:
@@ -20,6 +23,8 @@ esp32:
   board: nodemcu-32s
   framework:
     type: esp-idf
+wifi:
+  use_address: 10.17.241.212
 
 external_components:
   - source:
@@ -29,6 +34,9 @@ external_components:
     components: [nspanel_lovelace]
   - source: github://pr#7942
     components: adc
+    refresh: 0s
+  - source: github://pr#8325
+    components: mqtt
     refresh: 0s
   - source: components
   
@@ -174,6 +182,7 @@ mqtt:
   username: !secret mqtt_username
   password: !secret mqtt_password
   discovery: false
+  idf_send_async: true
 
 nspanel_lovelace:
   id: nspanel_id

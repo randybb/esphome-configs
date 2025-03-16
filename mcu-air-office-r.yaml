@@ -2,10 +2,12 @@ substitutions:
   device: air-office-r
   name: Office R Air Quality Monitor
   name_short: Office R
-  comment: "DEV"
-  
+  area: Office R
+  comment: "${area} | AirQ Monitoring"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   
 esp32:
@@ -13,8 +15,8 @@ esp32:
   # board: m5stamp-pico
   framework:
     type: esp-idf
-    # version: 5.2.1
-    # platform_version: 6.6.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 external_components:
   - source: components
@@ -22,11 +24,6 @@ external_components:
 packages:
   common: !include common/common.yaml
   
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 i2c:
   # - id: i2c0
   sda: 32

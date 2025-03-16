@@ -1,7 +1,7 @@
 substitutions:
   device: eworkbench
   name: Electronics Workbench
-  comment: "Office R: Electronics Workbench"
+  comment: "Office R | Electronics Workbench"
   
 esphome:
   name: mcu-${device}
@@ -14,8 +14,8 @@ esp32:
   variant: esp32c3
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 packages:
   common: !include common/common.yaml
@@ -42,6 +42,10 @@ i2c:
     sda: 1
     scl: 0
     scan: true
+  # - id: i2c_grove_2
+  #   sda: 19
+  #   scl: 18
+  #   scan: true
 
 uart:
   - id: uart_log
@@ -53,87 +57,188 @@ uart:
     tx_pin: 19
     baud_rate: 9600
 
+pcf8574:
+  - id: 'pcf8574_hub'
+    address: 0x20
+    pcf8575: true
+
+switch:
+  - platform: gpio
+    name: "PCF8574 Pin #0"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 0
+      # One of INPUT or OUTPUT
+      mode:
+        output: true
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #1"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 1
+      # One of INPUT or OUTPUT
+      mode:
+        output: true
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #7"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 7
+      # One of INPUT or OUTPUT
+      mode:
+        output: true
+      inverted: false
+
 binary_sensor:
   - platform: gpio
-    id: rotary_encoder_button
+    name: "PCF8574 Pin #10"
     pin:
-      number: 6
-      # mode: INPUT_PULLUP
-      inverted: true
-    filters:
-      - delayed_on: 30ms
-      - delayed_off: 30ms
-    on_press:
-      - display_menu.enter:
+      pcf8574: pcf8574_hub
+      number: 8
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #11"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 9
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #12"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 10
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #13"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 11
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #14"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 12
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #15"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 13
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #15"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 14
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
+  - platform: gpio
+    name: "PCF8574 Pin #17"
+    pin:
+      pcf8574: pcf8574_hub
+      number: 15
+      # One of INPUT or OUTPUT
+      mode: INPUT
+      inverted: false
 
-display:
-  - platform: lcd_pcf8574
-    id: my_lcd
-    dimensions: 20x4
-    address: 0x27
-    user_characters:
-      - position: 0
-        data:  # mark_back symbol
-          - 0b00100
-          - 0b01000
-          - 0b11110
-          - 0b01001
-          - 0b00101
-          - 0b00001
-          - 0b11110
-          - 0b00000
-    lambda: |-
-      id(my_lcd_menu).draw();
-      if (!id(my_lcd_menu).is_active())
-        it.print("Menu is not active");
+# binary_sensor:
+#   - platform: gpio
+#     id: rotary_encoder_button
+#     pin:
+#       number: 6
+#       # mode: INPUT_PULLUP
+#       inverted: true
+#     filters:
+#       - delayed_on: 30ms
+#       - delayed_off: 30ms
+#     on_press:
+#       - display_menu.enter:
 
-lcd_menu:
-  id: my_lcd_menu
-  display_id: my_lcd
-  active: true
-  mode: rotary
-  mark_back: 0x08
-  mark_selected: 0x3e
-  mark_editing: 0x2a
-  mark_submenu: 0x7e
-  items:
-    - type: back
-      text: 'Back'
-    - type: label
-      text: 'Label 1'
-    - type: label
-      text: !lambda |-
-        return "Templated label";
+# display:
+#   - platform: lcd_pcf8574
+#     id: my_lcd
+#     i2c_id: i2c_grove
+#     dimensions: 20x4
+#     address: 0x27
+#     user_characters:
+#       - position: 0
+#         data:  # mark_back symbol
+#           - 0b00100
+#           - 0b01000
+#           - 0b11110
+#           - 0b01001
+#           - 0b00101
+#           - 0b00001
+#           - 0b11110
+#           - 0b00000
+#     lambda: |-
+#       id(my_lcd_menu).draw();
+#       if (!id(my_lcd_menu).is_active())
+#         it.print("Menu is not active");
 
-select:
-  - platform: template
-    id: hdmi_switch
-    optimistic: true
-    options:
-      - PC1
-      - PC2
-      - PC3
-      - PC4
-    initial_option: PC1
-    # set_action:
-    #   - logger.log:
-    #         format: "Chosen option: %s (index %d)"
-    #         args: ["x.c_str()", "i"]
-      # - uart.write:
-      #     id: uart_hdmi_switch
-      #     data: [0x47, 0x30, 0x31, 0x67, 0x41, 0x00]
+# lcd_menu:
+#   id: my_lcd_menu
+#   display_id: my_lcd
+#   active: true
+#   mode: rotary
+#   mark_back: 0x08
+#   mark_selected: 0x3e
+#   mark_editing: 0x2a
+#   mark_submenu: 0x7e
+#   items:
+#     - type: back
+#       text: 'Back'
+#     - type: label
+#       text: 'Label 1'
+#     - type: label
+#       text: !lambda |-
+#         return "Templated label";
 
-sensor:
-  - platform: rotary_encoder
-    id: rotary_encoder_sensor
-    pin_a: 4
-    pin_b: 5
-    filters:
-      debounce: 30ms
-    on_anticlockwise:
-      - display_menu.up:
-    on_clockwise:
-      - display_menu.down:
+# select:
+#   - platform: template
+#     id: hdmi_switch
+#     optimistic: true
+#     options:
+#       - PC1
+#       - PC2
+#       - PC3
+#       - PC4
+#     initial_option: PC1
+#     # set_action:
+#     #   - logger.log:
+#     #         format: "Chosen option: %s (index %d)"
+#     #         args: ["x.c_str()", "i"]
+#       # - uart.write:
+#       #     id: uart_hdmi_switch
+#       #     data: [0x47, 0x30, 0x31, 0x67, 0x41, 0x00]
+
+# sensor:
+#   - platform: rotary_encoder
+#     id: rotary_encoder_sensor
+#     pin_a: 4
+#     pin_b: 5
+#     filters:
+#       debounce: 30ms
+#     on_anticlockwise:
+#       - display_menu.up:
+#     on_clockwise:
+#       - display_menu.down:
 
 time:
   - platform: homeassistant

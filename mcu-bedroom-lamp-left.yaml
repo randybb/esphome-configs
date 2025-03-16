@@ -1,17 +1,21 @@
 substitutions:
   device: bedroom-lamp-left
   name: Bedroom Lamp Left
-  comment: ""
+  area: Bedroom
+  comment: "${area} | Left Lamp"
   default_transition_length: 800ms
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:
   board: esp32doit-devkit-v1
   framework:
     type: esp-idf
+    version: 5.3.1
+    platform_version: 6.9.0
     sdkconfig_options:
       CONFIG_FREERTOS_UNICORE: y
     advanced:

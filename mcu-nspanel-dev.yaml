@@ -2,19 +2,23 @@ substitutions:
   device: nspanel-dev
   name: NSPanel DEV
   name_short: DevPanel
-  comment: "DEV | NSPanel"
+  area: DEV
+  comment: "${area} | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   on_boot:
     then:
       - switch.turn_off: screen_power
       - delay: 1s
       - switch.turn_on: screen_power
+      - delay: 2s
+      - lambda: 'id(nspanel_id).set_display_dim(5, 80);'
 
   #   priority: -100
   #   then:
@@ -34,11 +38,17 @@ esp32:
     # platform_version: 6.6.0
 
 external_components:
+  # - source:
+  #     type: git
+  #     url: https://github.com/sairon/esphome-nspanel-lovelace-ui
+  #     ref: dev
+  #   refresh: 0s
+  #   components: [nspanel_lovelace]
   - source:
       type: git
-      url: https://github.com/sairon/esphome-nspanel-lovelace-ui
+      url: https://github.com/olicooper/esphome-nspanel-lovelace-native
       ref: dev
-    refresh: 0s
+    refresh: 3h
     components: [nspanel_lovelace]
   - source: github://pr#7942
     components: adc
@@ -69,95 +79,97 @@ api:
         message: string
         song: string
       then:
-        - lambda: 'id(nspanel_id).send_custom_command("notify~" + heading + "~" + message);'
+        - lambda: 'id(nspanel_id).notify_on_screensaver(heading, message, 10000);'
+        # - lambda: 'id(nspanel_id).send_custom_command("notify~" + heading + "~" + message);'
         - rtttl.play:
             rtttl: !lambda 'return song;'
-        - delay: 10s
-        - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
+        # - delay: 10s
+        # - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
 
-    - service: update_tft
-      then:
-        - lambda: |-
-            id(nspanel_id).upload_tft("${tft_url}");
+# DISABLED until https://github.com/olicooper/esphome-nspanel-lovelace-native/issues/20 is fixed
+    # - service: update_tft
+    #   then:
+    #     - lambda: |-
+    #         id(nspanel_id).upload_tft("${tft_url}");
             
-    - service: upload_tft
-      variables:
-        url: string
-      then:
-        - lambda: |-
-            id(nspanel_id).upload_tft(url);
+    # - service: upload_tft
+    #   variables:
+    #     url: string
+    #   then:
+    #     - lambda: |-
+    #         id(nspanel_id).upload_tft(url);
 
-    # Service to send a command directly to the display. Useful for testing
-    - service: send_command
-      variables:
-        cmd: string
-      then:
-        - lambda: "id(nspanel_id).send_custom_command(cmd.c_str());"
+    # # Service to send a command directly to the display. Useful for testing
+    # - service: send_command
+    #   variables:
+    #     cmd: string
+    #   then:
+    #     - lambda: "id(nspanel_id).send_custom_command(cmd.c_str());"
 
-    # Service to pusblish to mqtt used for refreshin the panel
-    - service: publish_to_recv_topic
-      variables:
-        cmd: string
-      then:
-        - mqtt.publish:
-            topic: $panel_recv_topic
-            payload: !lambda "return cmd;"
+    # # Service to pusblish to mqtt used for refreshin the panel
+    # - service: publish_to_recv_topic
+    #   variables:
+    #     cmd: string
+    #   then:
+    #     - mqtt.publish:
+    #         topic: $panel_recv_topic
+    #         payload: !lambda "return cmd;"
 
-    # Service to send a command wake the screen
-    - service: wake
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("wake");'
+    # # Service to send a command wake the screen
+    # - service: wake
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("wake");'
 
-    # Service to send a command to show screensaver (some of the values are hardcoded)
-    - service: show_screensaver
-      then:
-        - mqtt.publish:
-            topic: $panel_recv_topic
-            payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+    # # Service to send a command to show screensaver (some of the values are hardcoded)
+    # - service: show_screensaver
+    #   then:
+    #     - mqtt.publish:
+    #         topic: $panel_recv_topic
+    #         payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
 
-    # Service to navigate to screen
-    - service: navigate_to_page
-      variables:
-        page: string
-      then:
-        - mqtt.publish_json:
-            topic: $panel_recv_topic
-            payload: |-
-              root["CustomRecv"] = "event,buttonPress2,navigate." + page + ",button";
+    # # Service to navigate to screen
+    # - service: navigate_to_page
+    #   variables:
+    #     page: string
+    #   then:
+    #     - mqtt.publish_json:
+    #         topic: $panel_recv_topic
+    #         payload: |-
+    #           root["CustomRecv"] = "event,buttonPress2,navigate." + page + ",button";
 
-    # Service to send a command disable screensaver
-    - service: disable_screensaver
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("timeout~0");'
+    # # Service to send a command disable screensaver
+    # - service: disable_screensaver
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("timeout~0");'
 
-    # Service to send a command enabled screensaver
-    - service: enable_screensaver
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("timeout~20");'
+    # # Service to send a command enabled screensaver
+    # - service: enable_screensaver
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("timeout~20");'
 
-    # Service to send a command wake the screen
-    - service: dim_0_to_100
-      variables:
-        intensity: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("dimmode~"+intensity+"~100");'
+    # # Service to send a command wake the screen
+    # - service: dim_0_to_100
+    #   variables:
+    #     intensity: string
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("dimmode~"+intensity+"~100");'
 
-    # Service to send a command To show the screen of a specific like
-    - service: show_entity
-      variables:
-        entity: string
-        title: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~" + title + "~" + entity);'
+    # # Service to send a command To show the screen of a specific like
+    # - service: show_entity
+    #   variables:
+    #     entity: string
+    #     title: string
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~" + title + "~" + entity);'
 
-    # Service to send a command To show the screen of a specific like
-    - service: notify_on_screensaver
-      variables:
-        line1: string
-        line2: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("notify~" + line1 + "~" + line2);'
-        # - rtttl.play: "short:d=4,o=5,b=100:16e6"
+    # # Service to send a command To show the screen of a specific like
+    # - service: notify_on_screensaver
+    #   variables:
+    #     line1: string
+    #     line2: string
+    #   then:
+    #     - lambda: 'id(nspanel_id).send_custom_command("notify~" + line1 + "~" + line2);'
+    #     # - rtttl.play: "short:d=4,o=5,b=100:16e6"
 
     # Service to send a command To show the screen of a specific like
     # interaction of the buttons are on implemented yet
@@ -167,14 +179,15 @@ api:
         description: string
         button1: string
         button2: string
-        timeout: string
+        timeout: int
         icon: string
       then:
+        - lambda: 'id(nspanel_id).notify_on_screensaver(title, description, timeout);'
         # show notification screen
-        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupNotify");'
+        # - lambda: 'id(nspanel_id).send_custom_command("pageType~popupNotify");'
         # set values on notification screen
         # color defined as number created in binary and converted to decimal (rrrrggggbbbbaaaa)
-        - lambda: 'id(nspanel_id).send_custom_command("entityUpdateDetail~id~"+ title + "~65535~" + button1 +"~3840~" + button2 + "~61440~" + description + "~65535~" + timeout + "~3~" + icon + "~65535~");'
+        # - lambda: 'id(nspanel_id).send_custom_command("entityUpdateDetail~id~"+ title + "~65535~" + button1 +"~3840~" + button2 + "~61440~" + description + "~65535~" + timeout + "~3~" + icon + "~65535~");'
         - rtttl.play: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"
 
 uart:
@@ -183,17 +196,226 @@ uart:
   rx_pin: 17
   baud_rate: 115200
 
-mqtt:
-  id: mqtt_client
-  broker: !secret mqtt_ip
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-  discovery: false
-
 nspanel_lovelace:
   id: nspanel_id
-  mqtt_recv_topic: $panel_recv_topic
-  mqtt_send_topic: $panel_send_topic
+  sleep_timeout: 10
+  locale:
+    language: /config/esphome/nspanel/sk.json
+    temperature_unit: celcius
+  screensaver:
+    time_id: ha_time
+    time_format: '%H:%M~$name_day'
+    date_format: '%A, %d. %b. %Y'
+    weather:
+      entity_id: sensor.weather_forecast_daily
+    # type: screensaver2
+    # statusIcon1:
+    #   entity: switch.office_r_light
+    #   icon:
+    #     "on": mdi:sofa
+    #     "off": mdi:sofa
+    #   color:
+    #     "on": [255, 255, 255]
+    #     "off": [255, 255, 255]
+    # statusIcon2:
+    #   entity: light.office_r_desk_strip
+    #   icon:
+    #     "on": mdi:table-furniture
+    #     "off": mdi:table-furniture
+    #   color:
+    #     "on": [255, 255, 255]
+    #     "off": [255, 255, 255]
+    # entities:
+    #   - entity: sensor.weather_forecast_daily
+    #     color: [255, 255, 255]
+    #   - entity: delete
+    #   - entity: delete
+    #   - entity: delete
+    #   - entity: sensor.weather_forecast_daily
+    #     color: [255, 255, 255]
+    #     type: 0
+    #   - entity: sensor.weather_forecast_daily
+    #     color: [255, 255, 255]
+    #     type: 1
+    #   - entity: sensor.weather_forecast_daily
+    #     color: [255, 255, 255]
+    #     type: 2
+    #   - entity: sensor.weather_forecast_daily
+    #     color: [255, 255, 255]
+    #     type: 3
+    #   - entity: delete
+    #   - entity: sensor.zigbee_office_r_temperature
+    #     color: [255, 255, 255]
+    #     name: ""
+    #     icon: mdi:home-thermometer
+    #   - entity: switch.heating_relay_3
+    #     icon:
+    #       "on": mdi:radiator
+    #       "off": "text:"
+    #     color:
+    #       "on": [255, 255, 255]
+    #   - entity: binary_sensor.heating_fireplace_fire
+    #     icon:
+    #       "on": mdi:fireplace
+    #       "off": "text:"
+    #     color:
+    #       "on": [255, 255, 255]
+    #   - entity: delete
+    #   - entity: delete
+    #   - entity: delete
+  cards:
+    - type: cardGrid
+      title: Kuchyňa / Obývačka
+      entities:
+        - name: Kuchyňa
+          entity_id: light.kitchen
+          icon: ceiling-light
+        - name: Stôl
+          entity_id: light.dining_table
+          icon: ceiling-light
+        - name: Gauč
+          entity_id: light.living_room
+          icon: ceiling-light
+        - name: TV
+          entity_id: light.tv_light
+          icon: led-strip-variant
+        - name: (Stôl)
+          entity_id: light.dining_table_ambilight
+          icon: ceiling-light-multiple-outline
+        - name: (Gauč)
+          entity_id: light.living_room_ambilight
+          icon: ceiling-light-multiple-outline
+    - type: cardGrid
+      title: Romanko
+      entities:
+        - name: Svetlo
+          entity_id: switch.office_r_light
+          icon: wall-sconce-flat
+        - name: LED pásik
+          entity_id: light.office_r_desk_strip
+          icon: led-strip-variant
+        - entity_id: delete
+        - name: Monitor
+          entity_id: light.office_r_display_lamp
+          icon: monitor-star
+        - name: (Monitor)
+          entity_id: light.office_r_display_lamp_ambilight
+          icon: monitor-star
+        - name: Whitebox
+          entity_id: switch.whitebox
+    - type: cardGrid
+      title: Von
+      entities:
+        - name: Terasa
+          entity_id: light.patio_light
+          icon: lightbulb-group
+        - name: Terasa
+          entity_id: switch.patio_relay
+          icon: power-socket-fr
+        - name: Vzadu
+          entity_id: switch.outside_light_back
+          icon: light-flood-down
+        - name: Z. domček
+          entity_id: switch.shed_light
+          icon: wall-sconce-flat
+          # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
+        - name: Z. domček
+          entity_id: switch.shed_socket
+          icon: power-socket-fr
+          # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
+        - name: Záhrada
+          entity_id: switch.garden_light
+          icon: light-flood-down
+          # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
+    - type: cardGrid
+      title: Brána
+      entities:
+        - name: Otvoriť
+          entity_id: button.gate_open
+          icon: gate-open
+        - name: Zatvoriť
+          entity_id: button.gate_close
+          icon: gate
+        - name: Automatizácia
+          entity_id: navigate.card_gate_automation
+    - type: cardGrid
+      title: Závlaha
+      entities:
+        - name: A1
+          entity_id: switch.irrigation_valve_a1
+          icon: valve
+        - name: A2
+          entity_id: switch.irrigation_valve_a2
+          icon: valve
+        - name: A3
+          entity_id: switch.irrigation_valve_a3
+          icon: valve
+        - name: A4
+          entity_id: switch.irrigation_valve_a4
+          icon: valve
+        - name: A5
+          entity_id: switch.irrigation_valve_a5
+          icon: valve
+        - name: Automatizácia
+          entity_id: navigate.card_irrigation_automation
+    - type: cardThermo
+      title: Kúrenie
+      thermo_entity_id: climate.bt_trv_office_r
+    # - type: cardQR
+    #   title: Guest Wifi
+    #   qr_text: "WIFI:T:WPA;S:LAB;P:slniecko;;"
+    #   # qrCode: "URL:https://www.johndoe.com/"
+    # #        entities:
+    # #          - entity_id: delete
+    # #          - entity_id: iText.LAB
+    # #            name: Name
+    # #            icon: wifi
+    # #          - entity_id: iText.slniecko
+    # #            name: Password
+    # #            icon: key
+    - type: cardEntities
+      title: Zwift
+      entities:
+        - name: Svetlo
+          entity_id: light.basement_light
+          icon: lightbulb-multiple
+        - name: LED
+          entity_id: light.exercise_room
+          icon: led-strip-variant
+        - name: Ventilátor
+          entity_id: light.exercise_room_fan
+          icon: fan
+        - name: Automatizácia
+          entity_id: navigate.card_exercise_automation
+    - type: cardEntities
+      title: Automatizácia
+      id: card_exercise_automation
+      hidden: true
+      entities:
+        - name: Start
+          entity_id: automation.zwift_enable_fan
+        - name: End
+          entity_id: automation.zwift_disable_fan
+    - type: cardEntities
+      title: Automatizácia
+      id: card_gate_automation
+      hidden: true
+      entities:
+        - name: Auto-otváranie
+          entity_id: switch.gate_auto_open
+        - name: Auto-zatváranie
+          entity_id: switch.gate_auto_close
+    - type: cardEntities
+      title: Automatizácia
+      id: card_irrigation_automation
+      hidden: true
+      entities:
+        - name: Ráno
+          entity_id: automation.irrigation_morning
+        - name: Terasa
+          entity_id: automation.irrigation_patio
+        - name: Rast trávy
+          entity_id: automation.irrigation_grow_grass
 
 time:
   - platform: homeassistant
@@ -240,12 +462,12 @@ switch:
     on_turn_on:
       # show a light on the panel when we swich on the light
       # - lambda: 'id(nspanel).send_custom_command("pageType~popupLight~[TITLE TO SHOW ON SCREEN]~[ENTITY NAME]");'
-      - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~Light 1~light.bed_light");'
-    on_turn_off:
-      # send to screensaver when switch off the light
-      - mqtt.publish:
-          topic: $panel_recv_topic
-          payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+      - lambda: 'id(nspanel_id).send_display_command("pageType~popupLight~Light 1~light.bed_light");'
+    # on_turn_off:
+    #   # send to screensaver when switch off the light
+    #   - mqtt.publish:
+    #       topic: $panel_recv_topic
+    #       payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
 
   - platform: gpio
     name: ${name} Relay 2
@@ -254,12 +476,12 @@ switch:
       number: 19
     on_turn_on:
       # show a light on the panel when we swich on the light
-      - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~Light 2~light.bed_light2");'
-    on_turn_off:
-      # send to screensaver when switch off the light
-      - mqtt.publish:
-          topic: $panel_recv_topic
-          payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
+      - lambda: 'id(nspanel_id).send_display_command("pageType~popupLight~Light 2~light.bed_light2");'
+    # on_turn_off:
+    #   # send to screensaver when switch off the light
+    #   - mqtt.publish:
+    #       topic: $panel_recv_topic
+    #       payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
 
   # Turn screen power on/off. Easy way to configure the screen power control, but this should not be used from HA, as all components must be re-initialized afterwards. For lights, names of lights etc. this practically means that the state must change once to happen.
   - platform: gpio
@@ -299,6 +521,11 @@ sensor:
     
   - platform: template
     id: room_temperature_id
+
+text_sensor:
+  - platform: homeassistant
+    id: name_day
+    entity_id: sensor.nameday_sk
 
 # esp32_ble_tracker:
 #   scan_parameters:

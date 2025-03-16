@@ -2,10 +2,12 @@ substitutions:
   device: basement-2
   name_short: Basement
   name: Basement 2
-  comment: "Basement: Lights"
+  area: Basement
+  comment: "${area} | Lights"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp8266:

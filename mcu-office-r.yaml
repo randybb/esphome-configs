@@ -1,10 +1,12 @@
 substitutions:
   device: office-r
   name: Office R
-  comment: "MS Teams presence"
+  area: Office R
+  comment: "${area} | MS Teams presence"
   
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
@@ -15,8 +17,8 @@ esp32:
   variant: esp32c3
   framework:
     type: esp-idf
-    # version: 5.1.2
-    # platform_version: 6.5.0
+    version: 5.3.1
+    platform_version: 6.9.0
 
 packages:
   common: !include common/common.yaml

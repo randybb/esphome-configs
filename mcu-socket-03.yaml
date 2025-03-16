@@ -2,6 +2,8 @@ substitutions:
   device: socket-03
   device_id: socket_03
   name: Socket 03
+  area: Bedroom
+  comment: "${area} | SPARE Socket"
   max_power: "3450"
   # <2020
   current_res: "0.00290"
@@ -11,12 +13,11 @@ substitutions:
   # current_res: "0.00117"
   # voltage_div: "755"
   # cf1_pin: GPIO04
-  comment: "First floor, Room R: Socket"
 
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
-
 esp8266:
   board: esp01_1m
 

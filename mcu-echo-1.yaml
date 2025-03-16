@@ -2,10 +2,12 @@ substitutions:
   device: echo-1
   name: Echo 1
   name_short: Echo 1
-  comment: "DEV"
-  
+  area: DEV
+  comment: "${area} | Echo"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:

@@ -1,0 +1,158 @@
+substitutions:
+  device: lvgl-eworkbench
+  name: Electronics Workbench Display
+  area: Office R
+  comment: "${area} | Electronics Workbench"
+
+esphome:
+  name: mcu-${device}
+  area: ${area}
+  comment: ${comment}
+  platformio_options:
+    upload_speed: 921600
+    build_unflags: -Werror=all
+    board_build.flash_mode: dio
+    board_build.f_flash: 80000000L
+    board_build.f_cpu: 240000000L
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    version: 5.3.1
+    platform_version: 6.9.0
+    sdkconfig_options:
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
+      CONFIG_ESP32S3_DATA_CACHE_64KB: y
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+
+packages:
+  common: !include common/common.yaml
+
+external_components:
+  #- source: github://buglloc/esphome-components
+  #- source:  github://Garag/esphome-components
+  - source:  github://clowrey/esphome-components
+    components: [axs15231]
+    refresh: 10min
+
+i2c:
+  sda: 4
+  scl: 8
+  id: touchscreen_bus
+
+psram:
+  mode: octal
+  speed: 120MHz
+  
+spi:
+  id: display_qspi
+  type: quad
+  clk_pin: 47
+  data_pins: [21, 48, 40, 39]
+    
+color:
+  - id: my_red
+    red: 100%
+    green: 0%
+    blue: 0%
+  - id: my_orange
+    red: 100%
+    green: 50%
+    blue: 0%
+  - id: my_yellow
+    red: 100%
+    green: 100%
+    blue: 0%
+  - id: my_green
+    red: 0%
+    green: 100%
+    blue: 0%
+  - id: my_blue
+    red: 0%
+    green: 0%
+    blue: 100%
+  - id: my_teal
+    red: 0%
+    green: 100%
+    blue: 100%
+  - id: my_gray
+    red: 70%
+    green: 70%
+    blue: 70%
+  - id: my_white
+    red: 100%
+    green: 100%
+    blue: 100%
+
+font:
+  - file: "gfonts://Roboto"
+    id: Roboto_48
+    size: 48
+  - file: "gfonts://Roboto"
+    id: Roboto_36
+    size: 36
+  - file: "gfonts://Roboto"
+    id: Roboto_24
+    size: 24
+  - file: "gfonts://Roboto"
+    id: Roboto_12
+    size: 12
+  - file: "gfonts://Roboto"
+    id: font_std
+    size: 40
+    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
+  - file: "gfonts://Roboto@700"
+    id: font_title
+    size: 40
+    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
+
+globals:
+  - id: bgcolor
+    type: Color
+    initial_value: "Color::random_color()"
+
+display:
+  - platform: axs15231
+    data_rate: 40MHz #20mhz is default
+    #spi_mode: MODE2
+    id: main_display
+    spi_id: display_qspi
+    dimensions:
+      height: 480
+      width: 320
+    cs_pin: 45
+    backlight_pin: 1
+    brightness: 50
+    transform:
+      swap_xy: false
+    rotation: 90
+    auto_clear_enabled: false
+    show_test_card: true
+    lambda: |-
+      it.fill(id(bgcolor));
+      it.print(it.get_width()/2, it.get_height()/2-20, id(font_title), TextAlign::CENTER, "ESPHome");
+      it.print(it.get_width()/2, it.get_height()/2+20, id(font_std), TextAlign::CENTER, "@UTBDK");
+
+touchscreen:
+  - platform: axs15231
+    id: main_touch
+    display: main_display
+    i2c_id: touchscreen_bus
+    transform:
+      swap_xy: true
+    on_touch:
+      - lambda: |-
+          Color newColor;
+          do { newColor =  Color::random_color(); } while (newColor == id(bgcolor));
+          id(bgcolor) = newColor;
+
+          ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
+            touch.x,
+            touch.y,
+            touch.x_raw,
+            touch.y_raw
+          );

@@ -1,10 +1,12 @@
 substitutions:
   device: m5paper
   name: M5Paper
-  comment: "DEV | m5paper"
-  
+  area: DEV
+  comment: "${area} | M5Paper"
+
 esphome:
   name: mcu-${device}
+  area: ${area}
   comment: ${comment}
 
 esp32:
