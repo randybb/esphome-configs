@@ -20,8 +20,8 @@ esp32:
   flash_size: 16MB
   framework:
     type: esp-idf
-    version: 5.3.1
-    platform_version: 6.9.0
+    version: 5.3.2
+    platform_version: 53.03.11
     sdkconfig_options:
       CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
       CONFIG_ESP32S3_DATA_CACHE_64KB: y
@@ -46,7 +46,7 @@ i2c:
 
 psram:
   mode: octal
-  speed: 120MHz
+  speed: 40MHz
   
 spi:
   id: display_qspi

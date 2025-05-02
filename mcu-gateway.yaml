@@ -10,13 +10,13 @@ esphome:
 esp32:
   board: esp32doit-devkit-v1
   framework:
-    # version: 5.1.2
-    # platform_version: 6.6.0
+    version: 5.3.2
+    platform_version: 53.03.11
     type: esp-idf
 
-# external_components:
-  # - source: github://pr#4062
-  #   components: ethernet
+external_components:
+  - source: github://pr#8457
+    components: ethernet
   # - source: github://pr#4080
   #   components: [lcd_pcf8574, lcd_base]
   # - source: github://pr#3564

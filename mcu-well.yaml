@@ -26,8 +26,8 @@ esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    version: 5.3.1
-    platform_version: 6.9.0
+    version: 5.3.2
+    platform_version: 53.03.11
 
 packages:
   common: !include common/common.yaml

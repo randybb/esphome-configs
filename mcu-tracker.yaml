@@ -88,8 +88,8 @@ esp32:
   #   platform_version: 6.5.0
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
+    version: 5.3.2
+    platform_version: 53.03.11
 
 ## TESTING
 
@@ -117,13 +117,13 @@ i2c:
 
 modem:
   id: atmodem
-  ready: modem_ready
+  # ready: modem_ready
   rx_pin: 26
   tx_pin: 27
   model: SIM7600
   apn: o2internet
-  username: ""
-  password: ""
+  # username: ""
+  # password: ""
   pin_code: ""
   init_at:
     - AT+CGNSSMODE=15,1 # GNSS all navigation systems
