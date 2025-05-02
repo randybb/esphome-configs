@@ -37,11 +37,11 @@ esp32:
   framework:
     type: esp-idf
 
-api:
-  reboot_timeout: 0s
+# api:
+#   reboot_timeout: 0s
 
-wifi:
-  reboot_timeout: 0s
+# wifi:
+#   reboot_timeout: 0s
 
 external_components:
   - source: components
@@ -80,7 +80,6 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
     effects:

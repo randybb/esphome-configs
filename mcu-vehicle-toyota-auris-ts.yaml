@@ -36,24 +36,24 @@ esp32:
   board: m5stack-atom
   framework:
     type: esp-idf
-    version: 5.3.1
-    platform_version: 6.9.0
+    version: 5.3.2
+    platform_version: 53.03.11
 
 external_components:
   - source: components
 
 packages:
-  wifi: !include common/wifi.yaml
+  # wifi: !include common/wifi.yaml
   logger: !include common/logger.yaml
   # api: !include common/api.yaml
-  ota: !include common/ota.yaml
+  # ota: !include common/ota.yaml
 #   common: !include common/common.yaml
 
 # api:
 #   reboot_timeout: 0s
 
-wifi:
-  reboot_timeout: 0s
+# wifi:
+#   reboot_timeout: 0s
 
 # debug:
 
@@ -85,7 +85,6 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
     effects:

@@ -37,18 +37,18 @@ esp32:
   framework:
     type: esp-idf
 
-api:
-  reboot_timeout: 0s
+# api:
+#   reboot_timeout: 0s
 
-wifi:
-  reboot_timeout: 0s
+# wifi:
+#   reboot_timeout: 0s
 
 external_components:
   - source: components
 
 packages:
   common: !include common/logger.yaml
-  wifi: !include common/wifi.yaml
+  # wifi: !include common/wifi.yaml
   # common: !include common/common.yaml
   
 # debug:
@@ -81,7 +81,6 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
     chipset: ws2812
     restore_mode: ALWAYS_OFF
     effects:
