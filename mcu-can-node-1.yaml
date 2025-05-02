@@ -13,11 +13,13 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-    version: 5.3.1
-    platform_version: 6.9.0
+    # version: 5.3.1
+    # platform_version: 6.9.0
 
 external_components:
   - source: github://mrk-its/esphome-canopen@dev
+    refresh: 1h
+  - source: github://mrk-its/esphome-canbus-udp-multicast@dev
     refresh: 1h
 
 packages:
@@ -28,65 +30,94 @@ canbus:
     id: can_bus
     rx_pin: 22
     tx_pin: 23
-    can_id: 0
-    bit_rate: 125kbps
+    can_id: 1
+    bit_rate: 500kbps
 
 canopen:
-  id: can_gate
+  id: can_open
   canbus_id: can_bus
   node_id: 1
   entities:
-    - id: boot
-      index: 1
-      tpdo: 0
-    - id: blue_led
-      index: 2
-      tpdo: 0
-    - id: uptime_sensor
-      index: 3
-      tpdo: 0
-    - id: cover1
-      index: 4
-      tpdo: 1
-    # - id: cover2
-    #   index: 5
-    #   tpdo: 1
+    - index: 1
+      id: light1_state
+      rpdo:
+        - node_id: 2
+          tpdo: 0
+          offset: 0
+          cmd: 0
 
-sensor:
-  - platform: uptime
-    id: uptime_sensor
-    name: "${name} Uptime"
-    update_interval: 5sec
-    internal: true
+    - index: 2
+      id: light1_brightness
+      size: 1
+      min_value: 0.0
+      max_value: 1.0
+      rpdo:
+        - node_id: 2
+          tpdo: 0
+          offset: 1
+          cmd: 0
+
+    - index: 3
+      id: light2_state
+      rpdo:
+        - node_id: 2
+          tpdo: 0
+          offset: 3
+          cmd: 0
+
+    - index: 4
+      id: light2_brightness
+      size: 1
+      min_value: 0.0
+      max_value: 1.0
+      rpdo:
+        - node_id: 2
+          tpdo: 0
+          offset: 4
+          cmd: 0
 
 binary_sensor:
+  - platform: template
+    id: light1_state
+    name: "Test Light 1 State"
+  - platform: template
+    id: light2_state
+    name: "Test Light 2 State"
+
+  - platform: template
+    id: light1_state_cmd
+
   - platform: gpio
-    name: "${name} Boot"
-    id: boot
-    internal: true
+    name: "Boot Button"
+    id: boot_button
     pin:
       number: 0
       inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+        - lambda: |-
+            bool state = id(light1_state).state || id(light2_state).state;
+
+            // send command to entity #1 (light) on node #2
+            id(can_open).send_entity_cmd(2, 1, !state);
+
+            // send command to entity #2 (light2) on node #2
+            id(can_open).send_entity_cmd(2, 2, !state);
+
+sensor:
+  - platform: template
+    id: light1_brightness
+    name: "Test Light 1 Brightness"
+  - platform: template
+    id: light2_brightness
+    name: "Test Light 2 Brightness"
 
 switch:
   - platform: gpio
-    name: "${name} Led"
+    name: "Led"
     id: blue_led
     internal: true
     pin: 2
-
-cover:
-  - platform: time_based
-    name: "${name} Cover"
-    id: cover1
-    internal: true
-    device_class: shutter
-    has_built_in_endstop: true
-    open_action:
-      - logger.log: open_action
-    open_duration: 10s
-    close_action:
-      - logger.log: close_action
-    close_duration: 10s
-    stop_action:
-      - logger.log: stop_action

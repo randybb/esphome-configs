@@ -13,11 +13,13 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-    version: 5.3.1
-    platform_version: 6.9.0
+    # version: 5.3.2
+    # platform_version: 53.03.11
 
 external_components:
   - source: github://mrk-its/esphome-canopen@dev
+    refresh: 1h
+  - source: github://mrk-its/esphome-canbus-udp-multicast@dev
     refresh: 1h
 
 packages:
@@ -28,65 +30,77 @@ canbus:
     id: can_bus
     rx_pin: 22
     tx_pin: 23
-    can_id: 0
-    bit_rate: 125kbps
+    can_id: 2
+    bit_rate: 500kbps
 
 canopen:
-  id: can_gate
+  id: can_open
   canbus_id: can_bus
   node_id: 2
   entities:
-    - id: boot
-      index: 1
+    - index: 1
+      id: light1
       tpdo: 0
-    - id: blue_led
-      index: 2
+
+    - index: 2
+      id: light2
       tpdo: 0
-    - id: uptime_sensor
-      index: 3
+
+    - index: 3
+      id: light3
       tpdo: 0
-    - id: cover1
-      index: 4
-      tpdo: 1
-    # - id: cover2
-    #   index: 5
-    #   tpdo: 1
 
-sensor:
-  - platform: uptime
-    id: uptime_sensor
-    name: "${name} Uptime"
-    update_interval: 5sec
-    internal: true
+output:
+  - platform: template
+    id: cw_output1
+    type: float
+    write_action:
+      - logger.log:
+          format: "output1: %f"
+          args: ['state']
 
-binary_sensor:
-  - platform: gpio
-    name: "${name} Boot"
-    id: boot
-    internal: true
-    pin:
-      number: 0
-      inverted: true
+  - platform: template
+    id: ww_output1
+    type: float
+    write_action:
+      - logger.log:
+          format: "output2: %f"
+          args: ['state']
 
-switch:
-  - platform: gpio
-    name: "${name} Led"
-    id: blue_led
-    internal: true
-    pin: 2
+  - platform: template
+    id: output2
+    type: float
+    write_action:
+      - logger.log:
+          format: "output1: %f"
+          args: ['state']
 
-cover:
-  - platform: time_based
-    name: "${name} Cover"
-    id: cover1
-    internal: true
-    device_class: shutter
-    has_built_in_endstop: true
-    open_action:
-      - logger.log: open_action
-    open_duration: 10s
-    close_action:
-      - logger.log: close_action
-    close_duration: 10s
-    stop_action:
-      - logger.log: stop_action
+  - platform: template
+    id: output3
+    type: float
+    write_action:
+      - logger.log:
+          format: "output1: %f"
+          args: ['state']
+
+light:
+  - platform: cwww
+    id: light1
+    name: "${name} Light 1"
+    cold_white: cw_output1
+    warm_white: ww_output1
+    cold_white_color_temperature: 6536 K
+    warm_white_color_temperature: 2000 K
+    constant_brightness: false
+    default_transition_length: 0s
+
+  - platform: monochromatic
+    id: light2
+    name: "${name} Light 2"
+    output: output2
+    default_transition_length: 0s
+
+  - platform: binary
+    id: light3
+    name: "${name} Light 3"
+    output: output3
