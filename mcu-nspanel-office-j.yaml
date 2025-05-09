@@ -1,7 +1,6 @@
 substitutions:
   device: nspanel-office-j
   name: Office J NSPanel
-  name_short: Office J
   area: Office J
   comment: "${area} | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
@@ -11,6 +10,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   on_boot:
@@ -190,7 +190,7 @@ time:
 
 binary_sensor:
   # - platform: gpio
-  #   name: ${name} Left Button
+  #   name: Left Button
   #   pin:
   #     number: 14
   #     inverted: true
@@ -198,7 +198,7 @@ binary_sensor:
   #     - switch.toggle: relay_1
 
   # - platform: gpio
-  #   name: ${name} Right Button
+  #   name: Right Button
   #   pin:
   #     number: 27
   #     inverted: true
@@ -210,7 +210,7 @@ binary_sensor:
   #         data:
   #           entity_id: light.office_r_desk_strip
   - platform: gpio
-    name: ${name} Left Button
+    name: Left Button
     pin:
       number: 14
       inverted: true
@@ -222,7 +222,7 @@ binary_sensor:
             root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
 
   - platform: gpio
-    name: ${name} Right Button
+    name: Right Button
     pin:
       number: 27
       inverted: true
@@ -252,16 +252,16 @@ output:
 
 light:
   - platform: binary
-    name: ${name_short} Light
+    name: Light
     id: light_1
     output: relay_1
 #   # - platform: binary
-#   #   name: ${name_full} Relay 2
+#   #   name: Relay 2
 #   #   output: relay_2
 
 switch:
   - platform: gpio
-    name: ${name} Screen Power
+    name: Screen Power
     id: screen_power
     entity_category: config
     pin:
@@ -291,7 +291,7 @@ sensor:
       b_constant: 3950
       reference_temperature: 22°C
       reference_resistance: 10kOhm
-    name: "${name_short} Temperature"
+    name: Temperature
   - platform: template
     id: room_temperature_id
 
@@ -299,7 +299,7 @@ sensor:
 
 # text_sensor:
 #   - platform: ble_scanner
-#     name: "${name_short} BLE Scanner"
+#     name: BLE Scanner
     
 # esp32_ble_beacon:
 #   type: iBeacon

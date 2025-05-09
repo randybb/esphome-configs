@@ -2,10 +2,11 @@ substitutions:
   device: can-node-1
   name: CAN Node 1
   area: DEV
-  comment: "${area} | CANOpen"
+  comment: "${area} | CANopen"
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -13,8 +14,8 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-    # version: 5.3.1
-    # platform_version: 6.9.0
+    # version: 5.3.2
+    # platform_version: 53.03.11
 
 external_components:
   - source: github://mrk-its/esphome-canopen@dev
@@ -79,16 +80,16 @@ canopen:
 binary_sensor:
   - platform: template
     id: light1_state
-    name: "Test Light 1 State"
+    name: Light 1 State
   - platform: template
     id: light2_state
-    name: "Test Light 2 State"
+    name: Light 2 State
 
   - platform: template
     id: light1_state_cmd
 
   - platform: gpio
-    name: "Boot Button"
+    name: Boot
     id: boot_button
     pin:
       number: 0
@@ -110,14 +111,14 @@ binary_sensor:
 sensor:
   - platform: template
     id: light1_brightness
-    name: "Test Light 1 Brightness"
+    name: Light 1 Brightness
   - platform: template
     id: light2_brightness
-    name: "Test Light 2 Brightness"
+    name: Light 2 Brightness
 
 switch:
   - platform: gpio
-    name: "Led"
+    name: LED
     id: blue_led
     internal: true
     pin: 2

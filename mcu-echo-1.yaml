@@ -7,6 +7,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -60,7 +61,7 @@ api:
 
 binary_sensor:
   - platform: gpio
-    name: ${name} Button
+    name: Button
     pin:
       number: 39
       inverted: true
@@ -77,7 +78,7 @@ light:
   #   id: status_led_id
   #   output: status_led_output
   - platform: esp32_rmt_led_strip
-    name: "${name} LED"
+    name: LED
     id: neo_buildin
     rgb_order: GRB
     pin: 27

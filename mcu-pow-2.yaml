@@ -6,6 +6,7 @@ substitutions:
   
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   comment: ${comment}
   on_boot: # Set the initial state of the template switch to the actual relay state. This will NOT change the state.
     priority: 250.0 # Wait until WiFi is connected to allow the sensor some time to settle
@@ -73,7 +74,7 @@ binary_sensor:
     publish_initial_state: true
     internal: true
   - platform: template
-    name: "${name} Load"
+    name: Load
     id: load_on
     lambda: |-
       if (isnan(id(w_sensor).state)) {
@@ -128,17 +129,17 @@ output:
 sensor:
   - platform: cse7766
     current:
-      name: "${name} Current"
+      name: Current
       id: a_sensor
       filters:
         - throttle_average: ${update_interval}
     voltage:
-      name: "${name} Voltage"
+      name: Voltage
       id: v_sensor
       filters:
         - throttle_average: ${update_interval}
     power:
-      name: "${name} Power"
+      name: Power
       id: w_sensor
       filters:
         - throttle_average: ${update_interval}
@@ -150,27 +151,27 @@ sensor:
           then:
             - light.turn_off: switch_led
     energy:
-      name: "${name} Energy"
+      name: Energy"
       id: wh_sensor
       filters:
         - throttle_average: ${update_interval}
 
   - platform: total_daily_energy
-    name: "${name} Total Daily Energy"
+    name: Total Daily Energy
     power_id: w_sensor
     filters:
       - multiply: 0.001
     unit_of_measurement: kWh
 
   - platform: template
-    name: "${name} Power Factor"
+    name: Power Factor
     device_class: power_factor
     id: power_factor
     lambda: return id(w_sensor).state / id(v_sensor).state / id(a_sensor).state;
 
 switch:
   - platform: template
-    name: "${name} Relay"
+    name: Relay
     optimistic: true
     id: relay_1
     turn_off_action:

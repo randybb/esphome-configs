@@ -1,0 +1,173 @@
+substitutions:
+  device: clock-living-room
+  name: Living room Clock
+  area: Living Room / Kitchen
+  comment: "${area}: TV Rack Clock"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+    # version: 5.3.2
+    # platform_version: 53.03.12
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/trip5/esphome-tm1650
+      ref: main
+    refresh: 60s
+    components: [ tm1650 ]
+
+packages:
+  common: !include common/common.yaml
+
+# https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+api:
+  services:
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+
+i2c:
+  id: i2c_main
+  sda: 32
+  scl: 33
+  scan: true #false
+  frequency: 100kHz
+
+globals:
+  - id: alarm_id
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Bratislava
+
+binary_sensor:
+  - platform: gpio
+    name: Button
+    pin:
+      number: 39
+      inverted: true
+
+display:
+  - platform: tm1650
+    id: tm1650_display
+    i2c_id: i2c_main
+    # clk_pin: 4
+    # dio_pin: 5
+    update_interval: 500ms
+    # intensity: 0
+    lambda: |-
+      static int i = 0;
+      i++;
+      if (id(alarm_id)) {
+        if ((i % 2) == 0)
+          it.print("8 8 ");
+        else
+          it.print(" 8 8");      
+      } else {
+        if (((i / 10) % 2) == 0) {
+          //it.set_intensity(7);
+          if ((i % 2) == 0)
+            it.strftime("%H.%M", id(ha_time).now());
+          else
+            it.strftime("%H%M", id(ha_time).now());
+        } else {
+          //it.set_intensity(1);
+          it.printf("%.0f~C", id(temperature).state);
+        }
+      }
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: LED
+    id: led
+    rgb_order: GRB
+    pin: 27
+    num_leds: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      # Use default parameters:
+      - random:
+      # Customize parameters
+      - random:
+          name: "My Slow Random Effect"
+          transition_length: 30s
+          update_interval: 30s
+      - random:
+          name: "My Fast Random Effect"
+          transition_length: 4s
+          update_interval: 5s
+      - strobe:
+      - strobe:
+          name: Strobe Effect With Custom Values
+          colors:
+            - state: True
+              brightness: 100%
+              red: 100%
+              green: 90%
+              blue: 0%
+              duration: 500ms
+            - state: False
+              duration: 250ms
+            - state: True
+              brightness: 100%
+              red: 0%
+              green: 100%
+              blue: 0%
+              duration: 500ms
+      - flicker:
+      - flicker:
+          name: Flicker Effect With Custom Values
+          alpha: 95%
+          intensity: 1.5%
+      - addressable_rainbow:
+      - addressable_rainbow:
+          name: Rainbow Effect With Custom Values
+          speed: 10
+          width: 50
+      - addressable_scan:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 100ms
+
+output:
+  - platform: ledc
+    pin: 25
+    id: rtttl_out
+
+rtttl:
+  output: rtttl_out
+
+sensor:
+  - platform: homeassistant
+    id: temperature
+    entity_id: sensor.zigbee_outside_temperature
+
+switch:
+  - platform: template
+    name: Alarm
+    optimistic: true
+    turn_on_action:
+      - globals.set:
+          id: alarm_id
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: alarm_id
+          value: 'false'

@@ -1,10 +1,13 @@
 substitutions:
   device: gateway
   name: Gateway
-  comment: "DEV | BLE Proxy, Modbus"
-  
+  area: DEV
+  comment: "${area} | BLE Proxy, Modbus"
+
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
   comment: ${comment}
 
 esp32:
@@ -72,10 +75,10 @@ i2c:
   #   subnet: 255.255.255.0
 
 
-ethernet:
+# ethernet:
   # use_address: 10.17.241.254
   # use_address: 10.17.241.98
-  use_address: mcu-gateway.local
+  # use_address: mcu-gateway.local
 
 uart:
   id: uart_modbus
@@ -108,7 +111,7 @@ sensor:
   - platform: modbus_controller
     modbus_controller_id: modbus_temp_1
     id: temp_1
-    name: "${name} Temperature 1"
+    name: Temperature 1
     address: 0
     unit_of_measurement: "°C"
     register_type: read
@@ -120,7 +123,7 @@ sensor:
   - platform: modbus_controller
     modbus_controller_id: modbus_temp_1
     id: hum_1
-    name: "${name} Humidity 1"
+    name: Humidity 1
     address: 1
     unit_of_measurement: "%"
     register_type: read
@@ -131,7 +134,7 @@ sensor:
   - platform: modbus_controller
     modbus_controller_id: modbus_temp_2
     id: temp_2
-    name: "${name} Temperature 2"
+    name: Temperature 2
     address: 0
     unit_of_measurement: "°C"
     register_type: read
@@ -143,7 +146,7 @@ sensor:
   - platform: modbus_controller
     modbus_controller_id: modbus_temp_2
     id: hum_2
-    name: "${name} Humidity 2"
+    name: Humidity 2
     address: 1
     unit_of_measurement: "%"
     register_type: read
@@ -153,25 +156,25 @@ sensor:
       - multiply: 0.1
   # - platform: bmp085
   #   temperature:
-  #     name: "BMP180 Temperature"
+  #     name: BMP180 Temperature
   #   pressure:
-  #     name: "BMP180 Pressure"
+  #     name: BMP180 Pressure
   #   address: 0x77
   #   update_interval: 60s
   # - platform: bme280
   #   temperature:
-  #     name: "BME280 Temperature"
+  #     name: BME280 Temperature
   #     oversampling: 16x
   #   pressure:
-  #     name: "BME280 Pressure"
+  #     name: BME280 Pressure
   #   humidity:
-  #     name: "BME280 Humidity"
+  #     name: BME280 Humidity
   #   address: 0x76
   #   update_interval: 60s
   - platform: modbus_controller
     modbus_controller_id: modbus_adc_1
     id: adc_1_1
-    name: "Solar Pressure"
+    name: Solar Pressure
     address: 0
     unit_of_measurement: "MPa"
     register_type: holding
@@ -186,7 +189,7 @@ sensor:
 switch:
 - platform: modbus_controller
   modbus_controller_id: modbus_adc_1
-  name: "Readress MODBUS"
+  name: Readress MODBUS
   register_type: holding
   address: 0x00FD
   entity_category: config

@@ -7,6 +7,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -169,7 +170,7 @@ ota:
 light:
   - platform: xiaomi_bslamp2
     id: my_light
-    name: ${name}
+    name: Light
     default_transition_length: ${default_transition_length}
 
     # When the brightness changes, update the front panel illumination.
@@ -272,7 +273,7 @@ sensor:
 # The possible light modes are: "off", "rgb", "white" and "night".
 text_sensor:
   - platform: xiaomi_bslamp2
-    # name: ${name} Light Mode
+    # name: Light Mode
     id: my_light_mode
 
 output:

@@ -1,12 +1,13 @@
 substitutions:
   device: air-office-r
-  name: Office R Air Quality Monitor
+  name: Office R Air
   name_short: Office R
   area: Office R
   comment: "${area} | AirQ Monitoring"
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   
@@ -52,7 +53,7 @@ uart:
 
 light:
   - platform: esp32_rmt_led_strip
-    # name: "${name} LED"
+    # name: LED
     id: neo
     rgb_order: GRB
     pin: 27
@@ -60,7 +61,7 @@ light:
     chipset: ws2812
     restore_mode: ALWAYS_OFF
   - platform: esp32_rmt_led_strip
-    name: "${name} NEO"
+    name: NEO
     id: neo_strip
     rgb_order: GRB
     pin: 25
@@ -116,4 +117,4 @@ sensor:
     uart_id: particle_uart
     update_interval: 20s
     pm_2_5:
-      name: "${name_short} Particulate Matter 2.5µm Concentration"
+      name: Particulate Matter 2.5µm Concentration

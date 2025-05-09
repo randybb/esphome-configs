@@ -9,6 +9,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -36,7 +37,7 @@ binary_sensor:
       number: GPIO13
       mode: INPUT_PULLUP
       inverted: yes
-    name: "${name} Button"
+    name: Button
     # filters:
     #   invert:
     on_press:
@@ -56,11 +57,11 @@ binary_sensor:
 
 light:
   - platform: binary
-    name: "${name} Red LED"
+    name: Red LED
     id: light_red
     output: led_red
   - platform: binary
-    name: "${name} Blue LED"
+    name: Blue LED
     id: light_blue
     output: led_blue
 
@@ -84,21 +85,21 @@ sensor:
     current_resistor: ${current_res}
     voltage_divider: ${voltage_div}
     current:
-      name: "${name} Current"
+      name: Current
       icon: mdi:flash-circle
       accuracy_decimals: 3
     voltage:
-      name: "${name} Voltage"
+      name: Voltage
       icon: mdi:current-ac
     power:
-      name: "${name} Power"
-      id: "${device_id}_power"
+      name: Power
+      id: power
       icon: mdi:flash-outline
     update_interval: 30s
     change_mode_every: 4
   - platform: total_daily_energy
-    name: "${name} Total Daily Power"
-    power_id: "${device_id}_power"
+    name: Total Daily Power
+    power_id: power
     filters:
         # Multiplication factor from W to kW is 0.001
         - multiply: 0.001
@@ -112,7 +113,7 @@ sensor:
 
 switch:
   - platform: gpio
-    name: "${name} Relay"
+    name: Relay
     # icon: mdi:power-socket-eu
     pin: GPIO15
     id: relay

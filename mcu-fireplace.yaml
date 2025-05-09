@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -78,12 +79,12 @@ pca9554:
 
 binary_sensor:
   - platform: gpio
-    name: "${name} Status Button"
+    name: Status Button
     filters:
       - invert:
     pin: 39
   - platform: template
-    name: "${name} Fire"
+    name: Fire
     lambda: |-
       if (id(heating_fireplace_temperature).state > 37.5) {
         return true;
@@ -91,7 +92,7 @@ binary_sensor:
         return false;
       }
   - platform: gpio
-    name: "${name} Pump"
+    name: Pump
     id: off_peak_status
     pin:
       pca9554: pca9554_module
@@ -104,7 +105,7 @@ sensor:
   - platform: ds248x
     address: 0x6203168B32A7FF28
     # index: 0
-    name: "${name}"
+    name: Temperature
     id: 'heating_fireplace_temperature'
 #   - platform: dht
 #     pin: 14

@@ -5,7 +5,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
-  friendly_name: mcu-${device}
+  friendly_name: ${device}
   comment: ${comment}
   on_boot:
     # priority: -10
@@ -144,40 +144,40 @@ axp192:
 binary_sensor:
   - platform: gpio
     id: modem_dtr
-    # name: "${name} Cellular DTR"
+    # name: Cellular DTR
     pin: 32
   - platform: gpio
     id: modem_ri
-    # name: "${name} Cellular RI"
+    # name: ellular RI
     pin: 33
   - platform: gpio
     id: modem_status
-    # name: "${name} Cellular Status"
+    # name: Cellular Status
     pin: 36
   - platform: template
     id: modem_ready
-    # name: "${name} Cellular Ready"
+    # name: Cellular Ready
 
 sensor:
   
 switch:
   - platform: gpio
     id: modem_powerkey
-    # name: "${name} Cellular PowerKey"
+    # name: Cellular PowerKey
     pin: 4
     # inverted: true
   - platform: gpio
     id: led
-    # name: "${name} LED"
+    # name: LED
     pin: 12
     inverted: true
   - platform: gpio
     id: modem_enable
-    # name: "${name} Cellular Enable"
+    # name: Cellular Enable
     pin: 25
   - platform: axp192
     id: gnss_enable
-    # name: "${name} GNSS Enable"
+    # name: GNSS Enable
     port: LDO3
 
 text_sensor:
@@ -403,30 +403,30 @@ text_sensor:
 # binary_sensor:
 #   - platform: sim7600
 #     registered:
-#       name: "${name} Cellular"
+#       name: Cellular
 #   - platform: gpio
 #     id: modem_status
-#     name: "${name} Cellular Status"
+#     name: Cellular Status
 #     pin: 36
 
 # sensor:
 #   - platform: sim7600
 #     rssi:
-#       name: "${name} Cellular RSSI"
+#       name: Cellular RSSI
 
 # switch:
 #   - platform: gpio
 #     id: modem_powerkey
-#     # name: "${name} Modem Powerkey"
+#     # name: Modem Powerkey
 #     pin: 4
 #   - platform: gpio
 #     id: led
-#     # name: "${name} LED"
+#     # name: LED
 #     pin: 12
 #     inverted: true
 #   - platform: gpio
 #     id: modem_enable
-#     # name: "${name} Modem Enable"
+#     # name: Modem Enable
 #     pin: 25
 #   - platform: axp192
 #     id: gnss_enable
@@ -445,16 +445,16 @@ text_sensor:
 # text_sensor:
 #   - platform: template
 #     id: sms_sender
-#     name: "${name} SMS Sender"
+#     name: SMS Sender
 #   - platform: template
 #     id: sms_message
-#     name: "${name} SMS Message"
+#     name: SMS Message
 #   - platform: template
 #     id: caller_id_text_sensor
-#     name: "${name} Caller ID"
+#     name: Caller ID
 #   - platform: template
 #     id: ussd_message
-#     name: "${name} USSD Code"
+#     name: USSD Code
 #   - platform: serial
 #     uart_id: modem_uart
 #     id: modem_read

@@ -1,11 +1,12 @@
 substitutions:
   device: staircase-light
-  name: Staircase Light
+  name: Staircase
   area: Staircase
   comment: "${area} | Light"
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -63,7 +64,7 @@ output:
 
 light:
   - platform: binary
-    name: "${name}"
+    name: Light
     id: light_relay
     output: relay
     restore_mode: ALWAYS_ON

@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -39,12 +40,12 @@ packages:
 
 button:
   - platform: output
-    name: "${name} Open"
+    name: Open
     id: gate_open
     output: relay_1
     duration: 200ms
   - platform: output
-    name: "${name} Close"
+    name: Close
     id: gate_close
     output: relay_2
     duration: 200ms
@@ -59,40 +60,40 @@ output:
 
 switch:
   - platform: template
-    name: "${name} Open"
+    name: Open
     turn_on_action:
       - button.press: gate_open
   - platform: template
-    name: "${name} Close"
+    name: Close
     turn_on_action:
       - button.press: gate_close
   - platform: template
-    name: "${name} Auto Open"
+    name: Auto Open
     id: auto_open
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
   - platform: template
-    name: "${name} Auto Close"
+    name: Auto Close
     id: auto_close
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
   - platform: template
-    name: "${name} Enable Auris"
+    name: Enable Auris
     id: enable_auris
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
   - platform: template
-    name: "${name} Enable Yaris"
+    name: Enable Yaris
     id: enable_yaris
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
   - platform: template
-    name: "${name} Enable Honda PCX125"
+    name: Enable Honda PCX125
     id: enable_pcx125
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
   - platform: template
-    name: "${name} Enable Suzuki DL650"
+    name: Enable Suzuki DL650
     id: enable_dl650
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
@@ -275,7 +276,7 @@ binary_sensor:
 
 select:
   - platform: template
-    name: Gate
+    name: State
     id: gate_state
     options:
      - Open

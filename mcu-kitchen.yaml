@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   on_boot:
@@ -85,14 +86,14 @@ pca9685:
 
 binary_sensor:
   - platform: gpio
-    name: "${name} Status Button"
+    name: Status Button
     filters:
       - invert:
     pin: 39
 
 light:
   # - platform: esp32_rmt_led_strip
-  #   name: "${name} Status Light"
+  #   name: Status Light
   #   id: neo
   #   rgb_order: GRB
   #   pin: 27
@@ -101,7 +102,7 @@ light:
   #   chipset: ws2812
   #   restore_mode: ALWAYS_OFF
   - platform: cwww
-    name: "${name} Worktop Left"
+    name: Worktop Left
     id: light_1
     default_transition_length: 200ms
     restore_mode: ALWAYS_ON
@@ -110,7 +111,7 @@ light:
     cold_white_color_temperature: 6536 K
     warm_white_color_temperature: 2000 K
   - platform: cwww
-    name: "${name} Stove"
+    name: Stove
     id: light_2
     default_transition_length: 200ms
     restore_mode: ALWAYS_ON
@@ -119,7 +120,7 @@ light:
     cold_white_color_temperature: 6536 K
     warm_white_color_temperature: 2000 K
   - platform: cwww
-    name: "${name} Worktop Right"
+    name: Worktop Right
     id: light_3
     default_transition_length: 200ms
     restore_mode: ALWAYS_ON
@@ -128,7 +129,7 @@ light:
     cold_white_color_temperature: 6536 K
     warm_white_color_temperature: 2000 K
   # - platform: cwww
-  #   name: "${name} Light Spare"
+  #   name: Light Spare
   #   id: light_4
   #   default_transition_length: 200ms
   #   restore_mode: ALWAYS_ON
