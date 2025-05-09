@@ -2,10 +2,11 @@ substitutions:
   device: can-node-2
   name: CAN Node 2
   area: DEV
-  comment: "${area} | CANOpen"
+  comment: "${area} | CANopen"
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -86,7 +87,7 @@ output:
 light:
   - platform: cwww
     id: light1
-    name: "${name} Light 1"
+    name: Light 1
     cold_white: cw_output1
     warm_white: ww_output1
     cold_white_color_temperature: 6536 K
@@ -96,11 +97,42 @@ light:
 
   - platform: monochromatic
     id: light2
-    name: "${name} Light 2"
+    name: Light 2
     output: output2
     default_transition_length: 0s
 
   - platform: binary
     id: light3
-    name: "${name} Light 3"
+    name: Light 3
     output: output3
+
+
+## LIGHTENING
+i2c:
+  sda: 17
+  scl: 18
+  scan: true
+  # frequency: 100kHz
+
+as3935_i2c:
+  irq_pin: 19
+  spike_rejection: 4
+
+binary_sensor:
+  - platform: as3935
+    name: Storm Alert
+
+sensor:
+  - platform: as3935
+    lightning_energy:
+      name: Energy
+    distance:
+      name: Storm Distance
+
+# logger:
+#   level: VERY_VERBOSE
+#   logs:
+#     canbus: DEBUG
+#     canopen: DEBUG
+#     can_driver: DEBUG
+#     timer_driver: DEBUG

@@ -1,6 +1,6 @@
 ---
 platform: debug
 device:
-  name: "${name} Device Info"
+  name: Device Info
 reset_reason:
-  name: "${name} Reset Reason"
+  name: Reset Reason

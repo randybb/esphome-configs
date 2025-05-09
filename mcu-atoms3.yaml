@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   platformio_options:
@@ -56,7 +57,7 @@ web_server:
 
 light:
   - platform: esp32_rmt_led_strip
-    name: "${name} LED"
+    name: LED
     id: neo
     rgb_order: GRB
     pin: 2
@@ -67,12 +68,12 @@ light:
 
 text:
   - platform: template
-    name: "${name} Test Text"
+    name: Test Text
     # id: "it_2"
     icon: "mdi:text"
     optimistic: true
     internal: false
-    initial_value: "Welcome ESPHOME"
+    initial_value: "Welcome ESPHOME - #{name}"
     restore_value: true
     mode: text
     # max_restore_data_length: 24
@@ -206,27 +207,27 @@ m5stack_4relay:
 
 switch:
   - platform: m5stack_4relay
-    name: ${name} Relay 1
+    name: Relay 1
     id: relay_1
     channel: 1
     # interlock: &interlock_group_1 [relay_1, relay_2]
     # interlock_wait_time: 1s
     m5stack_4relay_id: m5stack_relay_1
   - platform: m5stack_4relay
-    name: ${name} Relay 2
+    name: Relay 2
     id: relay_2
     channel: 2
     # interlock: *interlock_group_1
     # interlock_wait_time: 1s
     m5stack_4relay_id: m5stack_relay_1
   - platform: m5stack_4relay
-    name: ${name} Relay 3
+    name: elay 3
     id: relay_3
     channel: 3
     # interlock: &interlock_group_2 [relay_3, relay_4]
     m5stack_4relay_id: m5stack_relay_1
   - platform: m5stack_4relay
-    name: ${name} Relay 4
+    name: Relay 4
     id: relay_4
     channel: 4
     # interlock: *interlock_group_2
@@ -246,7 +247,7 @@ spi:
 
 binary_sensor:
   - platform: gpio
-    name: ${name} Button
+    name: Button
     pin:
       number: 41
       inverted: true
@@ -394,9 +395,9 @@ sensor:
     i2c_id: i2c_main
     address: 0x44
     temperature:
-      name: "TEST Temperature"
+      name: TEST Temperature
     humidity:
-      name: "TEST Humidity"
+      name: TEST Humidity
     update_interval: 10s
   - platform: mpu6886
     address: 0x68
@@ -414,7 +415,7 @@ sensor:
     # gyro_z:
     #   name: "${name} MPU6886 Gyro z"
     temperature:
-      name: "${name} Temperature"
+      name: Temperature
       id: blabla
   - platform: homeassistant
     id: test_humidity
@@ -437,22 +438,22 @@ sensor:
   #   resolution: 12
   - platform: dallas_temp
     address: 0xdb041750eae2ff28
-    name: "${name} Dallas Temp 1"
+    name: Dallas Temp 1
     one_wire_id: hub_1
     update_interval: 10s
   - platform: dallas_temp
     address: 0xb2041750cf1aff28
-    name: "${name} Dallas Temp 2"
+    name: Dallas Temp 2
     one_wire_id: hub_1
     update_interval: 30s
   - platform: dallas_temp
     address: 0xcd01191eb8b07128
-    name: "${name} Dallas Temp 3"
+    name: Dallas Temp 3
     one_wire_id: hub_1
     update_interval: 45s
   - platform: dallas_temp
     address: 0x5a01191ef3375b28
-    name: "${name} Dallas Temp 4"
+    name: Dallas Temp 4
     one_wire_id: hub_1
 
 time:

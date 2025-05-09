@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -87,20 +88,20 @@ switch:
       mode: OUTPUT
       inverted: true
   - platform: gpio
-    name: "${name} Socket"
+    name: Socket
     id: socket_relay
     pin:
       pca9554: pca9554_module
       number: 4
       mode: OUTPUT
   - platform: gpio
-    name: "Garden Light"
+    name: Garden Light
     id: garden_light_relay
     pin:
       number: 22
       mode: OUTPUT
   - platform: gpio
-    name: "${name} Light"
+    name: Light
     id: shed_light_relay
     pin:
       number: 19

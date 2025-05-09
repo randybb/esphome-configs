@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -27,7 +28,7 @@ packages:
 #     components: [ esp32_camera ]
 
 esp32_camera:
-  name: My Camera
+  name: Camera
   external_clock:
     pin: 0
     frequency: 20MHz
@@ -45,7 +46,7 @@ switch:
     pin: 32
     # restore_mode: ALWAYS_ON
     # id: "cam_power_down"
-    name: "${name} Enable CAM"
+    name: Enable
 
 # esp32_camera_web_server:
 #   - port: 8080

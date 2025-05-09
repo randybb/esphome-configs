@@ -1,10 +1,10 @@
 ---
 platform: debug
 free:
-  name: "${name} Heap Free"
+  name: Heap Free
 fragmentation:
-  name: "${name} Heap Fragmentation"
+  name: Heap Fragmentation
 block:
-  name: "${name} Heap Max Block"
+  name: Heap Max Block
 loop_time:
-  name: "${name} Loop Time"
+  name: Loop Time

@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   # platformio_options:
@@ -54,7 +55,7 @@ logger:
 
 light:
   - platform: esp32_rmt_led_strip
-    name: "${name} LED"
+    name: LED
     id: led
     rgb_order: GRB
     pin: 8

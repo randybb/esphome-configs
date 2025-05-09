@@ -6,6 +6,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
@@ -28,7 +29,7 @@ binary_sensor:
       number: GPIO0
       mode: INPUT
       inverted: True
-    name: "${name} Button"
+    name: Button
     on_press:
       - switch.toggle: relay
 
@@ -46,7 +47,7 @@ output:
 
 switch:
   - platform: gpio
-    name: "${name} Relay"
+    name: Relay
     pin: GPIO12
     id: relay
     on_turn_on:

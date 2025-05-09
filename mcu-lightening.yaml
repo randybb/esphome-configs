@@ -7,6 +7,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   
@@ -41,7 +42,7 @@ as3935_i2c:
 
 binary_sensor:
 #   - platform: gpio
-#     # name: ${name} Button
+#     # name: Button
 #     pin:
 #       number: 39
 #       inverted: true
@@ -50,7 +51,7 @@ binary_sensor:
 
 light:
   - platform: esp32_rmt_led_strip
-    # name: "${name} LED"
+    # name: LED
     id: neo
     rgb_order: GRB
     pin: 27
@@ -61,7 +62,7 @@ light:
 sensor:
   - platform: as3935
     lightning_energy:
-      name: Lightning Energy
+      name: Energy
     distance:
       name: Storm Distance
 

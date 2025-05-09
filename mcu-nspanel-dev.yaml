@@ -1,7 +1,6 @@
 substitutions:
   device: nspanel-dev
   name: NSPanel DEV
-  name_short: DevPanel
   area: DEV
   comment: "${area} | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
@@ -10,6 +9,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   on_boot:
@@ -424,7 +424,7 @@ time:
 
 binary_sensor:
   - platform: gpio
-    name: ${name} Left Button
+    name: Left Button
     pin:
       number: 14
       inverted: true
@@ -436,7 +436,7 @@ binary_sensor:
       #       entity_id: switch.gate_open
 
   - platform: gpio
-    name: ${name} Right Button
+    name: Right Button
     pin:
       number: 27
       inverted: true
@@ -455,7 +455,7 @@ output:
 
 switch:
   - platform: gpio
-    name: ${name} Relay 1
+    name: Relay 1
     id: relay_1
     pin:
       number: 22
@@ -470,7 +470,7 @@ switch:
     #       payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
 
   - platform: gpio
-    name: ${name} Relay 2
+    name: Relay 2
     id: relay_2
     pin:
       number: 19
@@ -485,7 +485,7 @@ switch:
 
   # Turn screen power on/off. Easy way to configure the screen power control, but this should not be used from HA, as all components must be re-initialized afterwards. For lights, names of lights etc. this practically means that the state must change once to happen.
   - platform: gpio
-    name: ${name} Screen Power
+    name: Screen Power
     id: screen_power
     entity_category: config
     pin:
@@ -517,7 +517,7 @@ sensor:
       b_constant: 3950
       reference_temperature: 25°C
       reference_resistance: 10kOhm
-    name: "Living Room Temperature Entry"
+    name: Living Room Temperature Entry
     
   - platform: template
     id: room_temperature_id

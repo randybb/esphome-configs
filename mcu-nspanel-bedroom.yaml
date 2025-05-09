@@ -11,6 +11,7 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
   on_boot:
@@ -185,7 +186,7 @@ time:
 
 binary_sensor:
   - platform: gpio
-    name: ${name} Left Button
+    name: Left Button
     pin:
       number: 14
       inverted: true
@@ -197,14 +198,13 @@ binary_sensor:
             root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
 
   - platform: gpio
-    name: ${name} Right Button
+    name: Right Button
     pin:
       number: 27
       inverted: true
     # on_click:
     #   - switch.toggle: relay_2
     on_click:
-
       - homeassistant.service:
           service: light.toggle
           data:
@@ -216,7 +216,7 @@ binary_sensor:
 
 light:
   - platform: binary
-    name: ${name_short} Light
+    name: Light
     id: light_1
     output: relay_1
 
@@ -236,7 +236,7 @@ output:
 
 switch:
   - platform: gpio
-    name: ${name} Screen Power
+    name: Screen Power
     id: screen_power
     entity_category: config
     pin:
@@ -268,7 +268,7 @@ sensor:
       b_constant: 3950
       reference_temperature: 25°C
       reference_resistance: 10kOhm
-    name: "${name_short} Temperature"
+    name: Temperature
     
   - platform: template
     id: room_temperature_id

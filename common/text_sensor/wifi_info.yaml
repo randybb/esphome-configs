@@ -1,17 +1,19 @@
 ---
 platform: wifi_info
 ip_address:
-  name: ${name} IP Address
+  name: IP Address
   icon: mdi:ip-network
   address_1:
-    name: ${name} IP Address 1
+    name: IP Address 1
+    icon: mdi:ip-network
   address_2:
-    name: ${name} IP Address 2
+    name: IP Address 2
+    icon: mdi:ip-network
 #ssid:
-#  name: ${name} SSID
+#  name: SSID
 #bssid:
-#  name: ${name} BSSID
+#  name: BSSID
 mac_address:
-  name: ${name} MAC
+  name: MAC
 #scan_results:
-#  name: ${name} Latest Scan Results
+#  name: Latest Scan Results
