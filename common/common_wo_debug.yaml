@@ -22,11 +22,6 @@ sensor:
   - <<: !include sensor/uptime.yaml
   - <<: !include sensor/wifi_signal.yaml
 
-#switch:
-#  - <<: !include switch/restart.yaml
-#  - <<: !include switch/safe_mode.yaml
-#  - <<: !include switch/shutdown.yaml
-
 text_sensor:
   # - <<: !include text_sensor/debug.yaml
   - <<: !include text_sensor/git_ref.yaml

@@ -16,14 +16,9 @@ sensor:
   - <<: !include sensor/uptime.yaml
   # - <<: !include sensor/free_heap.yaml
 
-#switch:
-#  - <<: !include switch/restart.yaml
-#  - <<: !include switch/safe_mode.yaml
-#  - <<: !include switch/shutdown.yaml
-
 text_sensor:
 #  - <<: !include text_sensor/debug.yaml
-  # - <<: !include text_sensor/version.yaml
+  - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/ethernet_info.yaml
 
 network:
