@@ -20,11 +20,12 @@ esphome:
       - switch.turn_on: screen_power
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
-wifi:
-  use_address: 10.17.241.212
+    advanced:
+      enable_lwip_mdns_queries: true
+      minimum_chip_revision: "3.0"
 
 external_components:
   - source:
@@ -32,16 +33,26 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  - source: github://pr#7942
-    components: adc
-    refresh: 0s
-  - source: github://pr#8325
-    components: mqtt
-    refresh: 0s
-  - source: components
   
 packages:
   common: !include common/common.yaml
+
+script:
+  - id: geiger_click
+    mode: restart
+    then:
+      - output.turn_on: buzzer_out
+      - output.ledc.set_frequency:
+          id: buzzer_out
+          frequency: 4000Hz
+      - output.set_level:
+          id: buzzer_out
+          level: 50%
+      - delay: 1ms
+      - output.turn_off: buzzer_out
+      - delay: !lambda |-
+          return esphome::random_uint32() % 450 + 50;
+      - script.execute: geiger_click
 
 api:
   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
@@ -72,6 +83,7 @@ api:
 
     - service: update_tft
       then:
+        - logger.log: "tft updating from: ${tft_url}"
         - lambda: |-
             id(nspanel_id).upload_tft("${tft_url}");
             
@@ -281,6 +293,7 @@ light:
     name: Light
     id: light_1
     output: relay_1
+    restore_mode: RESTORE_DEFAULT_OFF
 #   # - platform: binary
 #   #   name: Relay 2
 #   #   output: relay_2
@@ -304,6 +317,13 @@ switch:
       number: 4
       inverted: true
     restore_mode: ALWAYS_ON
+  - platform: template
+    name: "Geiger Counter"
+    optimistic: True
+    turn_on_action:
+      - script.execute: geiger_click
+    turn_off_action:
+      - script.stop: geiger_click
 
 rtttl:
   id: buzzer

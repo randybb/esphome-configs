@@ -36,13 +36,12 @@ esphome:
         }
 
 esp32:
-  board: esp32-c6-devkitc-1
   variant: esp32c6
   flash_size: 16MB
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
+    # version: 5.4.2
+    # platform_version: 54.03.21
 
 logger:
   hardware_uart: USB_SERIAL_JTAG

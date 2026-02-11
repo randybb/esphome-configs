@@ -1,7 +1,7 @@
 substitutions:
   device: nspanel-patio
   name: Patio NSPanel
-  area: Living Room / Kitchen
+  area: Living Room & Kitchen
   comment: "${area}, Patio | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
@@ -19,9 +19,11 @@ esphome:
       - switch.turn_on: screen_power
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.0"
 
 external_components:
   - source:
@@ -29,9 +31,6 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  - source: github://pr#7942
-    components: adc
-    refresh: 0s
   - source: components
   
 packages:

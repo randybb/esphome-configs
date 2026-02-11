@@ -1,0 +1,289 @@
+substitutions:
+  device: lvgl-trainer
+  name: Trainer Display
+  area: Basement
+  comment: "${area} | Pain Cave"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+
+packages:
+  common: !include common/common.yaml
+
+i2c:
+  - id: touchscreen_bus
+    sda: 4
+    scl: 8
+
+psram:
+  mode: octal
+  speed: 80MHz
+  
+spi:
+  id: display_qspi
+  type: quad
+  clk_pin: 47
+  data_pins: [21, 48, 40, 39]
+    
+color:
+  - id: my_red
+    red: 100%
+    green: 0%
+    blue: 0%
+  - id: my_orange
+    red: 100%
+    green: 50%
+    blue: 0%
+  - id: my_yellow
+    red: 100%
+    green: 100%
+    blue: 0%
+  - id: my_green
+    red: 0%
+    green: 100%
+    blue: 0%
+  - id: my_blue
+    red: 0%
+    green: 0%
+    blue: 100%
+  - id: my_teal
+    red: 0%
+    green: 100%
+    blue: 100%
+  - id: my_gray
+    red: 70%
+    green: 70%
+    blue: 70%
+  - id: my_white
+    red: 100%
+    green: 100%
+    blue: 100%
+
+font:
+  - file: "gfonts://Roboto"
+    id: Roboto_48
+    size: 48
+  - file: "gfonts://Roboto"
+    id: Roboto_36
+    size: 36
+  - file: "gfonts://Roboto"
+    id: Roboto_24
+    size: 24
+  - file: "gfonts://Roboto"
+    id: Roboto_12
+    size: 12
+  - file: "gfonts://Roboto"
+    id: font_std
+    size: 40
+    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
+  - file: "gfonts://Roboto@700"
+    id: font_title
+    size: 40
+    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
+
+globals:
+  - id: bgcolor
+    type: Color
+    initial_value: "Color::random_color()"
+
+# power_supply:
+#   id: main_backlight
+#   pin: 1
+#   enable_on_boot: true
+
+output:
+  - platform: ledc
+    id: gpio_backlight_pwm
+    pin: 1
+
+light:
+  - id: display_backlight
+    name: Backlight
+    platform: monochromatic
+    output: gpio_backlight_pwm
+    restore_mode: ALWAYS_ON
+    default_transition_length: 500ms
+
+display:
+  - platform: qspi_dbi
+    model: axs15231
+    data_rate: 40MHz #20mhz is default
+    #spi_mode: MODE2
+    id: main_display
+    spi_id: display_qspi
+    dimensions:
+      height: 480
+      width: 320
+    cs_pin: 45
+    brightness: 50
+    rotation: 90
+    auto_clear_enabled: false
+    # show_test_card: true
+    # lambda: |-
+    #   it.fill(id(bgcolor));
+    #   it.print(it.get_width()/2, it.get_height()/2-20, id(font_title), TextAlign::CENTER, "ESPHome");
+    #   it.print(it.get_width()/2, it.get_height()/2+20, id(font_std), TextAlign::CENTER, "@UTBDK");
+
+touchscreen:
+  - platform: axs15231
+    id: main_touch
+    display: main_display
+    i2c_id: touchscreen_bus
+    update_interval: 100ms
+    # interrupt_pin: 
+      # number: 3
+      # ignore_strapping_warning: true
+    calibration:
+      x_min: 0
+      x_max: 479
+      y_min: 0
+      y_max: 319
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: true
+    # on_touch:
+    #   - lambda: |-
+    #       Color newColor;
+    #       do { newColor =  Color::random_color(); } while (newColor == id(bgcolor));
+    #       id(bgcolor) = newColor;
+
+    #       ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
+    #         touch.x,
+    #         touch.y,
+    #         touch.x_raw,
+    #         touch.y_raw
+    #       );
+    on_release:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on:
+                id: display_backlight
+                transition_length: 300ms
+
+uart:
+  - id: ext_uart
+    tx_pin: 43
+    rx_pin: 44
+    baud_rate: 115200
+    stop_bits: 1
+    parity: NONE
+
+binary_sensor:
+  - platform: homeassistant
+    id: exercise_room_light
+    entity_id: light.exercise_room
+    publish_initial_state: true
+    on_state:
+      then:
+        lvgl.widget.update:
+          id: exercise_room_light_btn
+          state:
+            checked: !lambda return x;
+  - platform: homeassistant
+    id: exercise_room_fan
+    entity_id: light.mcu_dimmer_exercise_room_fan
+    publish_initial_state: true
+    on_state:
+      then:
+        lvgl.widget.update:
+          id: exercise_room_fan_btn
+          state:
+            checked: !lambda return x;
+
+lvgl:
+  buffer_size: 100%
+  log_level: WARN
+  color_depth: 16
+  default_font: montserrat_18
+#   on_idle:
+#     - timeout: !lambda "return (id(display_timeout).state * 1000);"
+#       then:
+#         - logger.log: "LVGL is idle"
+#         - light.turn_off:
+#             id: display_backlight
+#             transition_length: 2500ms
+#         - lvgl.pause:
+  top_layer:
+    widgets:
+      - buttonmatrix:
+          align: bottom_mid
+          # styles: header_footer
+          pad_all: 0
+          outline_width: 0
+          id: top_layer
+          # items:
+          #   styles: header_footer
+          rows:
+            - buttons:
+              - id: page_prev
+                text: "\uF053"
+                on_press:
+                  then:
+                    lvgl.page.previous:
+              - id: page_home
+                text: "\uF015"
+                on_press:
+                  then:
+                    lvgl.page.show: main_page
+              - id: page_next
+                text: "\uF054"
+                on_press:
+                  then:
+                    lvgl.page.next:
+  pages:
+    - id: main_page
+      widgets:
+        - label:
+            text: "ESPHome LVGL Display"
+            align: CENTER
+            text_align: CENTER
+            text_color: 0xFFFFFF
+    - id: excercise_page
+      widgets:
+        - label:
+            align: CENTER
+            text: 'Hello World!'
+        - button:
+            id: exercise_room_light_btn
+            align: TOP_LEFT
+            width: 100
+            height: 70
+            checkable: true
+            widgets:
+            - label:
+                align: CENTER
+                text: 'Light'
+            on_click:
+            - homeassistant.action:
+                action: light.toggle
+                data:
+                    entity_id: light.exercise_room
+        - button:
+            id: exercise_room_fan_btn
+            align: TOP_RIGHT
+            width: 100
+            height: 70
+            checkable: true
+            widgets:
+            - label:
+                align: CENTER
+                text: 'Fan'
+            on_click:
+            - homeassistant.action:
+                action: light.toggle
+                data:
+                    entity_id: light.mcu_dimmer_exercise_room_fan

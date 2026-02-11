@@ -1,7 +1,7 @@
 substitutions:
   device: fireplace
   name: Heating Fireplace
-  area: Living Room / Kitchen
+  area: Living Room & Kitchen
   comment: "${area}, Fireplace | Fireplace monitoring for heating"
 
 esphome:
@@ -11,15 +11,17 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
 
 external_components:
-  - source: github://mknjc/esphome@ds248x
-    components: ds248x
+  # - source: github://pr#12717
+  #   components: [ds248x]
+  #   refresh: 1h
+  - source: github://pr#13534
+    components: [ds2482, ds2484, ds248x_base]
+    refresh: 1h
 
 packages:
   common: !include common/common.yaml
@@ -55,13 +57,32 @@ i2c:
   scl: 21
   scan: true #false
 
-ds248x:
-  # i2c_id: i2c_main
-  address: 0x18 # should be the default
-  # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
-  active_pullup: true # adds a active pullup which should improve signal integrity
-  strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
-  bus_sleep: true # power down the bus when no transaction is in progres
+# ds248x:
+#   # i2c_id: i2c_main
+#   address: 0x18 # should be the default
+#   # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
+#   active_pullup: true # adds a active pullup which should improve signal integrity
+#   strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
+#   bus_sleep: true # power down the bus when no transaction is in progres
+
+# one_wire:
+#   id: one_wire_bus
+#   platform: ds2484
+#   active_pullup: true
+
+# ds248x:
+#   id: ds2484_module
+#   address: 0x18
+
+# one_wire:
+#   - platform: ds248x
+#     ds248x_id: ds2484_module
+#     id: one_wire_bus
+
+one_wire:
+  id: one_wire_bus
+  platform: ds2482
+  active_pullup: true
 
 pca9554:
   - id: pca9554_module
@@ -102,7 +123,8 @@ binary_sensor:
       - delayed_off: 300ms
 
 sensor:
-  - platform: ds248x
+  # - platform: ds248x
+  - platform: dallas_temp
     address: 0x6203168B32A7FF28
     # index: 0
     name: Temperature
@@ -117,3 +139,6 @@ sensor:
 #       id: 'kitchen_humidity'
 #     update_interval: 60s
 #     model: si7021
+
+bluetooth_proxy:
+  active: true

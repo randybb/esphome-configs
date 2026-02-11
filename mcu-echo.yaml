@@ -12,34 +12,22 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
-    # type: arduino
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
-
-external_components:
-  - source: components
-  # - source:
-  #     type: git
-  #     url: https://github.com/gnumpi/esphome_audio
-  #     ref: dev-next
-  #   components: [ adf_pipeline, i2s_audio ]
-  #   refresh: 0s
 
 packages:
-  common: !include common/common_esp8266.yaml
+  common: !include common/common.yaml
 
-# api:
-  # services:
-  #   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-  #   - service: play_rtttl
-  #     variables:
-  #       song: string
-  #     then:
-  #       - rtttl.play:
-  #           rtttl: !lambda 'return song;'
+api:
+  services:
+    # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
 
 i2c:
   sda: 26
@@ -101,19 +89,24 @@ output:
       allow_other_uses: true
 
 i2s_audio:
-  i2s_lrclk_pin: 33
-  i2s_bclk_pin: 19
+  - id: speaker_bus
+    i2s_lrclk_pin: 33
+    i2s_bclk_pin: 19
 
 speaker:
   - platform: i2s_audio
     id: speaker_id
+    i2s_audio_id: speaker_bus
     dac_type: external
     i2s_dout_pin: 22
     channel: mono
     sample_rate: 48000
+    buffer_duration: 100ms  # Smaller buffer
   - platform: mixer
     id: mixer_speaker_id
     output_speaker: speaker_id
+    num_channels: 1
+    task_stack_in_psram: false
     source_speakers:
       - id: announcement_spk_mixer_input
       - id: media_spk_mixer_input
@@ -132,10 +125,17 @@ media_player:
   - platform: speaker
     id: media_out
     name: Player
+    codec_support_enabled: false
     media_pipeline:
-        speaker: media_spk_resampling_input
+      speaker: media_spk_resampling_input
+      # format: WAV
+      # num_channels: 1
+      # sample_rate: 8000  # Lower sample rate
     announcement_pipeline:
-        speaker: announcement_spk_resampling_input
+      speaker: announcement_spk_resampling_input
+      # format: WAV
+      # num_channels: 1
+      # sample_rate: 8000  # Lower sample rate
     on_play:
       - light.turn_on: led_light
     on_idle:
@@ -144,6 +144,81 @@ media_player:
 rtttl:
   id: my_rtttl
   speaker: rtttl_spk_resampling_input
+
+button:
+  - platform: template
+    name: "Jump Sound"
+    on_press:
+      - if:
+          condition:
+            lambda: return !id(speaker_id)->is_running();
+          then:
+            - lambda: id(speaker_id)->start();
+            - delay: 50ms
+      - lambda: |-
+          static std::vector<int16_t> buffer;
+          const int duration_ms = 300;
+          const int samples = (16000 * duration_ms) / 1000;
+          buffer.resize(samples);
+          for (int i = 0; i < samples; i++) {
+            float progress = i / (float)samples;
+            float bounce = sin(progress * M_PI * 3) * 0.3;
+            float pitch_freq = 400 + (600 * progress) + (bounce * 200);
+            float envelope = exp(-progress * 4);
+            float phase = (i * pitch_freq * 2 * M_PI) / 16000;
+            buffer[i] = (int16_t)(1024 * sin(phase) * envelope);
+          }
+          id(speaker_id)->play((uint8_t*)buffer.data(), buffer.size() * 2);
+          id(speaker_id)->finish();
+  - platform: template
+    name: "Coin Sound"
+    on_press:
+      - if:
+          condition:
+            lambda: return !id(speaker_id)->is_running();
+          then:
+            - lambda: id(speaker_id)->start();
+            - delay: 50ms
+      - lambda: |-
+          static std::vector<int16_t> buffer;
+          const int duration_ms = 100;
+          const int samples = (16000 * duration_ms) / 1000;
+          buffer.resize(samples);
+          float phase = 0;
+          for (int i = 0; i < samples; i++) {
+            float progress = i / (float)samples;
+            float freq = (progress < 0.5) ? 988 : 1319;
+            float envelope = 1.0 - (progress * 0.7);
+            phase += (freq * 2 * M_PI) / 16000;
+            float square = (sin(phase) > 0) ? 1.0 : -1.0;
+            buffer[i] = (int16_t)(2048 * square * envelope);
+          }
+          id(speaker_id)->play((uint8_t*)buffer.data(), buffer.size() * 2);
+          id(speaker_id)->finish();
+  - platform: template
+    name: "Fireball Sound"
+    on_press:
+      - if:
+          condition:
+            lambda: return !id(speaker_id)->is_running();
+          then:
+            - lambda: id(speaker_id)->start();
+            - delay: 50ms
+      - lambda: |-
+          static std::vector<int16_t> buffer;
+          const int duration_ms = 300;
+          const int samples = (16000 * duration_ms) / 1000;
+          buffer.resize(samples);
+          for (int i = 0; i < samples; i++) {
+            float progress = i / (float)samples;
+            float pitch_freq = 800 * exp(-progress * 3);
+            float noise = (rand() % 100) / 100.0 * 0.3;
+            float envelope = exp(-progress * 2);
+            float phase = (i * pitch_freq * 2 * M_PI) / 16000;
+            buffer[i] = (int16_t)(1024 * (sin(phase) * 0.7 + noise) * envelope);
+          }
+          id(speaker_id)->play((uint8_t*)buffer.data(), buffer.size() * 2);
+          id(speaker_id)->finish();
 
 # microphone:
 #   - platform: i2s_audio

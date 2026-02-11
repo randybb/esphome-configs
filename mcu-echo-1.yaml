@@ -12,7 +12,7 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: arduino
     # version: 2.0.14
@@ -83,7 +83,6 @@ light:
     rgb_order: GRB
     pin: 27
     num_leds: 1
-    rmt_channel: 0
     chipset: ws2812
 
 # output:

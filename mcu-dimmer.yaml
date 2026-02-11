@@ -31,24 +31,97 @@ esphome:
         }
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.12
 
-external_components:
-  - source: github://pr#7072
-    components: ac_dimmer
-    refresh: 0s
-  - source: components
   
 packages:
   common: !include common/common.yaml
 
+# fan:
+#   - platform: speed
+#     output: fan_dimmer1
+#     id: fan1
+#     name: Exercise Room
+    # speed_count: 5
+    # preset_modes:
+    #   - 50%
+    #   - 60%
+    #   - 70%
+    #   - 80%
+    #   - 90%
+    #   - 100%
+    # on_preset_set:
+    #   then:
+    #     - fan.turn_on:
+    #         id: fan1
+    #         speed: !lambda |-
+    #           return x.c_str();
+    # # default_transition_length: 10s
+
+button:
+  - platform: template
+    name: Exercise Room Fan 50 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 50%
+  - platform: template
+    name: Exercise Room Fan 60 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 60%
+  - platform: template
+    name: Exercise Room Fan 70 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 70%
+  - platform: template
+    name: Exercise Room Fan 80 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 80%
+  - platform: template
+    name: Exercise Room Fan 90 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 90%
+  - platform: template
+    name: Exercise Room Fan 100 %
+    on_press:
+      then:
+        - output.set_level:
+            id: dimmer1
+            level: 100%
+  - platform: template
+    name: Exercise Room Fan +10 %
+    on_press:
+      then:
+        - light.dim_relative:
+            id: fan_dimmer1
+            relative_brightness: 10%
+  - platform: template
+    name: Exercise Room Fan -10 %
+    on_press:
+      then:
+        - light.dim_relative:
+            id: fan_dimmer1
+            relative_brightness: -10%
+
 light:
   - platform: monochromatic
     output: dimmer1
+    id: fan_dimmer1
     name: Exercise Room Fan
     default_transition_length: 10s
   - platform: esp32_rmt_led_strip

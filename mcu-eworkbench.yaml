@@ -11,12 +11,9 @@ esphome:
     board_build.flash_mode: dio
 
 esp32:
-  board: esp32-c3-devkitm-1
   variant: esp32c3
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
 
 packages:
   common: !include common/common.yaml
@@ -142,7 +139,7 @@ binary_sensor:
       mode: INPUT
       inverted: false
   - platform: gpio
-    name: "PCF8574 Pin #15"
+    name: "PCF8574 Pin #16"
     pin:
       pcf8574: pcf8574_hub
       number: 14

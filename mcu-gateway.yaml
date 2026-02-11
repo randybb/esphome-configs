@@ -11,28 +11,18 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: esp32doit-devkit-v1
+  variant: esp32
   framework:
-    version: 5.3.2
-    platform_version: 53.03.11
     type: esp-idf
 
 external_components:
-  - source: github://pr#8457
-    components: ethernet
-  # - source: github://pr#4080
-  #   components: [lcd_pcf8574, lcd_base]
-  # - source: github://pr#3564
-  #   refresh: 0s
-  #   components: 
-  #     - esp32
-  #     - ethernet_info
-  #     - ethernet
-  #     # - wifi
-  # - source: github://pr#2112
-  #   components: ["m5stack_4relay"]
-  #   refresh: 1h
-  # - source: components
+  # Ethernet LLDP 802.1AB transmitter
+  - source: github://pr#11760
+    components: [ethernet]
+    refresh: 1h
+  - source: github://pr#2112
+    components: ["m5stack_4relay"]
+    refresh: 1h
 
 packages:
   # common: !include common/common.yaml
@@ -58,6 +48,23 @@ i2c:
   sda: 13
   scl: 16
   scan: true
+
+ethernet:
+  lldp:
+    # Enable LLDP transmission
+    #enabled: true
+    # Optional: override default port
+    port: "test-port"
+    # Optional: override default system name
+    system_name: "test-system"
+    # Optional: override default system description
+    system_description: "test-description"
+    # Optional: override default "fast mode" burst packet count
+    tx_fast_count: 4
+    # Optional: override default LLDP frame transmission interval
+    tx_interval: 30
+    # Optional: override default hold count, used in conjuction with tx_interval to calculate overall TTL
+    tx_hold: 4
 
 # ethernet:
 #   type: LAN8720
@@ -200,6 +207,12 @@ esp32_ble_tracker:
     interval: 1100ms
     window: 1100ms
     active: true
+  on_ble_advertise:
+    - mac_address:
+        - D5:63:3C:12:E6:07
+      then:
+        - lambda: |-
+            ESP_LOGV("ble_adv", "Detected HPA250B");
 
 bluetooth_proxy:
   active: true

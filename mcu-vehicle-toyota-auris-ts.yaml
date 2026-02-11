@@ -9,6 +9,13 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
+  on_boot:
+    then:
+      - if:
+          condition:
+            - binary_sensor.is_off: button
+          then:
+            - wifi.disable:
   on_loop:
     then:
       lambda: |-
@@ -34,27 +41,27 @@ esphome:
         }
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
+    # version: 5.3.2
+    # platform_version: 53.03.11
 
 external_components:
   - source: components
 
 packages:
-  # wifi: !include common/wifi.yaml
+  wifi: !include common/wifi.yaml
   logger: !include common/logger.yaml
   # api: !include common/api.yaml
-  # ota: !include common/ota.yaml
+  ota: !include common/ota.yaml
 #   common: !include common/common.yaml
 
 # api:
 #   reboot_timeout: 0s
 
 # wifi:
-#   reboot_timeout: 0s
+#   enable_on_boot: false
 
 # debug:
 
@@ -72,6 +79,13 @@ packages:
 # UART1 TX  G33
 # 1-WIRE    G22
 # NC        G19
+
+binary_sensor:
+  - platform: gpio
+    id: button
+    filters:
+      - invert:
+    pin: 39
 
 esp32_ble_beacon:
   type: iBeacon

@@ -6,38 +6,19 @@ substitutions:
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
 
 esp32:
-  board: m5stack-core2
+  variant: esp32
   framework:
-    # type: arduino
     type: esp-idf
 
 psram:
 
 external_components:
-  # - source: github://pr#4027
-  #   refresh: 0s
-  #   components:
-  #     # - bm8563
-  #     - gt911
-  #     - it8951e
-  #     - m5paper
-  #     - spi
-  - source:
-      type: git
-      url: https://github.com/Passific/m5paper_esphome
-      ref: main
-    components:
-      - bm8563
-      - gt911
-      - it8951e
-      - m5paper
-      - spi
-# external_components:
-#   - source: components
+  - source: github://Passific/m5paper_esphome
 
 packages:
   common: !include common/common.yaml
@@ -55,9 +36,9 @@ time:
 m5paper:
   battery_power_pin: GPIO5
   main_power_pin: GPIO2
-  update_interval: 10s
-  battery_voltage:
-    name: "${name} Battery"
+  # update_interval: 10s
+  # battery_voltage:
+  #   name: "${name} Battery"
 
 # 0x44 SHT30
 # 0x50
@@ -142,7 +123,7 @@ font:
 display:
   - platform: it8951e
     id: m5paper_display
-    display_cs_pin: GPIO15
+    cs_pin: GPIO15
     reset_pin: GPIO23
     busy_pin: GPIO27
     rotation: 90
@@ -169,10 +150,10 @@ touchscreen:
 sensor:
   - platform: sht3xd
     temperature:
-      name: "${name} Temperature"
+      name: Temperature
       id: current_temperature
     humidity:
-      name: "${name} Humidity"
+      name: Humidity
     address: 0x44
     update_interval: 60s
 

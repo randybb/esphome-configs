@@ -9,8 +9,6 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
-  platformio_options:
-    board_build.flash_mode: dio
   # on_boot:
   #   - priority: 800
   #     then:
@@ -20,17 +18,13 @@ esphome:
   #           id(display_tft).disable();
   
 esp32:
-  board: esp32-s3-devkitc-1
-  # board: m5stack-atoms3
+  variant: esp32s3
   flash_size: 8MB
   framework:
     type: esp-idf
-    # version: dev
-    # version: 5.1.2
-    # platform_version: 6.6.0
-    version: 5.3.3
-    platform_version: 53.03.12
-    # type: arduino
+
+ota:
+  - platform: web_server
 
 pcf8574:
   - id: 'pcf8574_hub'
@@ -55,16 +49,16 @@ web_server:
   port: 80
   version: 3
 
-light:
-  - platform: esp32_rmt_led_strip
-    name: LED
-    id: neo
-    rgb_order: GRB
-    pin: 2
-    num_leds: 1
-    # rmt_channel: 0
-    chipset: ws2812
-    restore_mode: ALWAYS_OFF
+# light:
+#   - platform: esp32_rmt_led_strip
+#     name: LED
+#     id: neo
+#     rgb_order: GRB
+#     pin: 2
+#     num_leds: 1
+#     # rmt_channel: 0
+#     chipset: ws2812
+#     restore_mode: ALWAYS_OFF
 
 text:
   - platform: template
@@ -179,10 +173,10 @@ i2c:
 #   strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
 #   bus_sleep: true # power down the bus when no transaction is in progres
 
-one_wire:
-  - platform: gpio
-    pin: 1
-    id: hub_1
+# one_wire:
+#   - platform: gpio
+#     pin: 1
+#     id: hub_1
   # - platform: gpio
   #   pin: 2
   #   id: hub_2
@@ -205,7 +199,37 @@ m5stack_4relay:
 # wifi:
 #   use_address: 10.17.240.52
 
+output:
+  - platform: gpio
+    id: motor_in1
+    pin: 1
+  - platform: gpio
+    id: motor_in2
+    pin: 2
+
+
 switch:
+  - platform: template
+    name: "Motor Forward"
+    optimistic: true
+    turn_on_action:
+      - output.turn_on: motor_in1
+      - output.turn_off: motor_in2
+    turn_off_action:
+      - output.turn_off: motor_in1
+      - output.turn_off: motor_in2
+
+  - platform: template
+    name: "Motor Back"
+    optimistic: true
+    turn_on_action:
+      - output.turn_off: motor_in1
+      - output.turn_on: motor_in2
+    turn_off_action:
+      - output.turn_off: motor_in1
+      - output.turn_off: motor_in2
+
+# switch:
   - platform: m5stack_4relay
     name: Relay 1
     id: relay_1
@@ -221,7 +245,7 @@ switch:
     # interlock_wait_time: 1s
     m5stack_4relay_id: m5stack_relay_1
   - platform: m5stack_4relay
-    name: elay 3
+    name: Relay 3
     id: relay_3
     channel: 3
     # interlock: &interlock_group_2 [relay_3, relay_4]
@@ -391,34 +415,34 @@ display:
     #   it.rectangle(0, 0, 128, 64);
 
 sensor:
-  - platform: sht3xd
-    i2c_id: i2c_main
-    address: 0x44
-    temperature:
-      name: TEST Temperature
-    humidity:
-      name: TEST Humidity
-    update_interval: 10s
-  - platform: mpu6886
-    address: 0x68
-    i2c_id: i2c_main
-    # accel_x:
-    #   name: "${name} MPU6886 Accel X"
-    # accel_y:
-    #   name: "${name} MPU6886 Accel Y"
-    # accel_z:
-    #   name: "${name} MPU6886 Accel z"
-    # gyro_x:
-    #   name: "${name} MPU6886 Gyro X"
-    # gyro_y:
-    #   name: "${name} MPU6886 Gyro Y"
-    # gyro_z:
-    #   name: "${name} MPU6886 Gyro z"
-    temperature:
-      name: Temperature
-      id: blabla
+  # - platform: sht3xd
+  #   i2c_id: i2c_main
+  #   address: 0x44
+  #   temperature:
+  #     name: TEST Temperature
+  #   humidity:
+  #     name: TEST Humidity
+  #   update_interval: 10s
+  # - platform: mpu6886
+  #   address: 0x68
+  #   i2c_id: i2c_main
+  #   # accel_x:
+  #   #   name: "${name} MPU6886 Accel X"
+  #   # accel_y:
+  #   #   name: "${name} MPU6886 Accel Y"
+  #   # accel_z:
+  #   #   name: "${name} MPU6886 Accel z"
+  #   # gyro_x:
+  #   #   name: "${name} MPU6886 Gyro X"
+  #   # gyro_y:
+  #   #   name: "${name} MPU6886 Gyro Y"
+  #   # gyro_z:
+  #   #   name: "${name} MPU6886 Gyro z"
+  #   temperature:
+  #     name: Temperature
+  #     id: blabla
   - platform: homeassistant
-    id: test_humidity
+    id: test_humidity_ha
     entity_id: sensor.humidity_158d0001c2a1d1
   # - platform: ds248x
   #   address: 0x8b0516b39804ff28
@@ -436,25 +460,25 @@ sensor:
   #   address: 0x810516b3c69fff28
   #   name: "${name} Dallas Temp 4"
   #   resolution: 12
-  - platform: dallas_temp
-    address: 0xdb041750eae2ff28
-    name: Dallas Temp 1
-    one_wire_id: hub_1
-    update_interval: 10s
-  - platform: dallas_temp
-    address: 0xb2041750cf1aff28
-    name: Dallas Temp 2
-    one_wire_id: hub_1
-    update_interval: 30s
-  - platform: dallas_temp
-    address: 0xcd01191eb8b07128
-    name: Dallas Temp 3
-    one_wire_id: hub_1
-    update_interval: 45s
-  - platform: dallas_temp
-    address: 0x5a01191ef3375b28
-    name: Dallas Temp 4
-    one_wire_id: hub_1
+  # - platform: dallas_temp
+  #   address: 0xdb041750eae2ff28
+  #   name: Dallas Temp 1
+  #   one_wire_id: hub_1
+  #   update_interval: 10s
+  # - platform: dallas_temp
+  #   address: 0xb2041750cf1aff28
+  #   name: Dallas Temp 2
+  #   one_wire_id: hub_1
+  #   update_interval: 30s
+  # - platform: dallas_temp
+  #   address: 0xcd01191eb8b07128
+  #   name: Dallas Temp 3
+  #   one_wire_id: hub_1
+  #   update_interval: 45s
+  # - platform: dallas_temp
+  #   address: 0x5a01191ef3375b28
+  #   name: Dallas Temp 4
+  #   one_wire_id: hub_1
 
 time:
   - !include common/time/homeassistant.yaml

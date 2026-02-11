@@ -1,7 +1,7 @@
 substitutions:
   device: nspanel-fireplace
   name: Fireplace NSPanel
-  area: Living Room / Kitchen
+  area: Living Room & Kitchen
   comment: "${area}, Fireplace | NSPanel"
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
@@ -19,9 +19,11 @@ esphome:
       - switch.turn_on: screen_power
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.0"
 
 external_components:
   - source:
@@ -29,10 +31,6 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  - source: github://pr#7942
-    components: adc
-    refresh: 0s
-  - source: components
   
 packages:
   common: !include common/common.yaml
@@ -190,14 +188,28 @@ binary_sensor:
       inverted: true
     on_click:
     #   - switch.toggle: relay_1
-      - homeassistant.service:
-          service: light.toggle
-          data:
-            entity_id: light.living_room
-      - mqtt.publish_json:
-          topic: $panel_recv_topic
-          payload: |-
-            root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.living_room
+          - mqtt.publish_json:
+              topic: $panel_recv_topic
+              payload: |-
+                root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
+      - min_length: 500ms
+        max_length: 2000ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.worktop_lights
+          - mqtt.publish_json:
+              topic: $panel_recv_topic
+              payload: |-
+                root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_kitchen,button";
 
   - platform: gpio
     name: Right Button
@@ -206,15 +218,28 @@ binary_sensor:
       inverted: true
     on_click:
     #   - switch.toggle: relay_2
-      - homeassistant.service:
-          service: light.toggle
-          data:
-            entity_id: light.dining_table
-      - mqtt.publish_json:
-          topic: $panel_recv_topic
-          payload: |-
-            root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
-
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.dining_table
+          - mqtt.publish_json:
+              topic: $panel_recv_topic
+              payload: |-
+                root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
+      - min_length: 500ms
+        max_length: 2000ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.mcu_kitchen_stove
+          - mqtt.publish_json:
+              topic: $panel_recv_topic
+              payload: |-
+                root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_kitchen,button";
 output:
   - platform: ledc
     id: buzzer_out

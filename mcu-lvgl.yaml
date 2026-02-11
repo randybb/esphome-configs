@@ -14,13 +14,10 @@ esphome:
   includes: ota.h
 
 esp32:
-  board: esp32-s3-devkitc-1
   variant: esp32s3
   flash_size: 16MB
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
     # Required to achieve sufficient PSRAM bandwidth
     sdkconfig_options:
       CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y

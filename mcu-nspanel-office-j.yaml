@@ -20,9 +20,11 @@ esphome:
       - switch.turn_on: screen_power
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.0"
 
 external_components:
   - source:
@@ -30,10 +32,6 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  - source: github://pr#7942
-    components: adc
-    refresh: 0s
-  - source: components
   
 packages:
   common: !include common/common.yaml
@@ -255,6 +253,7 @@ light:
     name: Light
     id: light_1
     output: relay_1
+    restore_mode: RESTORE_DEFAULT_OFF
 #   # - platform: binary
 #   #   name: Relay 2
 #   #   output: relay_2

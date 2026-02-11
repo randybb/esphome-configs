@@ -12,11 +12,9 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: esp32doit-devkit-v1
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
     sdkconfig_options:
       CONFIG_FREERTOS_UNICORE: y
     advanced:

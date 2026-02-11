@@ -81,15 +81,11 @@ esphome:
       #     state: ON
 
 esp32:
-  board: esp32dev
-  # framework:
-  #   type: arduino
-  #   version: 2.0.14
-  #   platform_version: 6.5.0
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
+    # version: 5.3.2
+    # platform_version: 53.03.11
 
 ## TESTING
 
@@ -101,6 +97,8 @@ external_components:
     components: [ axp192 ]
   - source: github://pr#6721
     components: [ network, modem ]
+  - source: github://pr#9802
+    components: [ modem ]
   - source: components
   
 # packages:
@@ -159,6 +157,17 @@ binary_sensor:
     # name: Cellular Ready
 
 sensor:
+  - platform: modem
+    rssi:
+      name: rssi
+    ber:
+      name: ber
+    latitude:
+      name: Latitude
+    longitude:
+      name: Longitude
+    altitude:
+      name: Altitude
   
 switch:
   - platform: gpio
@@ -179,8 +188,17 @@ switch:
     id: gnss_enable
     # name: GNSS Enable
     port: LDO3
+  - platform: modem
+    gnss:
+      name: GNSS
+      restore_mode: ALWAYS_ON
 
 text_sensor:
+  - platform: modem
+    network_type:
+      name: network type
+    signal_strength:
+      name: Signal strength
 #   - platform: template
 #     name: "cgpaddr"
 #     update_interval: 25s

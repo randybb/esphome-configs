@@ -13,12 +13,11 @@ esphome:
     board_build.flash_mode: dio
 
 esp32:
-  board: esp32-c3-devkitm-1
   variant: esp32c3
   framework:
     type: esp-idf
-    version: 5.3.3
-    platform_version: 53.03.12
+    # version: 5.4.2
+    # platform_version: 54.03.21
 
 packages:
   common: !include common/common.yaml

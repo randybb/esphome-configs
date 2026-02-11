@@ -1,7 +1,7 @@
 substitutions:
   device: clock-living-room
   name: Living room Clock
-  area: Living Room / Kitchen
+  area: Living Room & Kitchen
   comment: "${area}: TV Rack Clock"
 
 esphome:
@@ -11,11 +11,9 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    # version: 5.3.2
-    # platform_version: 53.03.12
 
 external_components:
   - source:

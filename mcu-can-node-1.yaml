@@ -11,11 +11,11 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: esp32dev
+  variant: esp32
   framework:
     type: esp-idf
-    # version: 5.3.2
-    # platform_version: 53.03.11
+    # version: 5.4.2
+    # platform_version: 54.03.21
 
 external_components:
   - source: github://mrk-its/esphome-canopen@dev

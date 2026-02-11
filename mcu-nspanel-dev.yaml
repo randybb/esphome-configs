@@ -31,11 +31,11 @@ esphome:
   #           entity_id: automation.nspanel_send_weather_to_nspanel
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
+    advanced:
+      minimum_chip_revision: "3.0"
 
 external_components:
   # - source:
@@ -48,12 +48,9 @@ external_components:
       type: git
       url: https://github.com/olicooper/esphome-nspanel-lovelace-native
       ref: dev
-    refresh: 3h
-    components: [nspanel_lovelace]
-  - source: github://pr#7942
-    components: adc
     refresh: 0s
-  - source: components
+    components: [nspanel_lovelace]
+  # - source: components
   
 packages:
   common: !include common/common.yaml
@@ -64,6 +61,8 @@ packages:
 #   local: true
 
 api:
+  homeassistant_services: true
+  homeassistant_states: true
   services:
     # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
     - service: play_rtttl

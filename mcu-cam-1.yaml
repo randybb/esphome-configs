@@ -11,30 +11,30 @@ esphome:
   comment: ${comment}
 
 esp32:
-  board: esp32cam
+  # board: esp32cam
+  variant: esp32
   framework:
-    # type: arduino
     type: esp-idf
-    # version: 2.0.14
-    # platform_version: 6.5.0
 
 packages:
   common: !include common/common.yaml
 
-# external_components:
-#   - source:
-#       type: git
-#       url: https://github.com/MichaKersloot/esphome_custom_components
-#     components: [ esp32_camera ]
+i2c:
+  id: i2c_bus
+  sda: 26
+  scl: 27
+  scan: true
+
+psram:
+  mode: quad
+  speed: 40MHz
 
 esp32_camera:
   name: Camera
   external_clock:
     pin: 0
     frequency: 20MHz
-  i2c_pins:
-    sda: 26
-    scl: 27
+  i2c_id: i2c_bus
   data_pins: [5, 18, 19, 21, 36, 39, 34, 35]
   vsync_pin: 25
   href_pin: 23
@@ -44,7 +44,7 @@ esp32_camera:
 switch:
   - platform: gpio
     pin: 32
-    # restore_mode: ALWAYS_ON
+    restore_mode: ALWAYS_ON
     # id: "cam_power_down"
     name: Enable
 
