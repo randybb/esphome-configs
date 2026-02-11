@@ -1,0 +1,386 @@
+substitutions:
+  device: rfid-reader
+  name: RFID Reader
+  area: DEV
+  comment: "${area} | RFID Reader"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  # on_boot:
+  #   priority: -10
+  #   then:
+  #   - wait_until:
+  #       api.connected:
+  #   - logger.log: API is connected!
+  #   - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+  #   - light.turn_on:
+  #       id: notify_led
+  #       brightness: 100%
+  #       red: 0%
+  #       green: 0%
+  #       blue: 100%
+  #       flash_length: 500ms
+  #   - switch.turn_on: buzzer_enabled
+  #   - switch.turn_on: led_enabled
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+# external_components:
+#   - source: github://pr#13021
+#     components: [esphome]
+#     refresh: 1min
+
+packages:
+  common: !include common/common.yaml
+
+# logger:
+#   hardware_uart: UART0
+
+# GPIO20  U+
+# GPIO19  U-
+# GPIO0   Button
+# GPIO1   I2C SDA
+# GPIO2   I2C SDA
+# GPIO2   Notify LED
+# GPIO4   Buzzer
+# GPIO21  RGB
+
+api:
+  services:
+  - service: rfidreader_tag_ok
+    then:
+    - rtttl.play: "beep:d=16,o=5,b=100:b"
+
+  - service: rfidreader_tag_ko
+    then:
+    - rtttl.play: "beep:d=8,o=5,b=100:b"
+
+  - service: play_rtttl
+    variables:
+      song_str: string
+    then:
+    - rtttl.play: !lambda 'return song_str;'
+
+  - service: write_tag_id
+    variables:
+      tag_id: string
+    then:
+    - light.turn_on:
+        id: notify_led
+        brightness: 100%
+        red: 100%
+        green: 0%
+        blue: 0%
+    - lambda: |-
+        auto message = new nfc::NdefMessage();
+        std::string uri = "https://www.home-assistant.io/tag/";
+        uri += tag_id;
+        message->add_uri_record(uri);
+        id(pn532_module).write_mode(message);
+    - rtttl.play: "write:d=24,o=5,b=100:b"
+    - wait_until:
+        not:
+          pn532.is_writing:
+    - light.turn_off:
+        id: notify_led
+    - rtttl.play: "write:d=24,o=5,b=100:b,b"
+
+  - service: write_music_tag
+    variables:
+      music_url: string
+      music_info: string
+    then:
+    - light.turn_on:
+        id: notify_led
+        brightness: 100%
+        red: 100%
+        green: 0%
+        blue: 0%
+    - lambda: |-
+        auto message = new nfc::NdefMessage();
+        std::string uri = "";
+        std::string text = "";
+        uri += music_url;
+        text += music_info;
+        if ( music_url != "" ) {
+          message->add_uri_record(uri);
+        }
+        if ( music_info != "" ) {
+          message->add_text_record(text);
+        }
+        id(pn532_module).write_mode(message);
+    - rtttl.play: "write:d=24,o=5,b=100:b"
+    - wait_until:
+        not:
+          pn532.is_writing:
+    - light.turn_off:
+        id: notify_led
+    - rtttl.play: "write:d=24,o=5,b=100:b,b"
+
+globals:
+  - id: source
+    type: std::string
+  - id: url
+    type: std::string
+  - id: info
+    type: std::string
+
+i2c:
+  - id: i2c_rfid
+    sda: 1
+    scl: 2
+    frequency: 400kHz
+
+pn532_i2c:
+  id: pn532_module
+  i2c_id: i2c_rfid
+  update_interval: 1s
+  on_tag:
+    then:
+    - if:
+        condition:
+          switch.is_on: led_enabled
+        then:
+        - light.turn_on:
+            id: notify_led
+            brightness: 100%
+            red: 0%
+            green: 100%
+            blue: 0%
+            flash_length: 500ms
+
+    - delay: 0.15s #to fix slow component
+
+    - lambda: |-
+        id(source)="";
+        id(url)="";
+        id(info)="";
+        if (tag.has_ndef_message()) {
+          auto message = tag.get_ndef_message();
+          auto records = message->get_records();
+          for (auto &record : records) {
+            std::string payload = record->get_payload();
+            std::string type = record->get_type();
+            size_t hass = payload.find("https://www.home-assistant.io/tag/");
+            size_t applemusic = payload.find("https://music.apple.com");
+            size_t spotify = payload.find("https://open.spotify.com");
+            size_t sonos = payload.find("sonos-2://");
+
+            size_t mass_deezer = payload.find("deezer://");
+            size_t mass_filesystem_local = payload.find("filesystem_local://");
+            size_t mass_filesystem_smb = payload.find("filesystem_smb://");
+            size_t mass_plex = payload.find("plex://");
+            size_t mass_qobuz = payload.find("qobuz://");
+            size_t mass_radiobrowser = payload.find("radiobrowser://");
+            size_t mass_soundcloud = payload.find("soundcloud://");
+            size_t mass_spotify = payload.find("spotify://");
+            size_t mass_tidal = payload.find("tidal://");
+            size_t mass_tunein = payload.find("tunein://");
+            size_t mass_ytmusic = payload.find("ytmusic://");
+
+            if (type == "U" and hass != std::string::npos ) {
+              ESP_LOGD("tagreader", "Found Home Assistant tag NDEF");
+              id(source)="hass";
+              id(url)=payload;
+              id(info)=payload.substr(hass + 34);
+            }
+            else if (type == "U" and applemusic != std::string::npos ) {
+              ESP_LOGD("tagreader", "Found Apple Music tag NDEF");
+              id(source)="amusic";
+              id(url)=payload;
+            }
+            else if (type == "U" and spotify != std::string::npos ) {
+              ESP_LOGD("tagreader", "Found Spotify tag NDEF");
+              id(source)="spotify";
+              id(url)=payload;
+            }
+            else if (type == "U" and sonos != std::string::npos ) {
+              ESP_LOGD("tagreader", "Found Sonos app tag NDEF");
+              id(source)="sonos";
+              id(url)=payload;
+            }
+            else if (type == "U" && (mass_deezer != std::string::npos ||
+                    mass_filesystem_local != std::string::npos ||
+                    mass_filesystem_smb != std::string::npos ||
+                    mass_plex != std::string::npos ||
+                    mass_qobuz != std::string::npos ||
+                    mass_radiobrowser != std::string::npos ||
+                    mass_soundcloud != std::string::npos ||
+                    mass_spotify != std::string::npos ||
+                    mass_tidal != std::string::npos ||
+                    mass_tunein != std::string::npos ||
+                    mass_ytmusic != std::string::npos)) {
+              ESP_LOGD("tagreader", "Found Music Assistant tag NDEF");
+              id(source) = "mass";
+              id(url) = payload;
+            }
+            else if (type == "T" ) {
+              ESP_LOGD("tagreader", "Found music info tag NDEF");
+              id(info)=payload;
+            }
+            else if ( id(source)=="" ) {
+              id(source)="uid";
+            }
+          }
+        }
+        else {
+          id(source)="uid";
+        }
+
+    - if:
+        condition:
+          lambda: 'return ( id(source)=="uid" );'
+        then:
+          - homeassistant.tag_scanned: !lambda |-
+              ESP_LOGD("tagreader", "No HA NDEF, using UID");
+              return x;
+        else:
+        - if:
+            condition:
+              lambda: 'return ( id(source)=="hass" );'
+            then:
+            - homeassistant.tag_scanned: !lambda 'return id(info);'
+            else:
+            - homeassistant.event:
+                event: esphome.music_tag
+                data:
+                  reader: !lambda |-
+                    return App.get_name().c_str();
+                  source: !lambda |-
+                    return id(source);
+                  url: !lambda |-
+                    return id(url);
+                  info: !lambda |-
+                    return id(info);
+
+    - if:
+        condition:
+          switch.is_on: buzzer_enabled
+        then:
+        - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+  on_tag_removed:
+    then:
+    - homeassistant.event:
+        event: esphome.tag_removed
+
+# binary_sensor:
+#   - platform: rc522
+#     uid: 74-10-37-94
+#     name: "RC522 RFID Tag"
+
+button:
+  - platform: template
+    name: Write Tag Random
+    id: write_tag_random
+    # Optional variables:
+    icon: "mdi:pencil-box"
+    on_press:
+      then:
+      - light.turn_on:
+          id: notify_led
+          brightness: 100%
+          red: 100%
+          green: 0%
+          blue: 100%
+      - lambda: |-
+          static const char alphanum[] = "0123456789abcdef";
+          std::string uri = "https://www.home-assistant.io/tag/";
+          for (int i = 0; i < 8; i++)
+            uri += alphanum[random_uint32() % (sizeof(alphanum) - 1)];
+          uri += "-";
+          for (int j = 0; j < 3; j++) {
+            for (int i = 0; i < 4; i++)
+              uri += alphanum[random_uint32() % (sizeof(alphanum) - 1)];
+            uri += "-";
+          }
+          for (int i = 0; i < 12; i++)
+            uri += alphanum[random_uint32() % (sizeof(alphanum) - 1)];
+          auto message = new nfc::NdefMessage();
+          message->add_uri_record(uri);
+          ESP_LOGD("tagreader", "Writing payload: %s", uri.c_str());
+          id(pn532_module).write_mode(message);
+      - rtttl.play: "write:d=24,o=5,b=100:b"
+      - wait_until:
+          not:
+            pn532.is_writing:
+      - light.turn_off:
+          id: notify_led
+      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+  - platform: template
+    name: Clean Tag
+    id: clean_tag
+    icon: "mdi:nfc-variant-off"
+    on_press:
+      then:
+      - light.turn_on:
+          id: notify_led
+          brightness: 100%
+          red: 100%
+          green: 64.7%
+          blue: 0%
+      - lambda: 'id(pn532_module).clean_mode();'
+      - rtttl.play: "write:d=24,o=5,b=100:b"
+      - wait_until:
+          not:
+            pn532.is_writing:
+      - light.turn_off:
+          id: notify_led
+      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+  - platform: template
+    name: Cancel writing
+    id: cancel_writing
+    icon: "mdi:pencil-off"
+    on_press:
+      then:
+      - lambda: 'id(pn532_module).read_mode();'
+      - light.turn_off:
+          id: notify_led
+      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: notify_led
+    rgb_order: GRB
+    pin: 3
+    num_leds: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    rmt_symbols: 96
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    rgb_order: GRB
+    pin: 21
+    num_leds: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    rmt_symbols: 96
+
+output:
+  - platform: ledc
+    pin: 4
+    id: buzzer
+
+rtttl:
+  output: buzzer
+
+switch:
+- platform: template
+  name: Buzzer Enabled
+  id: buzzer_enabled
+  icon: mdi:volume-high
+  optimistic: true
+  restore_mode: RESTORE_DEFAULT_ON
+  entity_category: config
+- platform: template
+  name: LED enabled
+  id: led_enabled
+  icon: mdi:alarm-light-outline
+  optimistic: true
+  restore_mode: RESTORE_DEFAULT_ON
+  entity_category: config
