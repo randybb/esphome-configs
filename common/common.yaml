@@ -24,5 +24,8 @@ text_sensor:
   # - <<: !include text_sensor/uptime.yaml
   - <<: !include text_sensor/wifi_info.yaml
 
+# time:
+#.  - <<: !include time/homeassistant.yaml
+
 network:
   enable_ipv6: true

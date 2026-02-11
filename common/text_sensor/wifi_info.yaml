@@ -3,12 +3,21 @@ platform: wifi_info
 ip_address:
   name: IP Address
   icon: mdi:ip-network
+  # address_0:
+  #   name: IP Address 0
+  #   icon: mdi:ip-network
   address_1:
     name: IP Address 1
     icon: mdi:ip-network
   address_2:
     name: IP Address 2
     icon: mdi:ip-network
+  # address_3:
+  #   name: IP Address 3
+  #   icon: mdi:ip-network
+  # address_4:
+  #   name: IP Address 4
+  #   icon: mdi:ip-network
 #ssid:
 #  name: SSID
 #bssid:
@@ -17,3 +26,5 @@ mac_address:
   name: MAC
 #scan_results:
 #  name: Latest Scan Results
+power_save_mode:
+  name: WiFi Power Save Mode

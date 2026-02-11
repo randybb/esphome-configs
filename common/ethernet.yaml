@@ -3,7 +3,8 @@ ethernet:
   type: LAN8720
   mdc_pin: 23
   mdio_pin: 18
-  clk_pin: 17
-  clk_mode: CLK_OUT
+  clk:
+    pin: 17
+    mode: CLK_OUT
   phy_addr: 0
   power_pin: 12
