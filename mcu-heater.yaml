@@ -1,7 +1,6 @@
 substitutions:
-  device: heating
-  name: Heating
-  name_1: Heater
+  device: heater
+  name: Heater
   area: Basement
   comment: "${area} | Hot water and Heating control"
 
@@ -10,18 +9,30 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
+  areas:
+    - id: local_area
+      name: ${area}
+  devices:
+    - id: heating
+      name: Heating
+      area_id: local_area
+    - id: hot_water
+      name: Hot Water
+      area_id: local_area
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
 
 external_components:
-  - source: github://mknjc/esphome@ds248x
-    components: ds248x
-  
+  # - source: github://pr#12717
+  #   components: [ds248x]
+  #   refresh: 1h
+  - source: github://pr#13534
+    components: [ds2482, ds2484, ds248x_base]
+    refresh: 1h
+
 packages:
   common: !include common/common.yaml
 
@@ -133,8 +144,9 @@ time:
 climate:
   - platform: bang_bang
     sensor: hot_water_heater
-    name: Hot Water
+    name: ""
     id: hot_water_climate
+    device_id: hot_water
     visual:
       min_temperature: 40
       max_temperature: 65
@@ -160,13 +172,27 @@ i2c:
   scl: 21
   scan: true #false
 
-ds248x:
+# one_wire:
+#   id: one_wire_bus
+#   # i2c_id: i2c_main
+#   platform: ds2484
+#   active_pullup: true
+
+# ds248x:
+#   id: ds2484_module
+#   address: 0x18
+#   active_pullup: true
+
+# one_wire:
+#   - platform: ds248x
+#     ds248x_id: ds2484_module
+#     id: one_wire_bus
+
+one_wire:
+  id: one_wire_bus
   # i2c_id: i2c_main
-  address: 0x18 # should be the default
-  # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
-  active_pullup: true # adds a active pullup which should improve signal integrity
-  strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
-  bus_sleep: true # power down the bus when no transaction is in progres
+  platform: ds2482
+  active_pullup: true
 
 modbus:
   uart_id: uart_modbus
@@ -185,39 +211,43 @@ pca9554:
 
 switch:
   - platform: template
-    name: "Heating Enabled"
+    name: Heating Enabled
     id: heating_enabled
+    device_id: heating
     optimistic: True
   - platform: gpio
-    name: "Hot Water Demand" # Hot Water Heating Demand (to Heater)
+    name: Demand # Hot Water Heating Demand (to Heater)
     id: hot_water_demand
+    device_id: hot_water
     pin: 22
     inverted: true
   - platform: gpio
-    name: "Heating Demand" # Heating Demand (to Heater)
+    name: Demand # Heating Demand (to Heater)
     id: heating_demand
+    device_id: heating
     pin: 19
     inverted: true
   - platform: gpio
-    name: "${name_1} Power Level II"
+    name: Power Level II
     id: heating_power_level_2
     pin:
       pca9554: pca9554_module
       number: 4
   - platform: gpio
-    name: "${name_1} Power Level III"
+    name: Power Level III
     id: heating_power_level_3
     pin:
       pca9554: pca9554_module
       number: 5
 # - platform: uart
-#     name: "${name_1} Total Heater Power Reset"
+#     name: Total Heater Power Reset
 #     uart_id: 
 #     id: reset_total_heater_power
 #     data: [0x01, 0x42, 0x80, 0x11]
 
 sensor:
-  - platform: ds248x
+  # - platform: ds248x
+  - platform: dallas_temp
 # [22:06:25][D][dallas.sensor:082]:     0x1701143E35C5AA28  Feed
 # [22:06:25][D][dallas.sensor:082]:     0x7301143F7F57AA28  Return
 # [22:06:25][D][dallas.sensor:082]:     0xF701143E397FAA28  Heater Tank
@@ -228,32 +258,40 @@ sensor:
     # address: 0x320417500A93FF28 # 1. broken
     # address: 0x67041750F44CFF28 # 2. broken 
     address: 0x960417517301FF28 # Hot Water Tank - TOP (Heater)
-    name: "Hot Water - Heater"
-    id: 'hot_water_heater'
-  - platform: ds248x
+    name: Heater
+    id: hot_water_heater
+    device_id: hot_water
+  # - platform: ds248x
+  - platform: dallas_temp
     address: 0x5A041750B2C8FF28 # Hot Water Tank - Bottom (Solar)
-    name: "Hot Water - Solar"
-    id: 'hot_water_solar'
-  - platform: ds248x
+    name: Solar
+    id: hot_water_solar
+    device_id: hot_water
+  # - platform: ds248x
+  - platform: dallas_temp
     address: 0xF701143E397FAA28 # Heater Tank
-    name: "Heater"
-    id: 'heater'
-  - platform: ds248x
+    name: Temperature
+    id: heater
+  # - platform: ds248x
+  - platform: dallas_temp
     address: 0x1701143E35C5AA28 # Heating Water Feed (OUT from Heater, TO System)
-    name: "Heating OUT2"
-    id: 'heating_out'
-  - platform: ds248x
+    name: OUT2
+    id: heating_out
+    device_id: heating
+  # - platform: ds248x
+  - platform: dallas_temp
     address: 0x7301143F7F57AA28 # Heating Water Return (OUT from System, TO Heater)
-    name: "Heating IN2"
-    id: 'heating_in'
-  - platform: template
-    name: "Heater Total Daily Energy"
-    id: heater_daily_energy
-    lambda: |-
-      return (id(heater_l1_total_daily_energy).state + id(heater_l3_total_daily_energy).state + id(heater_l3_total_daily_energy).state);
+    name: IN2
+    id: heating_in
+    device_id: heating
+  # - platform: template
+  #   name: Total Daily Energy
+  #   id: heater_daily_energy
+  #   lambda: |-
+  #     return (id(heater_l1_total_daily_energy).state + id(heater_l3_total_daily_energy).state + id(heater_l3_total_daily_energy).state);
     update_interval: 60s
   - platform: template
-    name: 'Heater Daily Energy Price'
+    name: Daily Energy Price
     id: heater_energy_price
     unit_of_measurement: '€'
     lambda: |-
@@ -273,27 +311,27 @@ sensor:
       //# prenos spotreba * (0,00398400+0,01146600+0,00327000+0,00629760+0,01590000) = spotreba * 0,0409176
 
       // # 1,1 + (VT * 0,1038) + (NT * 0,069) + (75 * 0,1508) + ((VT+NT) * (0,00398400+0,01146600+0,00327000+0,00629760+0,01590000))
-      return (id(heater_daily_energy).state * (0.0409176 + 0.069));
+      return (id(heater_total_daily_energy).state * (0.0409176 + 0.069));
   # L1
   - platform: pzemac
     #address: 161
     current:
-      name: "${name_1} L1 Current"
+      name: L1 Current
     voltage:
-      name: "${name_1} L1 Voltage"
+      name: L1 Voltage
     energy:
-      name: "${name_1} L1 Energy"
+      name: L1 Energy
       id: heater_l1_energy
     power:
-      name: "${name_1} L1 Power"
+      name: L1 Power
       id: heater_l1_power
     frequency:
-      name: "${name_1} L1 Frequency"
+      name: L1 Frequency
     power_factor:
-      name: "${name_1} L1 Power Factor"
+      name: L1 Power Factor
     update_interval: 20s
   - platform: total_daily_energy
-    name: "${name_1} L1 Total Daily Energy"
+    name: L1 Total Daily Energy
     power_id: heater_l1_power
     id: heater_l1_total_daily_energy
     filters:
@@ -301,7 +339,7 @@ sensor:
     unit_of_measurement: kWh
     icon: mdi:counter
   - platform: integration
-    name: "${name_1} L1 Energy Meter" 
+    name: L1 Energy Meter"
     sensor: heater_l1_power
     time_unit: h
     filters:
@@ -312,22 +350,22 @@ sensor:
   - platform: pzemac
     address: 162
     current:
-      name: "${name_1} L2 Current"
+      name: L2 Current
     voltage:
-      name: "${name_1} L2 Voltage"
+      name: L2 Voltage
     energy:
-      name: "${name_1} L2 Energy"
+      name: L2 Energy
       id: heater_l2_energy
     power:
-      name: "${name_1} L2 Power"
+      name: L2 Power
       id: heater_l2_power
     frequency:
-      name: "${name_1} L2 Frequency"
+      name: L2 Frequency
     power_factor:
-      name: "${name_1} L2 Power Factor"
+      name: L2 Power Factor
     update_interval: 20s
   - platform: total_daily_energy
-    name: "${name_1} L2 Total Daily Energy"
+    name: L2 Total Daily Energy
     id: heater_l2_total_daily_energy
     power_id: heater_l2_power
     filters:
@@ -335,7 +373,7 @@ sensor:
     unit_of_measurement: kWh
     icon: mdi:counter
   - platform: integration
-    name: "${name_1} L2 Energy Meter" 
+    name: L2 Energy Meter
     sensor: heater_l2_power
     time_unit: h
     filters:
@@ -346,22 +384,22 @@ sensor:
   - platform: pzemac
     address: 163
     current:
-      name: "${name_1} L3 Current"
+      name: L3 Current
     voltage:
-      name: "${name_1} L3 Voltage"
+      name: L3 Voltage
     energy:
-      name: "${name_1} L3 Energy"
+      name: L3 Energy
       id: heater_l3_energy
     power:
-      name: "${name_1} L3 Power"
+      name: L3 Power
       id: heater_l3_power
     frequency:
-      name: "${name_1} L3 Frequency"
+      name: L3 Frequency
     power_factor:
-      name: "${name_1} L3 Power Factor"
+      name: L3 Power Factor
     update_interval: 20s
   - platform: total_daily_energy
-    name: "${name_1} L3 Total Daily Energy"
+    name: L3 Total Daily Energy
     power_id: heater_l3_power
     id: heater_l3_total_daily_energy
     filters:
@@ -369,7 +407,7 @@ sensor:
     unit_of_measurement: kWh
     icon: mdi:counter
   - platform: integration
-    name: "${name_1} L3 Energy Meter" 
+    name: L3 Energy Meter
     sensor: heater_l3_power
     time_unit: h
     filters:
@@ -378,8 +416,8 @@ sensor:
     icon: mdi:counter
   # TOTAL: L1+L2+L3
   - platform: template
-    name: "${name_1} Power"
-    id: "total_heater_power"
+    name: Power
+    id: total_heater_power
     device_class: power
     state_class: measurement
     unit_of_measurement: W
@@ -387,8 +425,8 @@ sensor:
     lambda: |-
       return id(heater_l1_power).state + id(heater_l2_power).state + id(heater_l3_power).state ;
   - platform: template
-    name: "${name_1} Total Daily Energy"
-    id: "heater_total_daily_energy"
+    name: Total Daily Energy
+    id: heater_total_daily_energy
     icon: mdi:counter
     device_class: energy
     # state_class: measurement
@@ -398,7 +436,7 @@ sensor:
     lambda: |-
       return id(heater_l1_total_daily_energy).state + id(heater_l2_total_daily_energy).state + id(heater_l3_total_daily_energy).state ;
   - platform: template
-    name: "${name_1} Energy"
+    name: Energy
     icon: mdi:counter
     device_class: energy
     state_class: total_increasing
@@ -411,7 +449,7 @@ sensor:
 
 binary_sensor:
   - platform: gpio
-    name: "${name} Off Peak" # Off Peak (HDO)
+    name: Off Peak # Off Peak (HDO)
     id: off_peak_status
     pin:
       pca9554: pca9554_module
@@ -420,7 +458,7 @@ binary_sensor:
       - delayed_on: 300ms
       - delayed_off: 300ms
   - platform: gpio
-    name: "${name} ON" # Heater ON
+    name: "ON" # Heater ON
     id: heater_on
     pin:
       pca9554: pca9554_module
@@ -429,7 +467,7 @@ binary_sensor:
       - delayed_on: 300ms
       - delayed_off: 300ms
   - platform: gpio
-    name: "${name} Error"
+    name: Error
     id: heating_error
     pin:
       pca9554: pca9554_module
@@ -439,7 +477,7 @@ binary_sensor:
       - delayed_off: 300ms
   - platform: template
     id: heater_alarm
-    name: "Heater Alarm"
+    name: Alarm
     lambda: |-
       if (id(off_peak_status).state && (id(heating_demand).state || id(heating_power_level_2).state) && !id(heater_on).state) {
         return true;
@@ -449,12 +487,15 @@ binary_sensor:
   - platform: homeassistant
     id: trv_heating_demand
     entity_id: binary_sensor.trv_heating_demand
+    device_id: heating
   - platform: homeassistant
     id: heating_fireplace_fire
     entity_id: binary_sensor.heating_fireplace_fire
+    device_id: heating
   - platform: template
     id: request_heating_demand
-    name: "Request Heating Demand"
+    name: Request Demand
+    device_id: heating
     lambda: |-
       if (id(trv_heating_demand).state && id(heating_enabled).state && !id(heating_fireplace_fire).state) {
         return true;
