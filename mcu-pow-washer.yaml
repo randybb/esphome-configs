@@ -1,28 +1,20 @@
 substitutions:
-  device: pow-1
-  name: POW 1
-  comment: "DEV"
+  device: pow-washer
+  name: Washer POW
+  comment: Washroom
   update_interval: 10s
-  
+
 esphome:
   name: mcu-${device}
   friendly_name: ${name}
   comment: ${comment}
-  on_boot: # Set the initial state of the template switch to the actual relay state. This will NOT change the state.
-    priority: 250.0 # Wait until WiFi is connected to allow the sensor some time to settle
-    then:
-      - if:
-          condition:
-            lambda: 'return id(v_sensor).state > 10;'
-          then:
-            - switch.turn_on: relay_1
-          else:
-            - switch.turn_off: relay_1
 
 esp32:
-  board: nodemcu-32s
+  variant: esp32
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
 
 interval:
   - interval: 30s
@@ -173,21 +165,13 @@ switch:
   - platform: template
     name: Relay
     optimistic: true
+    restore_mode: ALWAYS_ON
     id: relay_1
-    turn_off_action:
-      - switch.turn_on: relay_off
     turn_on_action:
       - switch.turn_on: relay_on
-  - platform: gpio
-    restore_mode: ALWAYS_OFF
-    internal: true
-    id: relay_off
-    pin: 4
-    on_turn_on:
-      - delay: 500ms
-      - switch.turn_off: relay_off # bi-stable relay so no need to keep on
-      - light.turn_off: switch_led
-    interlock: [relay_on]
+    turn_off_action:
+      - switch.turn_on: relay_off
+
   - platform: gpio
     restore_mode: ALWAYS_OFF
     internal: true
@@ -199,7 +183,16 @@ switch:
       - light.turn_on: switch_led
     interlock: [relay_off]
 
+  - platform: gpio
+    restore_mode: ALWAYS_OFF
+    internal: true
+    id: relay_off
+    pin: 4
+    on_turn_on:
+      - delay: 500ms
+      - switch.turn_off: relay_off # bi-stable relay so no need to keep on
+      - light.turn_off: switch_led
+    interlock: [relay_on]
+
 time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
+  - !include common/time/homeassistant.yaml
