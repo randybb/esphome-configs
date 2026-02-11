@@ -1,21 +1,26 @@
 substitutions:
   device: mains-power
   name: Mains Power
-  name_1: Mains
   area: Room
   comment: "${area} | Mains Power Monitoring"
 
 esphome:
   name: mcu-${device}
+  friendly_name: ${name}
   area: ${area}
   comment: ${comment}
+  areas:
+    - id: local_area
+      name: ${area}
+  devices:
+    - id: mains
+      name: Mains
+      area_id: local_area
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
   
 packages:
   common: !include common/common.yaml
@@ -48,7 +53,7 @@ uart:
 
 sensor:
   # - platform: template
-  #   name: "${name_1} Total Daily Energy"
+  #   name: Total Daily Energy
   #   id: mains_daily_energy
   #   lambda: |-
   #     return (id(mains_l1_total_daily_energy).state + id(mains_l3_total_daily_energy).state + id(mains_l3_total_daily_energy).state);
@@ -58,22 +63,28 @@ sensor:
     address: 10
     id: pzemac_l1
     current:
-      name: "${name_1} L1 Current"
+      name: L1 Current
+      device_id: mains
     voltage:
-      name: "${name_1} L1 Voltage"
+      name: L1 Voltage
+      device_id: mains
     energy:
-      name: "${name_1} L1 Energy"
+      name: L1 Energy
       id: mains_l1_energy
+      device_id: mains
     power:
-      name: "${name_1} L1 Power"
+      name: L1 Power
       id: mains_l1_power
+      device_id: mains
     frequency:
-      name: "${name_1} L1 Frequency"
+      name: L1 Frequency
+      device_id: mains
     power_factor:
-      name: "${name_1} L1 Power Factor"
+      name: L1 Power Factor
+      device_id: mains
     update_interval: 20s
   # - platform: total_daily_energy
-  #   name: "${name_1} L1 Total Daily Energy"
+  #   name: L1 Total Daily Energy
   #   power_id: mains_l1_power
   #   id: mains_l1_total_daily_energy
   #   filters:
@@ -81,7 +92,7 @@ sensor:
   #   unit_of_measurement: kWh
   #   icon: mdi:counter
   # - platform: integration
-  #   name: "${name_1} L1 Energy Meter" 
+  #   name: L1 Energy Meter
   #   sensor: mains_l1_power
   #   time_unit: h
   #   filters:
@@ -93,22 +104,28 @@ sensor:
     address: 11
     id: pzemac_l2
     current:
-      name: "${name_1} L2 Current"
+      name: L2 Current
+      device_id: mains
     voltage:
-      name: "${name_1} L2 Voltage"
+      name: L2 Voltage
+      device_id: mains
     energy:
-      name: "${name_1} L2 Energy"
+      name: L2 Energy
       id: mains_l2_energy
+      device_id: mains
     power:
-      name: "${name_1} L2 Power"
+      name: L2 Power
       id: mains_l2_power
+      device_id: mains
     frequency:
-      name: "${name_1} L2 Frequency"
+      name: L2 Frequency
+      device_id: mains
     power_factor:
-      name: "${name_1} L2 Power Factor"
+      name: L2 Power Factor
+      device_id: mains
     update_interval: 20s
   # - platform: total_daily_energy
-  #   name: "${name_1} L2 Total Daily Energy"
+  #   name: L2 Total Daily Energy
   #   id: mains_l2_total_daily_energy
   #   power_id: mains_l2_power
   #   filters:
@@ -116,7 +133,7 @@ sensor:
   #   unit_of_measurement: kWh
   #   icon: mdi:counter
   # - platform: integration
-  #   name: "${name_1} L2 Energy Meter" 
+  #   name: L2 Energy Meter
   #   sensor: mains_l2_power
   #   time_unit: h
   #   filters:
@@ -128,22 +145,28 @@ sensor:
     address: 12
     id: pzemac_l3
     current:
-      name: "${name_1} L3 Current"
+      name: L3 Current
+      device_id: mains
     voltage:
-      name: "${name_1} L3 Voltage"
+      name: L3 Voltage
+      device_id: mains
     energy:
-      name: "${name_1} L3 Energy"
+      name: L3 Energy
       id: mains_l3_energy
+      device_id: mains
     power:
-      name: "${name_1} L3 Power"
+      name: L3 Power
       id: mains_l3_power
+      device_id: mains
     frequency:
-      name: "${name_1} L3 Frequency"
+      name: L3 Frequency
+      device_id: mains
     power_factor:
-      name: "${name_1} L3 Power Factor"
+      name: L3 Power Factor
+      device_id: mains
     update_interval: 20s
   # - platform: total_daily_energy
-  #   name: "${name_1} L3 Total Daily Energy"
+  #   name: L3 Total Daily Energy
   #   power_id: mains_l3_power
   #   id: mains_l3_total_daily_energy
   #   filters:
@@ -151,7 +174,7 @@ sensor:
   #   unit_of_measurement: kWh
   #   icon: mdi:counter
   # - platform: integration
-  #   name: "${name_1} L3 Energy Meter" 
+  #   name: L3 Energy Meter"
   #   sensor: mains_l3_power
   #   time_unit: h
   #   filters:
@@ -160,8 +183,9 @@ sensor:
   #   icon: mdi:counter
   # TOTAL: L1+L2+L3
   - platform: template
-    name: "${name_1} Power"
-    id: "total_mains_power"
+    name: Power
+    id: total_mains_power
+    device_id: mains
     device_class: power
     state_class: measurement
     unit_of_measurement: W
@@ -169,8 +193,8 @@ sensor:
     lambda: |-
       return id(mains_l1_power).state + id(mains_l2_power).state + id(mains_l3_power).state ;
   # - platform: template
-  #   name: "${name_1} Total Daily Energy"
-  #   id: "mains_total_daily_energy"
+  #   name: Total Daily Energy
+  #   id: mains_total_daily_energy
   #   icon: mdi:counter
   #   device_class: energy
   #   # state_class: measurement
@@ -180,7 +204,8 @@ sensor:
   #   lambda: |-
   #     return id(mains_l1_total_daily_energy).state + id(mains_l2_total_daily_energy).state + id(mains_l3_total_daily_energy).state ;
   - platform: template
-    name: "${name_1} Energy"
+    name: Energy
+    device_id: mains
     icon: mdi:counter
     device_class: energy
     state_class: total_increasing
@@ -193,7 +218,8 @@ sensor:
 
 button:
   - platform: template
-    name: "${name_1} Energy Zero"
+    name: Energy Zero
+    device_id: mains
     on_press:
       - pzemac.reset_energy: pzemac_l1
       - pzemac.reset_energy: pzemac_l2
