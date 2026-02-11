@@ -24,11 +24,9 @@ esphome:
   #     - switch.turn_off: irrigation_relay_5
 
 esp32:
-  board: m5stack-atom
+  variant: esp32
   framework:
     type: esp-idf
-    version: 5.3.2
-    platform_version: 53.03.11
 
 packages:
   common: !include common/common.yaml
@@ -38,20 +36,20 @@ api:
     - service: irrigation_morning
       then:
         - switch.turn_on: irrigation_relay_1
-        - delay: 10minutes
+        - delay: 4minutes
+        - switch.turn_off: irrigation_relay_1
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_1
+        - delay: 4minutes
         - switch.turn_off: irrigation_relay_1
         - delay: 2minutes
         - switch.turn_on: irrigation_relay_2
-        - delay: 10minutes
+        - delay: 4minutes
         - switch.turn_off: irrigation_relay_2
         - delay: 2minutes
-        - switch.turn_on: irrigation_relay_3
-        - delay: 3minutes
-        - switch.turn_off: irrigation_relay_3
-        - delay: 2minutes
-        - switch.turn_on: irrigation_relay_3
-        - delay: 3minutes
-        - switch.turn_off: irrigation_relay_3
+        - switch.turn_on: irrigation_relay_2
+        - delay: 4minutes
+        - switch.turn_off: irrigation_relay_2
         # - switch.turn_on: irrigation_relay_4
         # - delay: 40minutes
         # - switch.turn_off: irrigation_relay_4
