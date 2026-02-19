@@ -93,13 +93,10 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
 
-# Bluetooth related stuff
 esp32_ble_tracker:
-  id: ${name}_ble_tracker
+  id: ${device}_ble_tracker
   scan_parameters:
     duration: 1min
-
-# bluetooth_proxy:
 
 binary_sensor:
   - platform: ble_presence
@@ -210,15 +207,6 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_pcx125
           then:
             - button.press: gate_close
-  # - platform: gpio
-  #   id: gate_flash
-  #   pin:
-  #     number: 26
-  #     inverted: true
-  #     mode:
-  #       input: true
-  #   filters:
-  #     - delayed_on: 10ms
   - platform: gpio
     id: gate_ogi
     pin:
@@ -230,53 +218,53 @@ binary_sensor:
       - delayed_on: 10ms
     entity_category: diagnostic
     on_multi_click:
-    - timing:
-        - OFF for at least 1500ms
-      then:
-        - select.set:
-            id: gate_state
-            option: Closed
-        - logger.log: "OGI OFF => GATE CLOSED"
-      invalid_cooldown: 100ms
-    - timing:
-        - ON for at least 400ms
-        - OFF for at least 400ms
-        - ON for at least 400ms
-        - OFF for at least 400ms
-      then:
-        - select.set:
-            id: gate_state
-            option: Opening
-        - logger.log: "OGI SLOW BLINK => GATE OPENING"
-      invalid_cooldown: 100ms
-    - timing:
-        - ON for at most 300ms
-        - OFF for at most 300ms
-        - ON for at most 300ms
-        - OFF for at most 300ms
-      then:
-        - select.set:
-            id: gate_state
-            option: Closing
-        - logger.log: "OGI FAST BLINK => GATE CLOSING"
-      invalid_cooldown: 100ms
-    - timing:
-        - ON for at least 1500ms
-      then:
-        - select.set:
-            id: gate_state
-            option: Open
-        - logger.log: "OGI ON => GATE OPEN"
-      invalid_cooldown: 100ms
+      - timing:
+          - OFF for at least 1500ms
+        then:
+          - select.set:
+              id: gate_state
+              option: Closed
+          - logger.log: "OGI OFF => GATE CLOSED"
+        invalid_cooldown: 100ms
+      - timing:
+          - ON for at least 400ms
+          - OFF for at least 400ms
+          - ON for at least 400ms
+          - OFF for at least 400ms
+        then:
+          - select.set:
+              id: gate_state
+              option: Opening
+          - logger.log: "OGI SLOW BLINK => GATE OPENING"
+        invalid_cooldown: 100ms
+      - timing:
+          - ON for at most 300ms
+          - OFF for at most 300ms
+          - ON for at most 300ms
+          - OFF for at most 300ms
+        then:
+          - select.set:
+              id: gate_state
+              option: Closing
+          - logger.log: "OGI FAST BLINK => GATE CLOSING"
+        invalid_cooldown: 100ms
+      - timing:
+          - ON for at least 1500ms
+        then:
+          - select.set:
+              id: gate_state
+              option: Open
+          - logger.log: "OGI ON => GATE OPEN"
+        invalid_cooldown: 100ms
 
 select:
   - platform: template
     name: State
     id: gate_state
     options:
-     - Open
-     - Closed
-     - Opening
-     - Closing
+      - Open
+      - Closed
+      - Opening
+      - Closing
     initial_option: Closed
     optimistic: true
