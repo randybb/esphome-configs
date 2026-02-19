@@ -93,6 +93,12 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
 
+globals:
+  - id: beacon_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
 esp32_ble_tracker:
   id: ${device}_ble_tracker
   scan_parameters:
@@ -104,109 +110,29 @@ binary_sensor:
     ibeacon_uuid: !secret ble_beacon_toyota_auris_uuid
     name: "Vehicle iBeacon Auris"
     timeout: 2min
-    on_press:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_auris
-              - switch.is_on: auto_open
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_pcx125
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_open
-    on_release:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_auris
-              - switch.is_on: auto_close
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_pcx125
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_close
+    on_press: !include {file: common/gate_beacon_open.yaml, vars: {enable_id: enable_auris}}
+    on_release: !include {file: common/gate_beacon_close.yaml, vars: {enable_id: enable_auris}}
   - platform: ble_presence
     id: ibeacon_yaris
     ibeacon_uuid: !secret ble_beacon_toyota_yaris_uuid
     name: "Vehicle iBeacon Yaris"
     timeout: 2min
-    on_press:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_yaris
-              - switch.is_on: auto_open
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_pcx125
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_open
-    on_release:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_yaris
-              - switch.is_on: auto_close
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_pcx125
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_close
+    on_press: !include {file: common/gate_beacon_open.yaml, vars: {enable_id: enable_yaris}}
+    on_release: !include {file: common/gate_beacon_close.yaml, vars: {enable_id: enable_yaris}}
   - platform: ble_presence
     id: ibeacon_pcx125
     ibeacon_uuid: !secret ble_beacon_honda_uuid
     name: "Vehicle iBeacon Honda PCX125"
     timeout: 2min
-    on_press:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_pcx125
-              - switch.is_on: auto_open
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_open
-    on_release:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_pcx125
-              - switch.is_on: auto_close
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_dl650
-          then:
-            - button.press: gate_close
+    on_press: !include {file: common/gate_beacon_open.yaml, vars: {enable_id: enable_pcx125}}
+    on_release: !include {file: common/gate_beacon_close.yaml, vars: {enable_id: enable_pcx125}}
   - platform: ble_presence
     id: ibeacon_dl650
     ibeacon_uuid: !secret ble_beacon_suzuki_uuid
     name: "Vehicle iBeacon Suzuki DL650"
     timeout: 2min
-    on_press:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_dl650
-              - switch.is_on: auto_open
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_pcx125
-          then:
-            - button.press: gate_open
-    on_release:
-      - if:
-          condition:
-            and:
-              - switch.is_on: enable_dl650
-              - switch.is_on: auto_close
-              - binary_sensor.is_off: ibeacon_auris
-              - binary_sensor.is_off: ibeacon_yaris
-              - binary_sensor.is_off: ibeacon_pcx125
-          then:
-            - button.press: gate_close
+    on_press: !include {file: common/gate_beacon_open.yaml, vars: {enable_id: enable_dl650}}
+    on_release: !include {file: common/gate_beacon_close.yaml, vars: {enable_id: enable_dl650}}
   - platform: gpio
     id: gate_ogi
     pin:

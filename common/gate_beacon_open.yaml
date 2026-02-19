@@ -1,0 +1,9 @@
+- lambda: 'id(beacon_count) += 1;'
+- if:
+    condition:
+      and:
+        - switch.is_on: ${enable_id}
+        - switch.is_on: auto_open
+        - lambda: 'return id(beacon_count) == 1;'
+    then:
+      - button.press: gate_open
