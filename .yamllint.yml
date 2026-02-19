@@ -14,6 +14,12 @@ rules:
   # Not all files use --- document start marker
   document-start: disable
 
+  # ESPHome uses both indented and non-indented sequences
+  indentation:
+    spaces: 2
+    indent-sequences: whatever
+    check-multi-line-strings: false
+
   # Some files have trailing spaces; warn only
   trailing-spaces: enable
 
