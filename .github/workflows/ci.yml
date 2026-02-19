@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  yamllint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          config_file: .yamllint.yml
+          file_or_dir: "*.yaml common/**/*.yaml"
+
+  validate:
+    name: ESPHome config validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get changed device configs
+        id: changed
+        uses: tj-actions/changed-files@v46
+        with:
+          files: "mcu-*.yaml"
+
+      - name: Install ESPHome
+        if: steps.changed.outputs.any_changed == 'true'
+        run: pip install esphome
+
+      - name: Prepare secrets
+        if: steps.changed.outputs.any_changed == 'true'
+        run: cp secrets.yaml.default secrets.yaml
+
+      - name: Validate changed configs
+        if: steps.changed.outputs.any_changed == 'true'
+        run: |
+          for f in ${{ steps.changed.outputs.all_changed_files }}; do
+            echo "Validating $f..."
+            esphome config "$f"
+          done

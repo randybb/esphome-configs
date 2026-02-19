@@ -1,0 +1,22 @@
+extends: default
+
+rules:
+  # ESPHome uses True/False (Python style) and yes/no
+  truthy:
+    allowed-values: ["true", "false", "True", "False", "yes", "no"]
+    check-keys: false
+
+  # Lambdas and long substitutions can exceed 80 chars
+  line-length:
+    max: 200
+    level: warning
+
+  # Not all files use --- document start marker
+  document-start: disable
+
+  # Some files have trailing spaces; warn only
+  trailing-spaces: enable
+
+  # Allow comments without a space after # in some cases (e.g. # noqa)
+  comments:
+    min-spaces-before-comment: 1
