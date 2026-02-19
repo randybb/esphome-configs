@@ -36,9 +36,9 @@ jobs:
         with:
           files: "mcu-*.yaml"
 
-      - name: Install ESPHome
+      - name: Install ESPHome (dev)
         if: steps.changed.outputs.any_changed == 'true'
-        run: pip install esphome
+        run: pip install git+https://github.com/esphome/esphome.git@dev
 
       - name: Prepare secrets
         if: steps.changed.outputs.any_changed == 'true'
