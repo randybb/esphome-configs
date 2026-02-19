@@ -16,21 +16,11 @@ esp32:
     advanced:
       minimum_chip_revision: "3.1"
 
-interval:
-  - interval: 30s
-    then:
-      if:
-        condition:
-          wifi.connected:
-        then:
-          - light.turn_on: wifi_status_led
-        else:
-          - light.turn_off: wifi_status_led
-
 packages:
   common: !include common/common.yaml
 
 uart:
+- id: cse7766_uart
   rx_pin: 16
   baud_rate: 4800
   parity: EVEN
@@ -120,6 +110,7 @@ output:
 
 sensor:
   - platform: cse7766
+    uart_id: cse7766_uart
     current:
       name: Current
       id: a_sensor
@@ -143,8 +134,13 @@ sensor:
           then:
             - light.turn_off: switch_led
     energy:
-      name: Energy"
+      name: Energy
       id: wh_sensor
+      filters:
+        - throttle_average: ${update_interval}
+    power_factor:
+      name: Power Factor
+      id: power_factor
       filters:
         - throttle_average: ${update_interval}
 
@@ -154,12 +150,6 @@ sensor:
     filters:
       - multiply: 0.001
     unit_of_measurement: kWh
-
-  - platform: template
-    name: Power Factor
-    device_class: power_factor
-    id: power_factor
-    lambda: return id(w_sensor).state / id(v_sensor).state / id(a_sensor).state;
 
 switch:
   - platform: template
@@ -180,7 +170,6 @@ switch:
     on_turn_on:
       - delay: 500ms
       - switch.turn_off: relay_on  # bi-stable relay so no need to keep on
-      - light.turn_on: switch_led
     interlock: [relay_off]
 
   - platform: gpio
@@ -191,7 +180,6 @@ switch:
     on_turn_on:
       - delay: 500ms
       - switch.turn_off: relay_off # bi-stable relay so no need to keep on
-      - light.turn_off: switch_led
     interlock: [relay_on]
 
 time:
