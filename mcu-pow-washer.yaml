@@ -20,10 +20,10 @@ packages:
   common: !include common/common.yaml
 
 uart:
-- id: cse7766_uart
-  rx_pin: 16
-  baud_rate: 4800
-  parity: EVEN
+  - id: cse7766_uart
+    rx_pin: 16
+    baud_rate: 4800
+    parity: EVEN
 
 binary_sensor:
   - platform: gpio
@@ -82,7 +82,7 @@ display:
       it.display_kwh(false);
       it.printf(0, "%.1f", id(v_sensor).state);
       it.printf(1, "%.1f", id(a_sensor).state);
-    } else {  
+    } else {
       it.display_voltage(false);
       it.display_kwh(true);
       it.printf(0, "%.1f", id(wh_sensor).state);

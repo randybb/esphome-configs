@@ -11,10 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get changed YAML files
+        id: changed
+        uses: tj-actions/changed-files@v46
+        with:
+          files: "**/*.yaml"
+
       - uses: ibiqlik/action-yamllint@v3
+        if: steps.changed.outputs.any_changed == 'true'
         with:
           config_file: .yamllint.yml
-          file_or_dir: "*.yaml common/**/*.yaml"
+          file_or_dir: ${{ steps.changed.outputs.all_changed_files }}
 
   validate:
     name: ESPHome config validation

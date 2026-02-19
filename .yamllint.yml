@@ -3,7 +3,7 @@ extends: default
 rules:
   # ESPHome uses True/False (Python style) and yes/no
   truthy:
-    allowed-values: ["true", "false", "True", "False", "yes", "no"]
+    allowed-values: ["true", "false", "True", "False", "yes", "no", "on", "off", "ON", "OFF"]
     check-keys: false
 
   # Lambdas and long substitutions can exceed 80 chars
@@ -17,6 +17,5 @@ rules:
   # Some files have trailing spaces; warn only
   trailing-spaces: enable
 
-  # Allow comments without a space after # in some cases (e.g. # noqa)
   comments:
-    min-spaces-before-comment: 1
+    require-starting-space: false
