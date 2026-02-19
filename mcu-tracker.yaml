@@ -99,7 +99,6 @@ external_components:
     components: [ network, modem ]
   - source: github://pr#9802
     components: [ modem ]
-  - source: components
 
 # packages:
 #   common: !include common/common.yaml
