@@ -32,11 +32,11 @@ pcf8574:
     pcf8575: true
 
 animation:
-  - file: "blinky.gif"
+  - file: "assets/images/blinky.gif"
     id: blinky
     resize: 128x128
     type: RGB565
-  - file: "vault_boy_walking.gif"
+  - file: "assets/images/vault_boy_walking.gif"
     id: vaultboy
     resize: 168x121
     type: RGB565
