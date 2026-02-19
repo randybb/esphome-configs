@@ -59,7 +59,7 @@ binary_sensor:
         - delay: 10s
         - switch.turn_off: relay
         - light.turn_off: light_blue
-        
+
 output:
   - platform: gpio
     pin: GPIO00
@@ -79,7 +79,7 @@ light:
     name: Blue LED
     id: light_blue
     output: led_blue
-    
+
 sensor:
   - platform: hlw8012
     sel_pin:

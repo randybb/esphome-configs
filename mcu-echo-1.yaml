@@ -20,11 +20,11 @@ esp32:
     # type: esp-idf
     # version: 5.1.2
     # platform_version: 6.5.0
-    
+
 
 external_components:
   - source: components
-  # - source: 
+  # - source:
   #     type: git
   #     url: https://github.com/nielsnl68/esphome
   #     ref: nvds-RTTTL_I2S
@@ -94,14 +94,14 @@ light:
 #           condition:
 #              lambda: return state > 0;
 #           then:
-#             - light.turn_on: 
+#             - light.turn_on:
 #                 id: neo_buildin
 #                 red: 1.0
 #                 green: 0.0
 #                 blue: 0.0
 #                 brightness: 100%
 #           else:
-#             - light.turn_off: 
+#             - light.turn_off:
 #                 id: neo_buildin
 #                 # green: 0.0
 #                 # red: 0.0
@@ -134,7 +134,7 @@ speaker:
 rtttl:
   id: my_rtttl
   speaker: echo_speaker
-  
+
 microphone:
   - platform: i2s_audio
     id: echo_microphone

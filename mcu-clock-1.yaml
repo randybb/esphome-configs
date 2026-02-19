@@ -126,7 +126,7 @@ display:
         if ((i % 2) == 0)
           it.print("8 8 ");
         else
-          it.print(" 8 8");      
+          it.print(" 8 8");
       } else {
         if (((i / 10) % 2) == 0) {
           //it.set_intensity(7);

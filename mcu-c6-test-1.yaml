@@ -46,7 +46,7 @@ esp32:
 logger:
   hardware_uart: USB_SERIAL_JTAG
   logs:
-    component: ERROR 
+    component: ERROR
 
 # web_server:
 #   port: 80

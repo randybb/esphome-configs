@@ -9,7 +9,7 @@ esphome:
   comment: ${comment}
   on_boot:
     # priority: -10
-    priority: 600 
+    priority: 600
     then:
       - logger.log: turning modem off
       - binary_sensor.template.publish:
@@ -33,7 +33,7 @@ esphome:
           state: ON
       # - switch.turn_on: cmd_gnss_enable
   # on_boot:
-  #   priority: 600 
+  #   priority: 600
   #   then:
   #     # https://www.manualslib.com/manual/1498555/Simcom-Sim7000g.html?page=25#manual
   #     - logger.log: turning modem off
@@ -42,7 +42,7 @@ esphome:
   #         state: OFF
   #     # The doc says that pulling 'modem_power' to ground works,
   #     # But I had to put if off for 2.6s, then on ?
-  #     - switch.turn_off: modem_powerkey  
+  #     - switch.turn_off: modem_powerkey
   #     - delay: 2.6s
   #     - switch.turn_on: modem_powerkey
   #     - logger.log: waiting off status
@@ -100,7 +100,7 @@ external_components:
   - source: github://pr#9802
     components: [ modem ]
   - source: components
-  
+
 # packages:
 #   common: !include common/common.yaml
 
@@ -168,7 +168,7 @@ sensor:
       name: Longitude
     altitude:
       name: Altitude
-  
+
 switch:
   - platform: gpio
     id: modem_powerkey
@@ -273,31 +273,31 @@ text_sensor:
   #       parts.push_back(data.substr(0, pos));
   #       data.erase(0, pos + delimiter.length());
   #     }
-  #     parts.push_back(data); 
+  #     parts.push_back(data);
 
   #     if (parts.size() < 14) {
   #       return { "Invalid GNSS data: " + gnss_info };
   #     }
-    
+
   #     std::string latitude = parts[4];
   #     std::string lat_direction = parts[5];
   #     std::string longitude = parts[6];
   #     std::string lon_direction = parts[7];
-    
+
   #     if (latitude.empty() || lat_direction.empty() || longitude.empty() || lon_direction.empty()) {
   #       return { "Invalid GNSS data: " + gnss_info };
   #     }
-    
+
   #     double lat_deg = std::stod(latitude.substr(0, 2));
   #     double lat_min = std::stod(latitude.substr(2));
   #     double lat = lat_deg + (lat_min / 60.0);
   #     if (lat_direction == "S") lat = -lat;
-    
+
   #     double lon_deg = std::stod(longitude.substr(0, 3));
   #     double lon_min = std::stod(longitude.substr(3));
   #     double lon = lon_deg + (lon_min / 60.0);
   #     if (lon_direction == "W") lon = -lon;
-    
+
   #     std::string google_maps_link = "https://www.google.com/maps/search/?api=1&query=" + std::to_string(lat) + "," + std::to_string(lon);
   #     return { google_maps_link };
 
@@ -317,7 +317,7 @@ text_sensor:
 #       url: https://github.com/ssieb/custom_components
 #     components: [ serial ]
 #   - source: components
-  
+
 # packages:
 #   common: !include common/common.yaml
 

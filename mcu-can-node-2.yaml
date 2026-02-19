@@ -25,7 +25,7 @@ external_components:
 
 packages:
   common: !include common/common.yaml
-  
+
 canbus:
   - platform: esp32_can
     id: can_bus

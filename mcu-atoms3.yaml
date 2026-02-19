@@ -16,7 +16,7 @@ esphome:
   #           id(display_tft).enable();
   #           id(display_tft).transfer_byte(0x11);
   #           id(display_tft).disable();
-  
+
 esp32:
   variant: esp32s3
   flash_size: 8MB
@@ -43,7 +43,7 @@ animation:
 
 logger:
   logs:
-    component: ERROR 
+    component: ERROR
 
 web_server:
   port: 80
@@ -377,7 +377,7 @@ display:
       id(blinky).next_frame();
       // Draw the animation my_animation at position [x=0,y=0]
       it.image(0, 0, id(blinky), COLOR_ON, COLOR_OFF);
-  
+
       // // it.print(0, 0, id(font_default), "Hello World!");
       // // it.strftime(0, 0, id(font_default), TextAlign::TOP_LEFT, "%H:%M", id(ha_time).now());
       // it.rectangle(0,  0, it.get_width(), it.get_height(), id(my_blue));

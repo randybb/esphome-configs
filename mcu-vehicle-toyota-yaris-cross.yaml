@@ -51,7 +51,7 @@ packages:
   common: !include common/logger.yaml
   # wifi: !include common/wifi.yaml
   # common: !include common/common.yaml
-  
+
 # debug:
 
 # PINOUTS: M5ATOM

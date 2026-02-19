@@ -10,7 +10,7 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
-  
+
 esp32:
   variant: esp32
   framework:
@@ -18,7 +18,7 @@ esp32:
 
 packages:
   common: !include common/common.yaml
-  
+
 i2c:
   # - id: i2c0
   sda: 32

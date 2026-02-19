@@ -21,7 +21,7 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-  
+
 packages:
   common: !include common/common.yaml
 
@@ -99,7 +99,7 @@ sensor:
   #     - lambda: return x * (0.001) + 2282;
   #   unit_of_measurement: kWh
   #   icon: mdi:counter
-  # L2  
+  # L2
   - platform: pzemac
     address: 11
     id: pzemac_l2
@@ -224,7 +224,7 @@ button:
       - pzemac.reset_energy: pzemac_l1
       - pzemac.reset_energy: pzemac_l2
       - pzemac.reset_energy: pzemac_l3
-  
+
 time:
   - platform: homeassistant
     id: ha_time

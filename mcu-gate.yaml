@@ -14,7 +14,7 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-  
+
 packages:
   common: !include common/common.yaml
 
@@ -116,7 +116,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_pcx125
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_open
     on_release:
       - if:
@@ -127,7 +127,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_pcx125
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_close
   - platform: ble_presence
     id: ibeacon_yaris
@@ -143,7 +143,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_pcx125
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_open
     on_release:
       - if:
@@ -154,7 +154,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_pcx125
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_close
   - platform: ble_presence
     id: ibeacon_pcx125
@@ -170,7 +170,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_open
     on_release:
       - if:
@@ -181,7 +181,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_dl650
-          then: 
+          then:
             - button.press: gate_close
   - platform: ble_presence
     id: ibeacon_dl650
@@ -197,7 +197,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_pcx125
-          then: 
+          then:
             - button.press: gate_open
     on_release:
       - if:
@@ -208,7 +208,7 @@ binary_sensor:
               - binary_sensor.is_off: ibeacon_auris
               - binary_sensor.is_off: ibeacon_yaris
               - binary_sensor.is_off: ibeacon_pcx125
-          then: 
+          then:
             - button.press: gate_close
   # - platform: gpio
   #   id: gate_flash

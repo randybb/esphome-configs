@@ -27,12 +27,12 @@ esp32:
 
 psram:
   mode: octal
-  speed: 80MHz 
+  speed: 80MHz
 
 packages:
   common: !include common/common.yaml
 
-# PINOUTS: ESP32 Cheap Yellow Display, 4.3", IPS, Capacitive 
+# PINOUTS: ESP32 Cheap Yellow Display, 4.3", IPS, Capacitive
 ## Display
 # R0        GND
 # R1        GND
@@ -256,7 +256,7 @@ script:
       #     src: solar_power_icon
       #     img_recolor: 0xFFF000 #mixes this color with the base image
       #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-      #     #bg_color: 0xFFFFFF          
+      #     #bg_color: 0xFFFFFF
       # # - lvgl.indicator.line.update:
       # #     id: power_meter_input2
       # #     value: !lambda return id(counting_number).state;
@@ -288,7 +288,7 @@ script:
       #     src: solar_power_icon
       #     img_recolor: 0xFFF000 #mixes this color with the base image
       #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-      #     #bg_color: 0xFFFFFF   
+      #     #bg_color: 0xFFFFFF
 
 image:
   - file: mdi:sun-wireless-outline
@@ -329,7 +329,7 @@ lvgl:
       bg_opa: TRANSP
       bg_color: 0
       radius: 4
-      pad_all: 2 
+      pad_all: 2
     - id: details_style
       text_font: MONTSERRAT_18
       align: center
@@ -338,7 +338,7 @@ lvgl:
       bg_opa: TRANSP
       bg_color: 0
       radius: 4
-      pad_all: 2 
+      pad_all: 2
   widgets:
     - obj: # Meter
         height: 240

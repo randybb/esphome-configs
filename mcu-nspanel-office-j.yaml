@@ -32,13 +32,13 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  
+
 packages:
   common: !include common/common.yaml
 
 api:
   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-  # 
+  #
   # stupnovane:d=4,o=6,b=180:c,e,g
   # help:d=4,o=6,b=100:f,8p,f,8p,f,8p,f,8p,f,8p,f,8p,f,8p,f,8p,f,8p,f
   # gate_opening:d=16,o=5,b=160:a, 8p, a
@@ -67,7 +67,7 @@ api:
       then:
         - lambda: |-
             id(nspanel_id).upload_tft("${tft_url}");
-            
+
     - service: upload_tft
       variables:
         url: string
@@ -299,7 +299,7 @@ sensor:
 # text_sensor:
 #   - platform: ble_scanner
 #     name: BLE Scanner
-    
+
 # esp32_ble_beacon:
 #   type: iBeacon
 #   uuid: '6d68252f-2e6f-b5b9-965f-43c0a3713880'

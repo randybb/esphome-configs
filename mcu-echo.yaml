@@ -227,12 +227,12 @@ button:
 # http_request:
 #   useragent: esphome/${device}
 #   timeout: 5s
-  
+
 # # Example configuration entry
 # interval:
 #   - interval: 1min
 #     then:
 #       # - script.execute: say_hello_server
-#       - http_request.get: 
+#       - http_request.get:
 #           url: https://esphome.io
 #           verify_ssl: false

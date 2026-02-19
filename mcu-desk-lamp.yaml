@@ -107,7 +107,7 @@ sensor:
 
             // positive rotation
             if (id(rotary).state > 0) {
-              // 
+              //
               if (id(rotary_button).state) {
                 temp -= 5.0f;
               } else {

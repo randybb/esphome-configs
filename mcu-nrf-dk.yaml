@@ -1,0 +1,10 @@
+esphome:
+  name: mcu-nrf-dk
+  friendly_name: mcu-nrf-dk
+
+nrf52:
+  board: nrf52840_dk
+  bootloader: adafruit_nrf52_sd140_v7
+
+# Enable logging
+logger:

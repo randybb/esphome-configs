@@ -72,7 +72,7 @@ light:
     name: Blue LED
     id: light_blue
     output: led_blue
-    
+
 sensor:
   - platform: hlw8012
     sel_pin:

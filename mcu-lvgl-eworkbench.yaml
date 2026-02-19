@@ -29,13 +29,13 @@ i2c:
 psram:
   mode: octal
   speed: 40MHz
-  
+
 spi:
   id: display_qspi
   type: quad
   clk_pin: 47
   data_pins: [21, 48, 40, 39]
-    
+
 color:
   - id: my_red
     red: 100%

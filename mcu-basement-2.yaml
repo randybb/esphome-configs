@@ -16,7 +16,7 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-  
+
 # Sonoff Dual R2
 # GPIO10	Push Button
 # GPIO00	Pin "button 0" on expansion header

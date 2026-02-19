@@ -23,7 +23,7 @@ packages:
 # B 	      GPIO12 	PWM3
 # W1 	      GPIO14 	PWM4
 # W2 	      GPIO04 	PWM5
-# LED D1 R 	GPIO05 	
+# LED D1 R 	GPIO05
 # LED D2 G 	GPIO01
 
 light:
@@ -42,7 +42,7 @@ light:
           name: Slow Strobe
       - strobe:
           name: Fast Strobe
-          colors: 
+          colors:
             - state: true
               duration: 100ms
             - state: false

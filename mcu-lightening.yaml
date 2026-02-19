@@ -10,7 +10,7 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
-  
+
 esp32:
   variant: esp32
   framework:

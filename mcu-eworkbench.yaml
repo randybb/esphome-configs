@@ -2,7 +2,7 @@ substitutions:
   device: eworkbench
   name: Electronics Workbench
   comment: "Office R | Electronics Workbench"
-  
+
 esphome:
   name: mcu-${device}
   friendly_name: ${name}
@@ -32,7 +32,7 @@ packages:
 # GPIO7   GPIO
 # GPIO8   GPIO
 # GPIO10   GPIO
-# GPIO18   UART RX 
+# GPIO18   UART RX
 # GPIO19   UART TX
 
 i2c:
@@ -257,7 +257,7 @@ time:
 #         if ((i % 2) == 0)
 #           it.print("8 8 ");
 #         else
-#           it.print(" 8 8");      
+#           it.print(" 8 8");
 #       } else {
 #         if (((i / 10) % 2) == 0) {
 #           //it.set_intensity(7);

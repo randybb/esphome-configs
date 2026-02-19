@@ -33,7 +33,7 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  
+
 packages:
   common: !include common/common.yaml
 
@@ -63,7 +63,7 @@ api:
       then:
         - lambda: |-
             id(nspanel_id).upload_tft("${tft_url}");
-            
+
     - service: upload_tft
       variables:
         url: string
@@ -267,7 +267,7 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     name: Temperature
-    
+
   - platform: template
     id: room_temperature_id
 

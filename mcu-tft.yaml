@@ -32,7 +32,7 @@ packages:
 
 logger:
   logs:
-    component: ERROR 
+    component: ERROR
 
 # GPIO1   UART TX
 # GPIO3   UART RX

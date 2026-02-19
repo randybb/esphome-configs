@@ -15,7 +15,7 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-  
+
 # Sonoff Dual R2
 # Pin 	  Function
 # GPIO10	Push Button
@@ -118,7 +118,7 @@ select:
                 id(blower_auto) = false;
                 id(relay_1).turn_off();
             }
-      
+
 status_led:
   pin:
     number: 13
@@ -136,7 +136,7 @@ switch:
     icon: mdi:power-socket-fr
     pin: 5
     id: relay_2
-    
+
 time:
   - platform: homeassistant
     timezone: Europe/Bratislava

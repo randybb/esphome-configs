@@ -28,13 +28,13 @@ i2c:
 psram:
   mode: octal
   speed: 80MHz
-  
+
 spi:
   id: display_qspi
   type: quad
   clk_pin: 47
   data_pins: [21, 48, 40, 39]
-    
+
 color:
   - id: my_red
     red: 100%
@@ -140,7 +140,7 @@ touchscreen:
     display: main_display
     i2c_id: touchscreen_bus
     update_interval: 100ms
-    # interrupt_pin: 
+    # interrupt_pin:
       # number: 3
       # ignore_strapping_warning: true
     calibration:

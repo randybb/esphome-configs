@@ -50,7 +50,7 @@ external_components:
 packages:
   common: !include common/logger.yaml
 #   common: !include common/common.yaml
-  
+
 # debug:
 
 # PINOUTS: M5ATOM

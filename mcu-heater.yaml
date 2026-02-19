@@ -241,7 +241,7 @@ switch:
       number: 5
 # - platform: uart
 #     name: Total Heater Power Reset
-#     uart_id: 
+#     uart_id:
 #     id: reset_total_heater_power
 #     data: [0x01, 0x42, 0x80, 0x11]
 
@@ -256,7 +256,7 @@ sensor:
 # [22:06:25][D][dallas.sensor:082]:     0xB2041750CF1AFF28  Heating Water (OUT from Heater, TO System)
 # [22:06:25][D][dallas.sensor:082]:     0x960417517301FF28  Hot Water Tank - TOP (Heater)
     # address: 0x320417500A93FF28 # 1. broken
-    # address: 0x67041750F44CFF28 # 2. broken 
+    # address: 0x67041750F44CFF28 # 2. broken
     address: 0x960417517301FF28 # Hot Water Tank - TOP (Heater)
     name: Heater
     id: hot_water_heater
@@ -297,7 +297,7 @@ sensor:
     lambda: |-
       //# platba za odberne miesto        0,75          1,1
       //# pevna mesacna zlozka tarify     0,15080000    0,1508 * 75 A
-      
+
       //## platba za systemove sluzby      0,00629760
       //# platba za prevadzku systemu     0,01590000
       //# variabilna zlozka tarify za distribuciu 0,00398400
@@ -346,7 +346,7 @@ sensor:
       - lambda: return x * (0.001) + 2282;
     unit_of_measurement: kWh
     icon: mdi:counter
-  # L2  
+  # L2
   - platform: pzemac
     address: 162
     current:

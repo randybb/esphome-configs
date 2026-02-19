@@ -32,7 +32,7 @@ external_components:
       ref: dev
     components: [nspanel_lovelace]
   - source: components
-  
+
 packages:
   common: !include common/common.yaml
 
@@ -62,7 +62,7 @@ api:
       then:
         - lambda: |-
             id(nspanel_id).upload_tft("${tft_url}");
-            
+
     - service: upload_tft
       variables:
         url: string
@@ -235,7 +235,7 @@ switch:
     entity_category: config
     pin:
       number: 19
-      
+
   - platform: gpio
     name: Screen Power
     id: screen_power
@@ -270,6 +270,6 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     name: Living Room Temperature
-    
+
   - platform: template
     id: room_temperature_id

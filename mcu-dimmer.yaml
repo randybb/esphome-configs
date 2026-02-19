@@ -35,7 +35,7 @@ esp32:
   framework:
     type: esp-idf
 
-  
+
 packages:
   common: !include common/common.yaml
 

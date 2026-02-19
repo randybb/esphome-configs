@@ -27,7 +27,7 @@ time:
   - platform: homeassistant
     id: ha_time
     timezone: Europe/Bratislava
-    on_time_sync: 
+    on_time_sync:
       - bm8563.write_time
   - platform: bm8563
     id: rtc_time
@@ -75,9 +75,9 @@ binary_sensor:
     pin:
       number: 37
       inverted: true
-    on_press: 
+    on_press:
       - component.update: m5paper_display
-    on_release: 
+    on_release:
       - component.update: m5paper_display
   - platform: gpio
     name: ${name} Button Press
@@ -100,7 +100,7 @@ binary_sensor:
     x_max: 100
     y_min: 0
     y_max: 100
-    on_press: 
+    on_press:
       # Example of applying the sleep duration and shutting down to the lowest power mode
       - bm8563.apply_sleep_duration
       - delay: 1s

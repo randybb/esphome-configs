@@ -74,7 +74,7 @@ output:
     pin: GPIO02
     id: led_blue
     inverted: True
-    
+
 sensor:
   - platform: hlw8012
     sel_pin:

@@ -51,7 +51,7 @@ external_components:
     refresh: 0s
     components: [nspanel_lovelace]
   # - source: components
-  
+
 packages:
   common: !include common/common.yaml
   # common: !include common/common_dev.yaml
@@ -90,7 +90,7 @@ api:
     #   then:
     #     - lambda: |-
     #         id(nspanel_id).upload_tft("${tft_url}");
-            
+
     # - service: upload_tft
     #   variables:
     #     url: string
@@ -517,7 +517,7 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     name: Living Room Temperature Entry
-    
+
   - platform: template
     id: room_temperature_id
 
