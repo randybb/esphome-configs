@@ -11,7 +11,6 @@ esphome:
   comment: ${comment}
   platformio_options:
     board_build.flash_mode: dio
-  includes: ota.h
 
 esp32:
   variant: esp32s3
