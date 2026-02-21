@@ -36,6 +36,8 @@ esp32:
     type: esp-idf
     advanced:
       minimum_chip_revision: "3.0"
+      include_builtin_idf_components:
+        - esp_http_client
 
 external_components:
   # - source:

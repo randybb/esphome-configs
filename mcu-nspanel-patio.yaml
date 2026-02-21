@@ -24,6 +24,8 @@ esp32:
     type: esp-idf
     advanced:
       minimum_chip_revision: "3.0"
+      include_builtin_idf_components:
+        - esp_http_client
 
 external_components:
   - source:
@@ -31,7 +33,6 @@ external_components:
       url: https://github.com/sairon/esphome-nspanel-lovelace-ui
       ref: dev
     components: [nspanel_lovelace]
-  - source: components
 
 packages:
   common: !include common/common.yaml
