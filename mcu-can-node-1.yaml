@@ -14,8 +14,6 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-    # version: 5.4.2
-    # platform_version: 54.03.21
 
 external_components:
   - source: github://mrk-its/esphome-canopen@dev
