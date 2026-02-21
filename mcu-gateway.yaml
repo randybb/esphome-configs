@@ -54,11 +54,11 @@ ethernet:
     # Enable LLDP transmission
     #enabled: true
     # Optional: override default port
-    port: "test-port"
+    port: eth
     # Optional: override default system name
-    system_name: "test-system"
+    system_name: mcu-${device}
     # Optional: override default system description
-    system_description: "test-description"
+    system_description: ${comment}
     # Optional: override default "fast mode" burst packet count
     tx_fast_count: 4
     # Optional: override default LLDP frame transmission interval
