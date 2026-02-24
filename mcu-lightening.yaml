@@ -1,3 +1,4 @@
+---
 substitutions:
   device: lightening
   name: Lightening detector
@@ -15,9 +16,6 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-
-external_components:
-  - source: components
 
 packages:
   common: !include common/common.yaml
@@ -38,11 +36,11 @@ as3935_i2c:
   irq_pin: 26
 
 binary_sensor:
-#   - platform: gpio
-#     # name: Button
-#     pin:
-#       number: 39
-#       inverted: true
+  #   - platform: gpio
+  #     # name: Button
+  #     pin:
+  #       number: 39
+  #       inverted: true
   - platform: as3935
     name: Storm Alert
 
@@ -62,4 +60,3 @@ sensor:
       name: Energy
     distance:
       name: Storm Distance
-

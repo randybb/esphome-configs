@@ -1,3 +1,4 @@
+---
 substitutions:
   device: gateway
   name: Gateway
@@ -73,19 +74,19 @@ ethernet:
 #   clk_mode: GPIO17_OUT
 #   phy_addr: 0
 #   power_pin: 12
-  # use_address: 10.17.240.245
+# use_address: 10.17.240.245
 
-  # # Optional manual IP
-  # manual_ip:
-  #   static_ip: 10.17.240.254
-  #   gateway: 10.17.240.1
-  #   subnet: 255.255.255.0
+# # Optional manual IP
+# manual_ip:
+#   static_ip: 10.17.240.254
+#   gateway: 10.17.240.1
+#   subnet: 255.255.255.0
 
 
 # ethernet:
-  # use_address: 10.17.241.254
-  # use_address: 10.17.241.98
-  # use_address: mcu-gateway.local
+# use_address: 10.17.241.254
+# use_address: 10.17.241.98
+# use_address: mcu-gateway.local
 
 uart:
   id: uart_modbus
@@ -190,17 +191,17 @@ sensor:
     register_count: 2
     filters:
       - calibrate_linear:
-        - 50 -> 0
-        - 450 -> 5
+          - 50 -> 0
+          - 450 -> 5
 
 switch:
-- platform: modbus_controller
-  modbus_controller_id: modbus_adc_1
-  name: Readress MODBUS
-  register_type: holding
-  address: 0x00FD
-  entity_category: config
-  icon: "mdi:toggle-switch"
+  - platform: modbus_controller
+    modbus_controller_id: modbus_adc_1
+    name: Readress MODBUS
+    register_type: holding
+    address: 0x00FD
+    entity_category: config
+    icon: "mdi:toggle-switch"
 
 esp32_ble_tracker:
   scan_parameters:

@@ -1,3 +1,4 @@
+---
 substitutions:
   device: echo-1
   name: Echo 1
@@ -31,7 +32,7 @@ external_components:
   #   components: [ speaker, rtttl ]
   #   refresh: 0s
   - source: github://pr#5177
-    components: [ rtttl ]
+    components: [rtttl]
     refresh: 0s
 
 packages:
@@ -48,10 +49,10 @@ api:
             rtttl: !lambda 'return song;'
 
 # i2c:
-  # sda: 26
-  # scl: 32
-#   scan: true #false
-#   frequency: 100kHz
+#   - sda: 26
+#     scl: 32
+#     scan: true #false
+#     frequency: 100kHz
 
 # uart:
 #   id: particle_uart

@@ -1,3 +1,4 @@
+---
 substitutions:
   device: atoms3
   name: AtomS3
@@ -118,36 +119,36 @@ canbus:
     bit_rate: 1000KBPS
     use_extended_id: true
     on_frame:
-    - can_id: 0x123
-      use_extended_id: true
-      then:
-      - lambda: |-
-          std::string b(x.begin(), x.end());
-          ESP_LOGD("can extended id 0x123", "%s", &b[0] );
-    - can_id: 0x123
-      then:
-      - lambda: |-
-          std::string b(x.begin(), x.end());
-          ESP_LOGD("can standard id 0x123", "%s", &b[0] );
-    - can_id: 0x3f1
-      can_id_mask: 0x7ff
-      use_extended_id: false
-      then:
-      - lambda: |-
-          std::string b(x.begin(), x.end());
-          ESP_LOGD("can id 0x03f1", "%s", &b[0] );
-    - can_id: 0x108
-      use_extended_id: false
-      then:
-      - lambda: |-
-          std::string b(x.begin(), x.end());
-          ESP_LOGD("can id 0x108", "%s", &b[0] );
-    - can_id: 0x109
-      use_extended_id: false
-      then:
-      - lambda: |-
-          std::string b(x.begin(), x.end());
-          ESP_LOGD("can id 0x109", "%s", &b[0] );
+      - can_id: 0x123
+        use_extended_id: true
+        then:
+        - lambda: |-
+            std::string b(x.begin(), x.end());
+            ESP_LOGD("can extended id 0x123", "%s", &b[0] );
+      - can_id: 0x123
+        then:
+        - lambda: |-
+            std::string b(x.begin(), x.end());
+            ESP_LOGD("can standard id 0x123", "%s", &b[0] );
+      - can_id: 0x3f1
+        can_id_mask: 0x7ff
+        use_extended_id: false
+        then:
+        - lambda: |-
+            std::string b(x.begin(), x.end());
+            ESP_LOGD("can id 0x03f1", "%s", &b[0] );
+      - can_id: 0x108
+        use_extended_id: false
+        then:
+        - lambda: |-
+            std::string b(x.begin(), x.end());
+            ESP_LOGD("can id 0x108", "%s", &b[0] );
+      - can_id: 0x109
+        use_extended_id: false
+        then:
+        - lambda: |-
+            std::string b(x.begin(), x.end());
+            ESP_LOGD("can id 0x109", "%s", &b[0] );
 
 i2c:
   # - id: i2c_groove
@@ -177,9 +178,9 @@ i2c:
 #   - platform: gpio
 #     pin: 1
 #     id: hub_1
-  # - platform: gpio
-  #   pin: 2
-  #   id: hub_2
+# - platform: gpio
+#   pin: 2
+#   id: hub_2
 
 m5stack_4relay:
   id: m5stack_relay_1
@@ -229,7 +230,7 @@ switch:
       - output.turn_off: motor_in1
       - output.turn_off: motor_in2
 
-# switch:
+  # switch:
   - platform: m5stack_4relay
     name: Relay 1
     id: relay_1

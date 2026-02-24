@@ -1,3 +1,4 @@
+---
 substitutions:
   device: socket-01
   name: Socket 01
@@ -99,8 +100,8 @@ sensor:
     name: Total Daily Power"
     power_id: power
     filters:
-        # Multiplication factor from W to kW is 0.001
-        - multiply: 0.001
+      # Multiplication factor from W to kW is 0.001
+      - multiply: 0.001
     unit_of_measurement: kWh
     icon: mdi:circle-slice-3
 

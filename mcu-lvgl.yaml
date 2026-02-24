@@ -1,3 +1,4 @@
+---
 substitutions:
   device: lvgl
   name: LVGL

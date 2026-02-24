@@ -1,3 +1,4 @@
+---
 substitutions:
   device: basement
   name: Basement
@@ -40,35 +41,35 @@ binary_sensor:
     name: Light Switch
     device_class: light
     on_click:
-    - min_length: 50ms
-      max_length: 350ms
-      then:
-        - homeassistant.service:
-            service: light.toggle
-            data:
-              entity_id: light.mcu_basement_2_light
-    - min_length: 351ms
-      max_length: 1000ms
-      then:
-        - homeassistant.service:
-            service: light.toggle
-            data:
-              entity_id: light.exercise_room
-    - min_length: 1001ms
-      max_length: 10000ms
-      then:
-        # - homeassistant.service:
-        #     service: light.turn_off
-        #     data:
-        #       entity_id: light.basement_light
-        - homeassistant.service:
-            service: light.turn_off
-            data:
-              entity_id: light.exercise_room
-        - homeassistant.service:
-            service: light.turn_off
-            data:
-              entity_id: light.exercise_room_fan
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.mcu_basement_2_light
+      - min_length: 351ms
+        max_length: 1000ms
+        then:
+          - homeassistant.service:
+              service: light.toggle
+              data:
+                entity_id: light.exercise_room
+      - min_length: 1001ms
+        max_length: 10000ms
+        then:
+          # - homeassistant.service:
+          #     service: light.turn_off
+          #     data:
+          #       entity_id: light.basement_light
+          - homeassistant.service:
+              service: light.turn_off
+              data:
+                entity_id: light.exercise_room
+          - homeassistant.service:
+              service: light.turn_off
+              data:
+                entity_id: light.exercise_room_fan
   - platform: gpio
     pin:
       number: 10

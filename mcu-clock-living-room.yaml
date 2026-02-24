@@ -1,3 +1,4 @@
+---
 substitutions:
   device: clock-living-room
   name: Living room Clock
@@ -21,7 +22,7 @@ external_components:
       url: https://github.com/trip5/esphome-tm1650
       ref: main
     refresh: 60s
-    components: [ tm1650 ]
+    components: [tm1650]
 
 packages:
   common: !include common/common.yaml

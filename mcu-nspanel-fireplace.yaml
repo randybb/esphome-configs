@@ -1,3 +1,4 @@
+---
 substitutions:
   device: nspanel-fireplace
   name: Fireplace NSPanel
@@ -189,7 +190,7 @@ binary_sensor:
       number: 14
       inverted: true
     on_click:
-    #   - switch.toggle: relay_1
+      #   - switch.toggle: relay_1
       - min_length: 50ms
         max_length: 350ms
         then:
@@ -219,7 +220,7 @@ binary_sensor:
       number: 27
       inverted: true
     on_click:
-    #   - switch.toggle: relay_2
+      #   - switch.toggle: relay_2
       - min_length: 50ms
         max_length: 350ms
         then:

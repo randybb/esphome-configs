@@ -1,3 +1,4 @@
+---
 substitutions:
   device: cec-bedroom
   name: Bedroom TV
@@ -52,11 +53,11 @@ uart:
     baud_rate: 9600
 
 sensor:
- - platform: a02yyuw
-   uart_id: uart_distance
-   name: 'Distance'
-   accuracy_decimals: 2
-   unit_of_measurement: cm
+  - platform: a02yyuw
+    uart_id: uart_distance
+    name: 'Distance'
+    accuracy_decimals: 2
+    unit_of_measurement: cm
 
 binary_sensor:
   - platform: gpio
@@ -138,22 +139,22 @@ hdmi_cec:
       then:
         - hdmi_cec.send: # Report ARC started
             destination: 0x0
-            data: [ 0xC1 ]
+            data: [0xC1]
     - opcode: 0x70 # System audio mode request
       then:
         - hdmi_cec.send:
             destination: 0x0
-            data: [ 0x72, 0x01 ]
+            data: [0x72, 0x01]
     - opcode: 0x71 # Give audio status
       then:
         - hdmi_cec.send:
             destination: 0x0
-            data: [ 0x7A, 0x7F ]
+            data: [0x7A, 0x7F]
     - opcode: 0x7D # Give audio system mode status
       then:
         - hdmi_cec.send:
             destination: 0x0
-            data: [ 0x7E, 0x01 ]
+            data: [0x7E, 0x01]
     - opcode: 0x46 # Give OSD name
       then:
         - hdmi_cec.send:

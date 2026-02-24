@@ -1,3 +1,4 @@
+---
 substitutions:
   device: rf433
   name: RF433 Bridge
@@ -28,11 +29,11 @@ remote_transmitter:
   carrier_duty_percent: 100%
 
 binary_sensor:
-# Key Fob remote
-# A: 011110110011101010100010
-# B: 011110110011101010101000
-# C: 011110110011101010100001
-# D: 011110110011101010100100
+  # Key Fob remote
+  # A: 011110110011101010100010
+  # B: 011110110011101010101000
+  # C: 011110110011101010100001
+  # D: 011110110011101010100100
   - platform: remote_receiver
     name: "Keyfob Remote Button A"
     rc_switch_raw:

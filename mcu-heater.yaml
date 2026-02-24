@@ -1,3 +1,4 @@
+---
 substitutions:
   device: heater
   name: Heater
@@ -248,13 +249,13 @@ switch:
 sensor:
   # - platform: ds248x
   - platform: dallas_temp
-# [22:06:25][D][dallas.sensor:082]:     0x1701143E35C5AA28  Feed
-# [22:06:25][D][dallas.sensor:082]:     0x7301143F7F57AA28  Return
-# [22:06:25][D][dallas.sensor:082]:     0xF701143E397FAA28  Heater Tank
-# [22:06:25][D][dallas.sensor:082]:     0x5A041750B2C8FF28  Hot Water Tank - Bottom (Solar)
-# [22:06:25][D][dallas.sensor:082]:     0xDB041750EAE2FF28  Heating Water Return (OUT from System, TO Heater)
-# [22:06:25][D][dallas.sensor:082]:     0xB2041750CF1AFF28  Heating Water (OUT from Heater, TO System)
-# [22:06:25][D][dallas.sensor:082]:     0x960417517301FF28  Hot Water Tank - TOP (Heater)
+    # [22:06:25][D][dallas.sensor:082]:     0x1701143E35C5AA28  Feed
+    # [22:06:25][D][dallas.sensor:082]:     0x7301143F7F57AA28  Return
+    # [22:06:25][D][dallas.sensor:082]:     0xF701143E397FAA28  Heater Tank
+    # [22:06:25][D][dallas.sensor:082]:     0x5A041750B2C8FF28  Hot Water Tank - Bottom (Solar)
+    # [22:06:25][D][dallas.sensor:082]:     0xDB041750EAE2FF28  Heating Water Return (OUT from System, TO Heater)
+    # [22:06:25][D][dallas.sensor:082]:     0xB2041750CF1AFF28  Heating Water (OUT from Heater, TO System)
+    # [22:06:25][D][dallas.sensor:082]:     0x960417517301FF28  Hot Water Tank - TOP (Heater)
     # address: 0x320417500A93FF28 # 1. broken
     # address: 0x67041750F44CFF28 # 2. broken
     address: 0x960417517301FF28 # Hot Water Tank - TOP (Heater)

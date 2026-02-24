@@ -1,3 +1,4 @@
+---
 substitutions:
   device: bedroom-lamp-left
   name: Bedroom Lamp Left
@@ -95,7 +96,7 @@ script:
                   id: my_light_mode
                   state: white
           then:
-            - front_panel.turn_on_leds: [ POWER, COLOR ]
+            - front_panel.turn_on_leds: [POWER, COLOR]
             - front_panel.set_level: !lambda return id(current_brightness);
       # In night light mode, turn off the front panel illumination, except
       # for the power button.
@@ -105,7 +106,7 @@ script:
                 id: my_light_mode
                 state: night
           then:
-            - front_panel.turn_on_leds: [ POWER ]
+            - front_panel.turn_on_leds: [POWER]
       - front_panel.update_leds:
 
 # If you want to control light presets from Home Assistant, then you can
@@ -201,18 +202,18 @@ light:
     # These bindings have been setup below, using the binary_sensor for
     # the color button.
     presets:
-#      rgb:
-#        red:         { red: 100%, green: 0%,   blue: 0%   }
-#        green:       { red: 0%,   green: 100%, blue: 0%   }
-#        blue:        { red: 0%,   green: 0%,   blue: 100% }
-#        yellow:      { red: 100%, green: 100%, blue: 0%   }
-#        purple:      { red: 100%, green: 0%,   blue: 100% }
-#        randomize:   { effect: Fast Random                }
+      # rgb:
+      # red:         { red: 100%, green: 0%,   blue: 0%   }
+      # green:       { red: 0%,   green: 100%, blue: 0%   }
+      # blue:        { red: 0%,   green: 0%,   blue: 100% }
+      # yellow:      { red: 100%, green: 100%, blue: 0%   }
+      # purple:      { red: 100%, green: 0%,   blue: 100% }
+      # randomize:   { effect: Fast Random                }
       white:
-        cold:        { color_temperature: 153 mireds      }
-        chilly:      { color_temperature: 275 mireds      }
-        luke:        { color_temperature: 400 mireds      }
-        warm:        { color_temperature: 588 mireds      }
+        cold:        {color_temperature: 153 mireds}
+        chilly:      {color_temperature: 275 mireds}
+        luke:        {color_temperature: 400 mireds}
+        warm:        {color_temperature: 588 mireds}
 
 # Binary sensors can be created for handling front panel touch / release
 # events. To specify what part of the front panel to look at, the "for"
@@ -224,16 +225,16 @@ binary_sensor:
     id: my_power_button
     for: POWER_BUTTON
     on_multi_click:
-    - timing:
-        - ON for at most 0.8s
-      then:
-        - light.toggle: my_light
-    - timing:
-        - ON for at least 0.8s
-      then:
-        - light.turn_on:
-            id: my_light
-            brightness: 1%
+      - timing:
+          - ON for at most 0.8s
+        then:
+          - light.toggle: my_light
+      - timing:
+          - ON for at least 0.8s
+        then:
+          - light.turn_on:
+              id: my_light
+              brightness: 1%
 
   # When tapping the color button, activate the next preset.
   # When holding the color button, activate the next preset group.
@@ -241,17 +242,17 @@ binary_sensor:
     id: my_color_button
     for: COLOR_BUTTON
     on_multi_click:
-    - timing:
-        - ON for at most 0.6s
-      then:
-        - preset.activate:
-            next: preset
-    - timing:
-        - ON for at least 0.6s
-      then:
-        - globals.set:
-            id: group_control
-            value: !lambda return !id(group_control);
+      - timing:
+          - ON for at most 0.6s
+        then:
+          - preset.activate:
+              next: preset
+      - timing:
+          - ON for at least 0.6s
+        then:
+          - globals.set:
+              id: group_control
+              value: !lambda return !id(group_control);
 #      - timing:
 #          - ON for at least 0.6s
 #        then:
@@ -271,20 +272,20 @@ sensor:
     id: my_slider_level
     range_from: 0.02
     on_value:
-    - if:
-        condition:
-          lambda: |-
-            return id(group_control);
-        then:
-          - homeassistant.service:
-              service: light.turn_on
-              data:
-                light_name: bedroom_lamp
+      - if:
+          condition:
+            lambda: |-
+              return id(group_control);
+          then:
+            - homeassistant.service:
+                service: light.turn_on
+                data:
+                  light_name: bedroom_lamp
+                  brightness: !lambda return x;
+          else:
+            - light.turn_on:
+                id: my_light
                 brightness: !lambda return x;
-        else:
-          - light.turn_on:
-              id: my_light
-              brightness: !lambda return x;
 
 # This text sensor propagates the currently active light mode.
 # The possible light modes are: "off", "rgb", "white" and "night".

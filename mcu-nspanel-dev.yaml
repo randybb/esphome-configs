@@ -1,3 +1,4 @@
+---
 substitutions:
   device: nspanel-dev
   name: NSPanel DEV
@@ -87,7 +88,7 @@ api:
         # - delay: 10s
         # - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
 
-# DISABLED until https://github.com/olicooper/esphome-nspanel-lovelace-native/issues/20 is fixed
+    # DISABLED until https://github.com/olicooper/esphome-nspanel-lovelace-native/issues/20 is fixed
     # - service: update_tft
     #   then:
     #     - lambda: |-

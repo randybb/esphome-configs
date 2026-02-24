@@ -1,3 +1,4 @@
+---
 substitutions:
   device: lvgl-trainer
   name: Trainer Display
@@ -141,8 +142,8 @@ touchscreen:
     i2c_id: touchscreen_bus
     update_interval: 100ms
     # interrupt_pin:
-      # number: 3
-      # ignore_strapping_warning: true
+    # number: 3
+    # ignore_strapping_warning: true
     calibration:
       x_min: 0
       x_max: 479
@@ -209,14 +210,14 @@ lvgl:
   log_level: WARN
   color_depth: 16
   default_font: montserrat_18
-#   on_idle:
-#     - timeout: !lambda "return (id(display_timeout).state * 1000);"
-#       then:
-#         - logger.log: "LVGL is idle"
-#         - light.turn_off:
-#             id: display_backlight
-#             transition_length: 2500ms
-#         - lvgl.pause:
+  #   on_idle:
+  #     - timeout: !lambda "return (id(display_timeout).state * 1000);"
+  #       then:
+  #         - logger.log: "LVGL is idle"
+  #         - light.turn_off:
+  #             id: display_backlight
+  #             transition_length: 2500ms
+  #         - lvgl.pause:
   top_layer:
     widgets:
       - buttonmatrix:
@@ -229,21 +230,21 @@ lvgl:
           #   styles: header_footer
           rows:
             - buttons:
-              - id: page_prev
-                text: "\uF053"
-                on_press:
-                  then:
-                    lvgl.page.previous:
-              - id: page_home
-                text: "\uF015"
-                on_press:
-                  then:
-                    lvgl.page.show: main_page
-              - id: page_next
-                text: "\uF054"
-                on_press:
-                  then:
-                    lvgl.page.next:
+                - id: page_prev
+                  text: "\uF053"
+                  on_press:
+                    then:
+                      lvgl.page.previous:
+                - id: page_home
+                  text: "\uF015"
+                  on_press:
+                    then:
+                      lvgl.page.show: main_page
+                - id: page_next
+                  text: "\uF054"
+                  on_press:
+                    then:
+                      lvgl.page.next:
   pages:
     - id: main_page
       widgets:

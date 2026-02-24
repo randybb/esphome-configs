@@ -1,3 +1,4 @@
+---
 substitutions:
   device: socket-03
   name: Socket 03
@@ -122,8 +123,8 @@ sensor:
     power_id: power
     accuracy_decimals: 5
     filters:
-        # Multiplication factor from W to kW is 0.001
-        - multiply: 0.001
+      # Multiplication factor from W to kW is 0.001
+      - multiply: 0.001
     unit_of_measurement: kWh
     icon: mdi:circle-slice-3
 

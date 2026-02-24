@@ -1,3 +1,4 @@
+---
 substitutions:
   device: tracker
   name: Tracker
@@ -94,11 +95,11 @@ external_components:
       type: git
       url: https://github.com/crossan007/esphome
       ref: "feature/AXP192"
-    components: [ axp192 ]
+    components: [axp192]
   - source: github://pr#6721
-    components: [ network, modem ]
+    components: [network, modem]
   - source: github://pr#9802
-    components: [ modem ]
+    components: [modem]
 
 # packages:
 #   common: !include common/common.yaml

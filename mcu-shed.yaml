@@ -1,3 +1,4 @@
+---
 substitutions:
   device: shed
   name: Shed
@@ -37,18 +38,18 @@ binary_sensor:
       number: 6
       inverted: true
     on_click:
-    - min_length: 50ms
-      max_length: 350ms
-      then:
-        - switch.toggle: shed_light_relay
-    - min_length: 351ms
-      max_length: 1000ms
-      then:
-        - switch.toggle: garden_light_relay
-    - min_length: 1001ms
-      max_length: 10000ms
-      then:
-        - switch.toggle: socket_relay
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - switch.toggle: shed_light_relay
+      - min_length: 351ms
+        max_length: 1000ms
+        then:
+          - switch.toggle: garden_light_relay
+      - min_length: 1001ms
+        max_length: 10000ms
+        then:
+          - switch.toggle: socket_relay
 
 switch:
   - platform: gpio
