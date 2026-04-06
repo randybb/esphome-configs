@@ -196,6 +196,7 @@ mqtt:
   password: !secret mqtt_password
   discovery: false
   idf_send_async: true
+  reboot_timeout: 0s
 
 nspanel_lovelace:
   id: nspanel_id
