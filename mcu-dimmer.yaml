@@ -17,16 +17,11 @@ esphome:
         auto state = App.get_app_state();
         if (state != last_state) {
           if (state & STATUS_LED_ERROR) {
-            auto call = id(led).turn_on();
-            call.set_effect("ERROR");
-            call.perform();
+            id(led).turn_on().set_effect('ERROR').perform();
           } else if (state & STATUS_LED_WARNING) {
-            auto call = id(led).turn_on();
-            call.set_effect("BOOT");
-            call.perform();
+            id(led).turn_on().set_effect('BOOT').perform();
           } else {
-            auto call = id(led).turn_off();
-            call.perform();
+            id(led).turn_off().perform();
           }
           last_state = state;
         }
