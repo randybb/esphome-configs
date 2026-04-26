@@ -261,7 +261,7 @@ switch:
     name: "PCF8574 Pin #8"
     pin:
       pcf8574: pcf8574_hub
-      number: 17
+      number: 9
       # One of INPUT or OUTPUT
       mode:
         output: true
