@@ -202,7 +202,7 @@ nspanel_lovelace:
   id: nspanel_id
   sleep_timeout: 10
   locale:
-    language: /config/esphome/nspanel/sk.json
+    language: nspanel/sk.json
     temperature_unit: celcius
   screensaver:
     time_id: ha_time
