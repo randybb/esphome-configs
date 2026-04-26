@@ -15,6 +15,8 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.0"
 
 external_components:
   # Ethernet LLDP 802.1AB transmitter
