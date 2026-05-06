@@ -1,3 +1,4 @@
 ---
 platform: restart
 name: Restart
+id: restart_switch

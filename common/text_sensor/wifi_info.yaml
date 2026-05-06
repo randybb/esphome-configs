@@ -2,29 +2,39 @@
 platform: wifi_info
 ip_address:
   name: IP Address
+  id: ip_address_sensor
   icon: mdi:ip-network
   # address_0:
   #   name: IP Address 0
   #   icon: mdi:ip-network
   address_1:
     name: IP Address 1
+    id: ip_address_1_sensor
     icon: mdi:ip-network
   address_2:
     name: IP Address 2
+    id: ip_address_2_sensor
     icon: mdi:ip-network
   # address_3:
   #   name: IP Address 3
+  #   id: ip_address_3_sensor
   #   icon: mdi:ip-network
   # address_4:
   #   name: IP Address 4
+  #   id: ip_address_4_sensor
   #   icon: mdi:ip-network
 #ssid:
 #  name: SSID
+#  id: ssid_sensor
 #bssid:
 #  name: BSSID
+#  id: bssid_sensor
 mac_address:
   name: MAC
+  id: mac_address_sensor
 #scan_results:
 #  name: Latest Scan Results
+#  id: scan_results_sensor
 power_save_mode:
   name: WiFi Power Save Mode
+  id: wifi_power_save_mode_sensor

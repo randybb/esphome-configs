@@ -1,3 +1,4 @@
 ---
 platform: uptime
 name: Uptime
+id: uptime_sensor

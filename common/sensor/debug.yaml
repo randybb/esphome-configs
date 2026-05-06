@@ -2,9 +2,13 @@
 platform: debug
 free:
   name: Heap Free
+  id: heap_free_sensor
 fragmentation:
   name: Heap Fragmentation
+  id: heap_fragmentation_sensor
 block:
   name: Heap Max Block
+  id: heap_max_block_sensor
 loop_time:
   name: Loop Time
+  id: loop_time_sensor

@@ -1,6 +1,7 @@
 ---
 platform: git_ref
 name: Git Ref
+id: git_ref_sensor
 long: true
 all: true
 abbrev: 16

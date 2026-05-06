@@ -1,3 +1,4 @@
 ---
 platform: shutdown
 name: Shutdown
+id: shutdown_button

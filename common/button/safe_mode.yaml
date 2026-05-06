@@ -1,3 +1,4 @@
 ---
 platform: safe_mode
 name: Restart (Safe Mode)
+id: restart_safe_mode_button

@@ -1,3 +1,4 @@
 ---
 platform: factory_reset
 name: Factory Defaults
+id: factory_reset_button

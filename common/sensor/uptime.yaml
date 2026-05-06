@@ -1,6 +1,7 @@
 ---
 platform: uptime
 name: Uptime
+id: uptime_sensor
 unit_of_measurement: "days"
 accuracy_decimals: 2
 update_interval: 60s

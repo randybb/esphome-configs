@@ -2,5 +2,7 @@
 platform: debug
 device:
   name: Device Info
+  id: device_info_sensor
 reset_reason:
   name: Reset Reason
+  id: reset_reason_sensor

@@ -2,7 +2,10 @@
 platform: ethernet_info
 ip_address:
   name: IP Address
+  id: ip_address_sensor
   address_1:
     name: IP Address 1
+    id: ip_address_1_sensor
   address_2:
     name: IP Address 2
+    id: ip_address_2_sensor
