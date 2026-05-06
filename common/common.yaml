@@ -1,7 +1,7 @@
 ---
 <<: !include wifi.yaml
 <<: !include api.yaml
-<<: !include ota.yaml
+<<: !include ota_esp32.yaml
 # <<: !include logger.yaml
 <<: !include logger_debug.yaml
 

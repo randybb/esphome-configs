@@ -1,0 +1,5 @@
+---
+ota:
+  - platform: esphome
+    password: !secret ota_password
+    # allow_partition_access: true
