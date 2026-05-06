@@ -28,7 +28,6 @@ esphome:
             - light.turn_off: light_3
             # - light.turn_off: light_4
 
-
 esp32:
   variant: esp32
   framework:
@@ -37,6 +36,8 @@ esp32:
 packages:
   common: !include common/common.yaml
 
+api:
+  reboot_timeout: 300s
 
 # PINOUTS: M5ATOM+Atom Hub Switch
 # IR        G12
