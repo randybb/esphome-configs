@@ -51,6 +51,10 @@ api:
         - switch.turn_on: irrigation_relay_2
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_2
+        - delay: 2minutes
+        - switch.turn_on: irrigation_relay_3
+        - delay: 4minutes
+        - switch.turn_off: irrigation_relay_3
         # - switch.turn_on: irrigation_relay_4
         # - delay: 40minutes
         # - switch.turn_off: irrigation_relay_4
