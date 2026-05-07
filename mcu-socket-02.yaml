@@ -1,7 +1,6 @@
 ---
 substitutions:
   device: socket-02
-  device_id: socket_02
   name: Socket 02
   area: Bedroom
   comment: "${area} | Bug Repelent Socket"
