@@ -16,7 +16,8 @@ esp32:
   framework:
     type: esp-idf
     advanced:
-      minimum_chip_revision: "3.0"
+      minimum_chip_revision: 3.0
+      sram1_as_iram: true
 
 external_components:
   # Ethernet LLDP 802.1AB transmitter

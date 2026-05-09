@@ -36,7 +36,8 @@ esp32:
   framework:
     type: esp-idf
     advanced:
-      minimum_chip_revision: "3.0"
+      minimum_chip_revision: 3.0
+      sram1_as_iram: true
       include_builtin_idf_components:
         - esp_http_client
 
