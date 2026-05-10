@@ -3,7 +3,7 @@ substitutions:
   device: gate
   name: Gate
   area: Outside
-  comment: "${area} | Gate"
+  comment: Gate
 
 esphome:
   name: mcu-${device}
@@ -142,7 +142,7 @@ binary_sensor:
       mode:
         input: true
     filters:
-      - delayed_on: 10ms
+      - delayed_on_off: 10ms
     entity_category: diagnostic
     on_multi_click:
       - timing:
@@ -154,15 +154,23 @@ binary_sensor:
           - logger.log: "OGI OFF => GATE CLOSED"
         invalid_cooldown: 100ms
       - timing:
-          - ON for at least 400ms
-          - OFF for at least 400ms
-          - ON for at least 400ms
-          - OFF for at least 400ms
+          - ON for at least 1500ms
+        then:
+          - select.set:
+              id: gate_state
+              option: Open
+          - logger.log: "OGI ON => GATE OPEN"
+        invalid_cooldown: 100ms
+      - timing:
+          - ON for 400ms to 500ms
+          - OFF for 400ms to 500ms
+          - ON for 400ms to 500ms
+          - OFF for 400ms to 500ms
         then:
           - select.set:
               id: gate_state
               option: Opening
-          - logger.log: "OGI SLOW BLINK => GATE OPENING"
+          - logger.log: "OGI SLOW BLINKING => GATE OPENING"
         invalid_cooldown: 100ms
       - timing:
           - ON for at most 300ms
@@ -173,15 +181,7 @@ binary_sensor:
           - select.set:
               id: gate_state
               option: Closing
-          - logger.log: "OGI FAST BLINK => GATE CLOSING"
-        invalid_cooldown: 100ms
-      - timing:
-          - ON for at least 1500ms
-        then:
-          - select.set:
-              id: gate_state
-              option: Open
-          - logger.log: "OGI ON => GATE OPEN"
+          - logger.log: "OGI FAST BLINKING => GATE CLOSING"
         invalid_cooldown: 100ms
 
 select:

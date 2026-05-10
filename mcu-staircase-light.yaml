@@ -3,7 +3,7 @@ substitutions:
   device: staircase-light
   name: Staircase
   area: Staircase
-  comment: "${area} | Light"
+  comment: Light
 
 esphome:
   name: mcu-${device}

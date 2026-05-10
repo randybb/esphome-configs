@@ -3,7 +3,7 @@ substitutions:
   device: basement
   name: Basement
   area: Basement
-  comment: "${area} | Sockets"
+  comment: Sockets
 
 esphome:
   name: mcu-${device}

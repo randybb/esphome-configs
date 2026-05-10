@@ -3,7 +3,7 @@ substitutions:
   device: patio
   name: Patio
   area: Outside
-  comment: "${area}, Patio | On the back yard"
+  comment: Patio | On the back yard
 
 esphome:
   name: mcu-${device}

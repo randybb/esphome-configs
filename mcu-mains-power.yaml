@@ -3,7 +3,7 @@ substitutions:
   device: mains-power
   name: Mains Power
   area: Room
-  comment: "${area} | Mains Power Monitoring"
+  comment: Mains Power Monitoring
 
 esphome:
   name: mcu-${device}

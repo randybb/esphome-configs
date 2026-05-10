@@ -3,7 +3,7 @@ substitutions:
   device: socket-03
   name: Socket 03
   area: Bedroom
-  comment: "${area} | SPARE Socket"
+  comment: SPARE Socket
   max_power: "3450"
   # <2020
   current_res: "0.00290"

@@ -3,7 +3,7 @@ substitutions:
   device: can-node-2
   name: CAN Node 2
   area: DEV
-  comment: "${area} | CANopen"
+  comment: CANopen
 
 esphome:
   name: mcu-${device}

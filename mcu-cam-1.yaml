@@ -3,7 +3,7 @@ substitutions:
   device: cam-1
   name: Cam 1
   area: DEV
-  comment: "${area} | Camera"
+  comment: Camera
 
 esphome:
   name: mcu-${device}

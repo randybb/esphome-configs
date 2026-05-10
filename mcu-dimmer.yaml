@@ -3,7 +3,7 @@ substitutions:
   device: dimmer
   name: Dimmer
   area: Basement
-  comment: "${area} | Pain cave fan"
+  comment: Pain cave fan
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: shed
   name: Shed
   area: Outside
-  comment: "${area}, Shed | Irrigation B"
+  comment: Shed | Irrigation B
 
 esphome:
   name: mcu-${device}

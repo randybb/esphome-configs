@@ -3,7 +3,7 @@ substitutions:
   device: lvgl-eworkbench
   name: Electronics Workbench Display
   area: Office R
-  comment: "${area} | Electronics Workbench"
+  comment: Electronics Workbench
 
 esphome:
   name: mcu-${device}

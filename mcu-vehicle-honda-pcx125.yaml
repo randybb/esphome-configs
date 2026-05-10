@@ -3,7 +3,7 @@ substitutions:
   device: vehicle-honda-pcx125
   name: Vehicle Honda PCX125
   area: Outside
-  comment: "${area}, Beacon | Honda PCX125"
+  comment: ${area}, Beacon | Honda PCX125
 
 esphome:
   name: mcu-${device}

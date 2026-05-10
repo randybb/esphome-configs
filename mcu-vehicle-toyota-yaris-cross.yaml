@@ -3,7 +3,7 @@ substitutions:
   device: vehicle-toyota-yaris-cross
   name: Vehicle Toyota Yaris Cross
   area: Outside
-  comment: "${area}, Beacon | Toyota Yaris Cross"
+  comment: ${area}, Beacon | Toyota Yaris Cross
 
 esphome:
   name: mcu-${device}

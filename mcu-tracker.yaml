@@ -2,11 +2,13 @@
 substitutions:
   device: tracker
   name: Tracker
-  comment: "DEV | LTE GPS tracker"
+  area: DEV
+  comment: LTE GPS tracker
 
 esphome:
   name: mcu-${device}
   friendly_name: ${device}
+  area: ${area}
   comment: ${comment}
   on_boot:
     # priority: -10
@@ -85,7 +87,6 @@ esp32:
   variant: esp32
   framework:
     type: esp-idf
-    # version: 5.3.2
     # platform_version: 53.03.11
 
 ## TESTING

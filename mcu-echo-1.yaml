@@ -4,7 +4,7 @@ substitutions:
   name: Echo 1
   name_short: Echo 1
   area: DEV
-  comment: "${area} | Echo"
+  comment: Echo
 
 esphome:
   name: mcu-${device}

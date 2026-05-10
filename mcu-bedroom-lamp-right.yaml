@@ -3,7 +3,7 @@ substitutions:
   device: bedroom-lamp-right
   name: Bedroom Lamp Right
   area: Bedroom
-  comment: "${area} | Right Lamp"
+  comment: Right Lamp
   default_transition_length: 800ms
 
 esphome:

@@ -4,7 +4,7 @@ substitutions:
   name: Lightening detector
   name_short: Lightening
   area: DEV
-  comment: "${area} | Lightening"
+  comment: Lightening
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: office-r
   name: Office R
   area: Office R
-  comment: "${area} | MS Teams presence"
+  comment: MS Teams presence
 
 esphome:
   name: mcu-${device}

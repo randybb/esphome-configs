@@ -4,7 +4,7 @@ substitutions:
   name: Office R Air
   name_short: Office R
   area: Office R
-  comment: "${area} | AirQ Monitoring"
+  comment: AirQ Monitoring
 
 esphome:
   name: mcu-${device}

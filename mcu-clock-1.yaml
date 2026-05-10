@@ -3,7 +3,7 @@ substitutions:
   device: clock-1
   name: Clock 1
   area: Office R
-  comment: "${area} | Clock"
+  comment: Clock
 
 esphome:
   name: mcu-${device}

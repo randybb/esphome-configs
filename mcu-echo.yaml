@@ -4,7 +4,7 @@ substitutions:
   name: Echo
   name_short: Echo
   area: Office R
-  comment: "${area} | Speaker"
+  comment: Speaker
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: lvgl
   name: LVGL
   area: DEV
-  comment: "${area} | LVGL"
+  comment: LVGL
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: atoms3
   name: AtomS3
   area: DEV
-  comment: "${area} | --"
+  comment: --
 
 esphome:
   name: mcu-${device}

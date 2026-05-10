@@ -2,8 +2,8 @@
 substitutions:
   device: tv-light
   name: TV Light
-  area: Living Room / Kitchen
-  comment: "${area}: TV Rack Light"
+  area: Living Room & Kitchen
+  comment: TV Rack Light
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: clock-living-room
   name: Living room Clock
   area: Living Room & Kitchen
-  comment: "${area}: TV Rack Clock"
+  comment: TV Rack Clock
 
 esphome:
   name: mcu-${device}

@@ -3,7 +3,7 @@ substitutions:
   device: heater
   name: Heater
   area: Basement
-  comment: "${area} | Hot water and Heating control"
+  comment: Hot water and Heating control
 
 esphome:
   name: mcu-${device}

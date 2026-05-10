@@ -3,7 +3,7 @@ substitutions:
   device: fireplace
   name: Heating Fireplace
   area: Living Room & Kitchen
-  comment: "${area}, Fireplace | Fireplace monitoring for heating"
+  comment: Fireplace monitoring for heating
 
 esphome:
   name: mcu-${device}

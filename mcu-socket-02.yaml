@@ -3,7 +3,7 @@ substitutions:
   device: socket-02
   name: Socket 02
   area: Bedroom
-  comment: "${area} | Bug Repelent Socket"
+  comment: Bug Repelent Socket
   current_res: "0.00290"
   voltage_div: "940"
 

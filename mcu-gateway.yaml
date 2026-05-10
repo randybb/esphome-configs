@@ -3,7 +3,7 @@ substitutions:
   device: gateway
   name: Gateway
   area: DEV
-  comment: "${area} | BLE Proxy, Modbus"
+  comment: BLE Proxy, Modbus
 
 esphome:
   name: mcu-${device}

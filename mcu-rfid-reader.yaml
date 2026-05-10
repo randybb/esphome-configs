@@ -3,7 +3,7 @@ substitutions:
   device: rfid-reader
   name: RFID Reader
   area: DEV
-  comment: "${area} | RFID Reader"
+  comment: RFID Reader
 
 esphome:
   name: mcu-${device}

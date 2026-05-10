@@ -4,7 +4,7 @@ substitutions:
   name: Bedroom NSPanel
   name_short: Bedroom
   area: Bedroom
-  comment: "${area} | NSPanel"
+  comment: NSPanel
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url

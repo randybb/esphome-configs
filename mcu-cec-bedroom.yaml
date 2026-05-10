@@ -3,7 +3,7 @@ substitutions:
   device: cec-bedroom
   name: Bedroom TV
   area: Bedroom
-  comment: "${area} | CEC"
+  comment: CEC
 
 esphome:
   name: mcu-${device}

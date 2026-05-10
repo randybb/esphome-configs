@@ -3,7 +3,7 @@ substitutions:
   device: nspanel-fireplace
   name: Fireplace NSPanel
   area: Living Room & Kitchen
-  comment: "${area}, Fireplace | NSPanel"
+  comment: NSPanel
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url

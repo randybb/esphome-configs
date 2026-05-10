@@ -3,7 +3,7 @@ substitutions:
   device: m5paper
   name: M5Paper
   area: DEV
-  comment: "${area} | M5Paper"
+  comment: M5Paper
 
 esphome:
   name: mcu-${device}

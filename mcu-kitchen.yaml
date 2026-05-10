@@ -3,7 +3,7 @@ substitutions:
   device: kitchen
   name: Kitchen
   area: Living Room & Kitchen
-  comment: "${area} | Kitchen Worktop and Stove Lights"
+  comment: Kitchen Worktop and Stove Lights
 
 esphome:
   name: mcu-${device}

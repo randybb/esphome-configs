@@ -3,7 +3,7 @@ substitutions:
   device: nspanel-patio
   name: Patio NSPanel
   area: Living Room & Kitchen
-  comment: "${area}, Patio | NSPanel"
+  comment: ${area}, Patio | NSPanel
   panel_recv_topic: "tele/${device}/RESULT"
   panel_send_topic: "cmnd/${device}/CustomSend"
   tft_url: !secret tft_url

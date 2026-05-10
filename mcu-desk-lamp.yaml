@@ -3,7 +3,7 @@ substitutions:
   device: desk-lamp
   name: Desk Lamp
   area: Room
-  comment: "${area} | Desk lamp"
+  comment: Desk lamp
 
 esphome:
   name: mcu-${device}

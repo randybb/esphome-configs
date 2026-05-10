@@ -3,7 +3,7 @@ substitutions:
   device: socket-01
   name: Socket 01
   area: Bedroom
-  comment: "${area} | TV Socket"
+  comment: TV Socket
   current_res: "0.00290"
   voltage_div: "940"
 
