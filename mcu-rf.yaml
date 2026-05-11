@@ -1,0 +1,65 @@
+---
+substitutions:
+  device: rf
+  name: RF Bridge
+  area: Living Room & Kitchen
+  comment: Fireplace | RF Gateway
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  variant: esp32
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+packages:
+  common: !include common/common.yaml
+
+spi:
+  clk_pin: 25
+  mosi_pin: 19
+  miso_pin: 22
+  
+cc1101:
+  cs_pin: 33
+  frequency: 433.92MHz
+  gdo0_pin:
+    number: 21
+    allow_other_uses: true
+
+infrared:
+  - platform: ir_rf_proxy
+    name: RF Proxy Transmitter
+    id: rf_proxy_tx
+    remote_transmitter_id: rf_tx
+    frequency: 433MHz
+  - platform: ir_rf_proxy
+    name: RF Proxy Receiver
+    id: rf_proxy_rx
+    remote_receiver_id: rf_rx
+    receiver_frequency: 433MHz
+     
+remote_receiver:
+  - id: rf_rx
+    pin:
+      number: 21
+      allow_other_uses: true
+    dump: all
+
+remote_transmitter:
+  - id: rf_tx
+    pin:
+      number: 21
+      allow_other_uses: true
+    carrier_duty_percent: 100%
+    on_transmit:
+      then:
+        - cc1101.begin_tx
+    on_complete:
+      then:
+        - cc1101.begin_rx
