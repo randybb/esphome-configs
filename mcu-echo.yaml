@@ -101,7 +101,7 @@ speaker:
     dac_type: external
     i2s_dout_pin: 22
     channel: mono
-    sample_rate: 48000
+    sample_rate: 16000
     buffer_duration: 100ms  # Smaller buffer
   - platform: mixer
     id: mixer_speaker_id
@@ -127,6 +127,7 @@ media_player:
     id: media_out
     name: Player
     codec_support_enabled: false
+    buffer_size: 14000
     media_pipeline:
       speaker: media_spk_resampling_input
       # format: WAV
