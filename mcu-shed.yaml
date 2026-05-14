@@ -13,6 +13,7 @@ esphome:
 
 esp32:
   variant: esp32
+  toolchain: esp-idf
   framework:
     type: esp-idf
     # version: 5.4.2

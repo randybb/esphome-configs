@@ -1,5 +1,6 @@
 esp32:
   variant: esp32
+  toolchain: esp-idf
   framework:
     type: esp-idf
 

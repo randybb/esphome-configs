@@ -16,6 +16,7 @@ esphome:
 
 esp32:
   variant: esp32c3
+  toolchain: esp-idf
   framework:
     type: esp-idf
 

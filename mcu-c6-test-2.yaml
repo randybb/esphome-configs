@@ -39,10 +39,9 @@ esphome:
 esp32:
   variant: esp32c6
   flash_size: 16MB
+  toolchain: esp-idf
   framework:
     type: esp-idf
-    # version: 5.4.2
-    # platform_version: 54.03.21
 
 logger:
   hardware_uart: USB_SERIAL_JTAG

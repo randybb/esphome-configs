@@ -12,8 +12,8 @@ esphome:
   comment: ${comment}
 
 esp32:
-  # board: esp32cam
   variant: esp32
+  toolchain: esp-idf
   framework:
     type: esp-idf
 

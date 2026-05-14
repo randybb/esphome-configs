@@ -21,6 +21,7 @@ esphome:
 esp32:
   variant: esp32s3
   flash_size: 8MB
+  toolchain: esp-idf
   framework:
     type: esp-idf
 
@@ -207,7 +208,15 @@ output:
   - platform: gpio
     id: motor_in2
     pin: 2
+  - platform: ledc
+    pin: 16
+    id: gpio_tft_backlight
 
+light:
+  - platform: monochromatic
+    id: display_tft_backlight
+    output: gpio_tft_backlight
+    restore_mode: ALWAYS_ON
 
 switch:
   - platform: template
@@ -360,18 +369,19 @@ font:
     size: 12
 
 display:
-  - platform: st7789v
+  - platform: mipi_spi
+    model: ST7789V
     id: display_tft
-    model: Custom
-    height: 128
-    width: 128
-    offset_height: 2
-    offset_width: 1
-    backlight_pin: 16
+    dimensions:
+      height: 128
+      width: 128
+      offset_height: 2
+      offset_width: 1
+    # backlight_pin: 16
     cs_pin: 15
     dc_pin: 33
     reset_pin: 34
-    eightbitcolor: true
+    # eightbitcolor: true
     update_interval: 1s
     lambda: |-
       //Ingress shown animation Frame.
