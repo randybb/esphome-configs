@@ -22,9 +22,9 @@ esp32:
 
 external_components:
   # Ethernet LLDP 802.1AB transmitter
-  - source: github://pr#11760
-    components: [ethernet]
-    refresh: 1h
+  # - source: github://pr#11760
+  #   components: [ethernet]
+  #   refresh: 1h
   - source: github://pr#2112
     components: ["m5stack_4relay"]
     refresh: 1h
@@ -54,22 +54,22 @@ i2c:
   scl: 16
   scan: true
 
-ethernet:
-  lldp:
-    # Enable LLDP transmission
-    #enabled: true
-    # Optional: override default port
-    port: eth
-    # Optional: override default system name
-    system_name: mcu-${device}
-    # Optional: override default system description
-    system_description: ${comment}
-    # Optional: override default "fast mode" burst packet count
-    tx_fast_count: 4
-    # Optional: override default LLDP frame transmission interval
-    tx_interval: 30
-    # Optional: override default hold count, used in conjuction with tx_interval to calculate overall TTL
-    tx_hold: 4
+# ethernet:
+#   lldp:
+#     # Enable LLDP transmission
+#     #enabled: true
+#     # Optional: override default port
+#     port: eth
+#     # Optional: override default system name
+#     system_name: mcu-${device}
+#     # Optional: override default system description
+#     system_description: ${comment}
+#     # Optional: override default "fast mode" burst packet count
+#     tx_fast_count: 4
+#     # Optional: override default LLDP frame transmission interval
+#     tx_interval: 30
+#     # Optional: override default hold count, used in conjuction with tx_interval to calculate overall TTL
+#     tx_hold: 4
 
 # ethernet:
 #   type: LAN8720
