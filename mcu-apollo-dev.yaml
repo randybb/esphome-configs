@@ -31,3 +31,31 @@ switch:
 
 web_server:
   version: "3"
+
+light:
+  - platform: esp32_rmt_led_strip
+    name: RGB LEDs
+    pin: 14
+    id: rgb_leds
+    chipset: WS2812
+    num_leds: 10
+    rgb_order: GRB
+    rmt_symbols: 48
+    
+  - platform: esp32_rmt_led_strip
+    name: Onboard RGB LED
+    pin: 5
+    id: onboard_rgb_led
+    chipset: WS2812
+    num_leds: 1
+    rgb_order: GRB
+    rmt_symbols: 48
+
+output:
+  - platform: ledc
+    pin: 18
+    id: buzzer_output
+
+rtttl:
+  - output: buzzer_output
+    id: rtttl_player
