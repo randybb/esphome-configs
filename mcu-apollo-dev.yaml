@@ -65,6 +65,11 @@ light:
           update_interval: 5s
       - addressable_rainbow:
       - addressable_color_wipe:
+      - addressable_scan:
+      - addressable_twinkle:
+      - addressable_random_twinkle:
+      - addressable_fireworks:
+      - addressable_flicker:
   - platform: esp32_rmt_led_strip
     name: Onboard RGB LED
     pin: 5
