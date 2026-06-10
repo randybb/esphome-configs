@@ -1,9 +1,22 @@
-# Board: Apollo ESPHome Starter Kit (Apollo Automation)
-# Definition: definitions/boards/apollo-esk-1/manifest.yaml
+---
+substitutions:
+  device: apollo-dev
+  name: Apollo DEV
+  area: DEV
+  comment: --
 
 esphome:
-  name: mcu-apollo-dev
-  friendly_name: mcu-apollo-dev
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  # on_boot:
+  #   - priority: 800
+  #     then:
+  #       - lambda: |-
+  #           id(display_tft).enable();
+  #           id(display_tft).transfer_byte(0x11);
+  #           id(display_tft).disable();
 
 esp32:
   variant: esp32c6
@@ -11,23 +24,8 @@ esp32:
   framework:
     type: esp-idf
 
-logger:
-
-api:
-  encryption:
-    key: "B30iETCPqYhIZ/aey5vvvqZpWz38XfZtBg4kPITXjYM="
-
-ota:
-  - platform: esphome
-
-wifi:
-  ssid: "!secret wifi_ssid"
-  password: "!secret wifi_password"
-  ap:
-    ssid: mcu-apollo-dev Fallback Hotspot
-    password: "Arae718OxwCt"
-
-captive_portal:
+packages:
+  common: !include common/common.yaml
 
 switch:
   - platform: gpio
