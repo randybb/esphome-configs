@@ -59,3 +59,30 @@ output:
 rtttl:
   - output: buzzer_output
     id: rtttl_player
+
+i2c:
+  - scl: 0
+    sda: 1
+    id: i2c_1
+
+sensor:
+  - platform: aht10
+    i2c_id: i2c_1
+    variant: AHT20
+    humidity:
+      name: Humidity
+      id: aht20_humidity
+      device_class: humidity
+      unit_of_measurement: "%"
+      accuracy_decimals: 2
+      force_update: false
+      state_class: measurement
+    temperature:
+      name: Temperature
+      id: aht20_temperature
+      device_class: temperature
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+      force_update: false
+      state_class: measurement
+    id: aht20
