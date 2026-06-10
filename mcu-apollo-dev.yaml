@@ -20,6 +20,16 @@ esp32:
 packages:
   common: !include common/common.yaml
 
+api:
+  # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+  services:
+    - service: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+  
 switch:
   - platform: gpio
     id: accessory_power
