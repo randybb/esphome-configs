@@ -51,7 +51,18 @@ light:
     num_leds: 10
     rgb_order: GRB
     rmt_symbols: 48
-    
+    effects:
+      # Use default parameters:
+      - random:
+      # Customize parameters
+      - random:
+          name: "My Slow Random Effect"
+          transition_length: 30s
+          update_interval: 30s
+      - random:
+          name: "My Fast Random Effect"
+          transition_length: 4s
+          update_interval: 5s
   - platform: esp32_rmt_led_strip
     name: Onboard RGB LED
     pin: 5
