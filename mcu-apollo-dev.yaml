@@ -63,6 +63,8 @@ light:
           name: "My Fast Random Effect"
           transition_length: 4s
           update_interval: 5s
+      - addressable_rainbow:
+      - addressable_color_wipe:
   - platform: esp32_rmt_led_strip
     name: Onboard RGB LED
     pin: 5
