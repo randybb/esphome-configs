@@ -10,13 +10,6 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
-  # on_boot:
-  #   - priority: 800
-  #     then:
-  #       - lambda: |-
-  #           id(display_tft).enable();
-  #           id(display_tft).transfer_byte(0x11);
-  #           id(display_tft).disable();
 
 esp32:
   variant: esp32c6
