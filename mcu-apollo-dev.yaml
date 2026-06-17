@@ -1,7 +1,7 @@
 ---
 substitutions:
   device: apollo-dev #test
-  name: Apollo DEV
+  name: Apollo DEV #test
   area: DEV
   comment: --
 
