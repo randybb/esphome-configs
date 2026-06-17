@@ -6,7 +6,7 @@ substitutions:
   comment: --
 
 esphome:
-  name: mcu-${device}
+  name: mcu-${device} #test
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
