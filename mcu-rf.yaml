@@ -21,41 +21,34 @@ packages:
   common: !include common/common.yaml
 
 spi:
-  clk_pin: 25
+  clk_pin: 23
   mosi_pin: 19
   miso_pin: 22
   
 cc1101:
   cs_pin: 33
   frequency: 433.92MHz
-  gdo0_pin:
-    number: 21
-    allow_other_uses: true
 
-infrared:
+radio_frequency:
   - platform: ir_rf_proxy
     name: RF Proxy Transmitter
     id: rf_proxy_tx
     remote_transmitter_id: rf_tx
-    frequency: 433MHz
+    frequency: 433.92MHz
   - platform: ir_rf_proxy
     name: RF Proxy Receiver
     id: rf_proxy_rx
     remote_receiver_id: rf_rx
-    receiver_frequency: 433MHz
+    frequency: 433.92MHz
      
 remote_receiver:
   - id: rf_rx
-    pin:
-      number: 21
-      allow_other_uses: true
+    pin: 25
     dump: all
 
 remote_transmitter:
   - id: rf_tx
-    pin:
-      number: 21
-      allow_other_uses: true
+    pin: 21
     carrier_duty_percent: 100%
     on_transmit:
       then:
