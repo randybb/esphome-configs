@@ -22,8 +22,8 @@ packages:
 
 api:
   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-  services:
-    - service: play_rtttl
+  actions:
+    - action: play_rtttl
       variables:
         song: string
       then:

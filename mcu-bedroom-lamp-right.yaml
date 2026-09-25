@@ -111,8 +111,8 @@ script:
 # make use of the following service.
 api:
   reboot_timeout: 0s
-  services:
-    - service: activate_preset
+  actions:
+    - action: activate_preset
       variables:
         my_group: string
         my_preset: string

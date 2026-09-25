@@ -22,9 +22,9 @@ packages:
   common: !include common/common.yaml
 
 api:
-  services:
+  actions:
     # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-    - service: play_rtttl
+    - action: play_rtttl
       variables:
         song: string
       then:

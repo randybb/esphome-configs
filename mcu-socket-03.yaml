@@ -106,8 +106,8 @@ sensor:
           then:
             - light.turn_off: light_red
             - switch.turn_off: relay
-            - homeassistant.service:
-                service: persistent_notification.create
+            - homeassistant.action:
+                action: persistent_notification.create
                 data:
                   title: Message from ${name}
                 data_template:

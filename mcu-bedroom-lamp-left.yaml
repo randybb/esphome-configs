@@ -114,8 +114,8 @@ script:
 # make use of the following service.
 api:
   reboot_timeout: 0s
-  services:
-    - service: activate_preset
+  actions:
+    - action: activate_preset
       variables:
         my_group: string
         my_preset: string
@@ -279,8 +279,8 @@ sensor:
             lambda: |-
               return id(group_control);
           then:
-            - homeassistant.service:
-                service: light.turn_on
+            - homeassistant.action:
+                action: light.turn_on
                 data:
                   light_name: bedroom_lamp
                   brightness: !lambda return x;

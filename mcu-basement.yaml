@@ -44,15 +44,15 @@ binary_sensor:
       - min_length: 50ms
         max_length: 350ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.mcu_basement_2_light
       - min_length: 351ms
         max_length: 1000ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.exercise_room
       - min_length: 1001ms
@@ -62,12 +62,12 @@ binary_sensor:
           #     service: light.turn_off
           #     data:
           #       entity_id: light.basement_light
-          - homeassistant.service:
-              service: light.turn_off
+          - homeassistant.action:
+              action: light.turn_off
               data:
                 entity_id: light.exercise_room
-          - homeassistant.service:
-              service: light.turn_off
+          - homeassistant.action:
+              action: light.turn_off
               data:
                 entity_id: light.exercise_room_fan
   - platform: gpio
@@ -88,8 +88,8 @@ binary_sensor:
     filters:
       invert:
     on_press:
-      - homeassistant.service:
-          service: light.turn_on
+      - homeassistant.action:
+          action: light.turn_on
           data:
             entity_id: light.mcu_basement_2_light
 

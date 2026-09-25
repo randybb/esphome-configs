@@ -54,22 +54,22 @@ packages:
 # GPIO21  RGB
 
 api:
-  services:
-  - service: rfidreader_tag_ok
+  actions:
+  - action: rfidreader_tag_ok
     then:
     - rtttl.play: "beep:d=16,o=5,b=100:b"
 
-  - service: rfidreader_tag_ko
+  - action: rfidreader_tag_ko
     then:
     - rtttl.play: "beep:d=8,o=5,b=100:b"
 
-  - service: play_rtttl
+  - action: play_rtttl
     variables:
       song_str: string
     then:
     - rtttl.play: !lambda 'return song_str;'
 
-  - service: write_tag_id
+  - action: write_tag_id
     variables:
       tag_id: string
     then:
@@ -93,7 +93,7 @@ api:
         id: notify_led
     - rtttl.play: "write:d=24,o=5,b=100:b,b"
 
-  - service: write_music_tag
+  - action: write_music_tag
     variables:
       music_url: string
       music_info: string
@@ -348,7 +348,7 @@ button:
 light:
   - platform: esp32_rmt_led_strip
     id: notify_led
-    rgb_order: GRB
+    channel_colors: GRB
     pin: 3
     num_leds: 1
     chipset: ws2812
@@ -356,7 +356,7 @@ light:
     rmt_symbols: 96
   - platform: esp32_rmt_led_strip
     id: status_led
-    rgb_order: GRB
+    channel_colors: GRB
     pin: 21
     num_leds: 1
     chipset: ws2812

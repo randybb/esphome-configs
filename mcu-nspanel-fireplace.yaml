@@ -40,15 +40,15 @@ packages:
 
 api:
   # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-  services:
-    - service: play_rtttl
+  actions:
+    - action: play_rtttl
       variables:
         song: string
       then:
         - rtttl.play:
             rtttl: !lambda 'return song;'
 
-    - service: notify
+    - action: notify
       variables:
         heading: string
         message: string
@@ -60,12 +60,12 @@ api:
         - delay: 10s
         - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
 
-    - service: update_tft
+    - action: update_tft
       then:
         - lambda: |-
             id(nspanel_id).upload_tft("${tft_url}");
 
-    - service: upload_tft
+    - action: upload_tft
       variables:
         url: string
       then:
@@ -73,14 +73,14 @@ api:
             id(nspanel_id).upload_tft(url);
 
     # Service to send a command directly to the display. Useful for testing
-    - service: send_command
+    - action: send_command
       variables:
         cmd: string
       then:
         - lambda: "id(nspanel_id).send_custom_command(cmd.c_str());"
 
     # Service to pusblish to mqtt used for refreshin the panel
-    - service: publish_to_recv_topic
+    - action: publish_to_recv_topic
       variables:
         cmd: string
       then:
@@ -89,18 +89,18 @@ api:
             payload: !lambda "return cmd;"
 
     # Service to send a command wake the screen
-    - service: wake
+    - action: wake
       then:
         - lambda: 'id(nspanel_id).send_custom_command("wake");'
 
     # Service to send a command to show screensaver (some of the values are hardcoded)
-    - service: show_screensaver
+    - action: show_screensaver
       then:
         - mqtt.publish:
             topic: $panel_recv_topic
             payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
     # Service to navigate to screen
-    - service: navigate_to_page
+    - action: navigate_to_page
       variables:
         page: string
       then:
@@ -110,24 +110,24 @@ api:
               root["CustomRecv"] = "event,buttonPress2,navigate." + page + ",button";
 
     # Service to send a command disable screensaver
-    - service: disable_screensaver
+    - action: disable_screensaver
       then:
         - lambda: 'id(nspanel_id).send_custom_command("timeout~0");'
 
     # Service to send a command enabled screensaver
-    - service: enable_screensaver
+    - action: enable_screensaver
       then:
         - lambda: 'id(nspanel_id).send_custom_command("timeout~20");'
 
     # Service to send a command wake the screen
-    - service: dim_0_to_100
+    - action: dim_0_to_100
       variables:
         intensity: string
       then:
         - lambda: 'id(nspanel_id).send_custom_command("dimmode~"+intensity+"~100");'
 
     # Service to send a command To show the screen of a specific like
-    - service: show_entity
+    - action: show_entity
       variables:
         entity: string
         title: string
@@ -135,7 +135,7 @@ api:
         - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~" + title + "~" + entity);'
 
     # Service to send a command To show the screen of a specific like
-    - service: notify_on_screensaver
+    - action: notify_on_screensaver
       variables:
         line1: string
         line2: string
@@ -145,7 +145,7 @@ api:
 
     # Service to send a command To show the screen of a specific like
     # interaction of the buttons are on implemented yet
-    - service: notify_fullscreen
+    - action: notify_fullscreen
       variables:
         title: string
         description: string
@@ -196,8 +196,8 @@ binary_sensor:
       - min_length: 50ms
         max_length: 350ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.living_room
           - mqtt.publish_json:
@@ -207,8 +207,8 @@ binary_sensor:
       - min_length: 500ms
         max_length: 2000ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.worktop_lights
           - mqtt.publish_json:
@@ -226,8 +226,8 @@ binary_sensor:
       - min_length: 50ms
         max_length: 350ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.dining_table
           - mqtt.publish_json:
@@ -237,8 +237,8 @@ binary_sensor:
       - min_length: 500ms
         max_length: 2000ms
         then:
-          - homeassistant.service:
-              service: light.toggle
+          - homeassistant.action:
+              action: light.toggle
               data:
                 entity_id: light.mcu_kitchen_stove
           - mqtt.publish_json:

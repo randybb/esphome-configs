@@ -68,16 +68,16 @@ packages:
 api:
   homeassistant_services: true
   homeassistant_states: true
-  services:
+  actions:
     # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
-    - service: play_rtttl
+    - action: play_rtttl
       variables:
         song: string
       then:
         - rtttl.play:
             rtttl: !lambda 'return song;'
 
-    - service: notify
+    - action: notify
       variables:
         heading: string
         message: string
@@ -177,7 +177,7 @@ api:
 
     # Service to send a command To show the screen of a specific like
     # interaction of the buttons are on implemented yet
-    - service: notify_fullscreen
+    - action: notify_fullscreen
       variables:
         title: string
         description: string
