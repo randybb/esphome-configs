@@ -34,8 +34,8 @@ packages:
   common: !include common/common.yaml
 
 api:
-  services:
-    - service: irrigation_morning
+  actions:
+    - action: irrigation_morning
       then:
         - switch.turn_on: irrigation_relay_1
         - delay: 4minutes
@@ -59,7 +59,7 @@ api:
         # - switch.turn_on: irrigation_relay_4
         # - delay: 40minutes
         # - switch.turn_off: irrigation_relay_4
-    - service: irrigation_grass
+    - action: irrigation_grass
       then:
         - switch.turn_on: irrigation_relay_1
         - delay: 5minutes
@@ -72,7 +72,7 @@ api:
         - switch.turn_on: irrigation_relay_3
         - delay: 2minutes
         - switch.turn_off: irrigation_relay_3
-    - service: irrigation_patio
+    - action: irrigation_patio
       then:
         - switch.turn_on: irrigation_relay_5
         - delay: 30sec
