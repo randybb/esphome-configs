@@ -39,22 +39,32 @@ api:
   actions:
     - action: irrigation_morning
       then:
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_1
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_1
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_1
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_1
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_2
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_2
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_2
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_2
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_3
         - delay: 4minutes
         - switch.turn_off: irrigation_relay_3
@@ -63,22 +73,48 @@ api:
         # - switch.turn_off: irrigation_relay_4
     - action: irrigation_grass
       then:
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_1
         - delay: 5minutes
         - switch.turn_off: irrigation_relay_1
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_2
         - delay: 5minutes
         - switch.turn_off: irrigation_relay_2
         - delay: 2minutes
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_3
         - delay: 2minutes
         - switch.turn_off: irrigation_relay_3
     - action: irrigation_patio
       then:
+        - lambda: |-
+            id(relay_module).setup();
         - switch.turn_on: irrigation_relay_5
         - delay: 30sec
         - switch.turn_off: irrigation_relay_5
+
+script:
+  - id: modbus_turn_on_ch1
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGD("modbus", "Sending Channel 0 ON command as byte array");
+          // Channel 0 open command: [0x01, 0x05, 0x00, 0x00, 0xFF, 0x00, 0x8C, 0x3A]
+          uint8_t data[8] = {0x01, 0x06, 0x00, 0x01, 0x01, 0x00, 0xD9, 0x9A};
+          id(modbus_uart).write_array(data, 8);
+  - id: modbus_turn_off_ch1
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGD("modbus", "Sending Channel 0 OFF command as byte array");
+          // Channel 0 close command: [0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0xCD, 0xCA]
+          uint8_t data[8] = {0x01, 0x06, 0x00, 0x01, 0x02, 0x00, 0xD9, 0x6A};
+          id(modbus_uart).write_array(data, 8);
 
 i2c:
   sda: 25
@@ -88,6 +124,32 @@ i2c:
 pca9554:
   - id: relay_module
     address: 0x27
+
+uart:
+  id: modbus_uart
+  tx_pin: 23
+  rx_pin: 33
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 256
+
+modbus:
+  id: modbus_hub
+  uart_id: modbus_uart
+
+modbus_controller:
+  - id: n4dig08
+    address: 0x01
+    modbus_id: modbus_hub
+    setup_priority: -10
+
+logger:
+  level: DEBUG # Alebo VERY_VERBOSE, ak chceš vidieť úplne všetko
+  logs:
+    modbus: DEBUG
+    modbus_controller: DEBUG
 
 sprinkler:
   - id: lawn_sprinkler_ctrlr
