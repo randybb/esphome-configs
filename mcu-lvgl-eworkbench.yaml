@@ -105,8 +105,8 @@ power_supply:
   enable_on_boot: true
 
 display:
-  - platform: qspi_dbi
-    model: axs15231
+  - platform: mipi_spi
+    model: AXS15231
     data_rate: 40MHz #20mhz is default
     #spi_mode: MODE2
     id: main_display
@@ -115,7 +115,6 @@ display:
       height: 480
       width: 320
     cs_pin: 45
-    brightness: 50
     rotation: 90
     auto_clear_enabled: false
     show_test_card: true

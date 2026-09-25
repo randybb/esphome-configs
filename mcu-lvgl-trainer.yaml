@@ -116,8 +116,8 @@ light:
     default_transition_length: 500ms
 
 display:
-  - platform: qspi_dbi
-    model: axs15231
+  - platform: mipi_spi
+    model: AXS15231
     data_rate: 40MHz #20mhz is default
     #spi_mode: MODE2
     id: main_display
@@ -126,8 +126,6 @@ display:
       height: 480
       width: 320
     cs_pin: 45
-    brightness: 50
-    rotation: 90
     auto_clear_enabled: false
     # show_test_card: true
     # lambda: |-
@@ -187,7 +185,7 @@ binary_sensor:
   - platform: homeassistant
     id: exercise_room_light
     entity_id: light.exercise_room
-    publish_initial_state: true
+    trigger_on_initial_state: true
     on_state:
       then:
         lvgl.widget.update:
@@ -197,7 +195,7 @@ binary_sensor:
   - platform: homeassistant
     id: exercise_room_fan
     entity_id: light.mcu_dimmer_exercise_room_fan
-    publish_initial_state: true
+    trigger_on_initial_state: true
     on_state:
       then:
         lvgl.widget.update:
@@ -206,6 +204,7 @@ binary_sensor:
             checked: !lambda return x;
 
 lvgl:
+  rotation: 90
   buffer_size: 100%
   log_level: WARN
   color_depth: 16
