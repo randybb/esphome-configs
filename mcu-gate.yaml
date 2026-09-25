@@ -136,32 +136,39 @@ binary_sensor:
     on_press: !include {file: common/gate_beacon_open.yaml, vars: {enable_id: enable_dl650}}
     on_release: !include {file: common/gate_beacon_close.yaml, vars: {enable_id: enable_dl650}}
   - platform: gpio
-    id: gate_ogi
+    id: gate_ogi_state
     pin:
       number: 32
       inverted: true
+      allow_other_uses: true
+      mode:
+        input: true
+    filters:
+      - delayed_on_off: 10ms
+      - delayed_on_off: 1500ms
+    entity_category: diagnostic
+    on_press:
+      - select.set:
+          id: gate_state
+          option: Open
+      - logger.log: "OGI ON (steady) => GATE OPEN"
+    on_release:
+      - select.set:
+          id: gate_state
+          option: Closed
+      - logger.log: "OGI OFF (steady) => GATE CLOSED"
+  - platform: gpio
+    id: gate_ogi_blink
+    pin:
+      number: 32
+      inverted: true
+      allow_other_uses: true
       mode:
         input: true
     filters:
       - delayed_on_off: 10ms
     entity_category: diagnostic
     on_multi_click:
-      - timing:
-          - OFF for at least 1500ms
-        then:
-          - select.set:
-              id: gate_state
-              option: Closed
-          - logger.log: "OGI OFF => GATE CLOSED"
-        invalid_cooldown: 100ms
-      - timing:
-          - ON for at least 1500ms
-        then:
-          - select.set:
-              id: gate_state
-              option: Open
-          - logger.log: "OGI ON => GATE OPEN"
-        invalid_cooldown: 100ms
       - timing:
           - ON for 400ms to 500ms
           - OFF for 400ms to 500ms
