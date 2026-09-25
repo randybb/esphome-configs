@@ -29,6 +29,8 @@ esp32:
   toolchain: esp-idf
   framework:
     type: esp-idf
+    advanced:
+      sram1_as_iram: true
 
 packages:
   common: !include common/common.yaml
