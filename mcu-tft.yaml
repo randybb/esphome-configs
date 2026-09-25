@@ -99,8 +99,8 @@ font:
 
 
 display:
-  - platform: ili9xxx
-    model: TFT 2.4
+  - platform: mipi_spi
+    model: ILI9341
     cs_pin: 7
     dc_pin: 8
     reset_pin: 10
