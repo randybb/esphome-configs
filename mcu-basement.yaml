@@ -27,7 +27,7 @@ packages:
 # GPIO13	Blue Status LED
 
 globals:
-  - id: blower_auto
+  - id: aerator_auto
     type: bool
     restore_value: true
     initial_value: "true"
@@ -95,7 +95,7 @@ binary_sensor:
 
 select:
   - platform: template
-    name: Sewage Treatment Blower
+    name: Sewage Treatment Aerator Pump
     icon: mdi:hair-dryer-outline
     optimistic: true
     options:
@@ -109,14 +109,14 @@ select:
         - lambda: |-
             switch (i) {
               case 0: {
-                id(blower_auto) = false;
+                id(aerator_auto) = false;
                 id(relay_1).turn_on();
               } break;
               case 1: {
-                id(blower_auto) = true;
+                id(aerator_auto) = true;
               } break;
               case 2:
-                id(blower_auto) = false;
+                id(aerator_auto) = false;
                 id(relay_1).turn_off();
             }
 
@@ -127,7 +127,7 @@ status_led:
 
 switch:
   - platform: gpio
-    name: Sewage Treatment Blower
+    name: Sewage Treatment Aerator Pump
     icon: mdi:hair-dryer-outline
     pin: 12
     id: relay_1
@@ -147,7 +147,7 @@ time:
         then:
           - if:
               condition:
-                lambda: 'return id(blower_auto);'
+                lambda: 'return id(aerator_auto);'
               then:
                 - switch.turn_on: relay_1
                 - delay: 12min
