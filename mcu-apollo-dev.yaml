@@ -50,7 +50,7 @@ light:
     id: rgb_leds
     chipset: WS2812
     num_leds: 10
-    rgb_order: GRB
+    channel_colors: GRB
     rmt_symbols: 48
     effects:
       # Use default parameters:
@@ -77,7 +77,7 @@ light:
     id: onboard_rgb_led
     chipset: WS2812
     num_leds: 1
-    rgb_order: GRB
+    channel_colors: GRB
     rmt_symbols: 48
 
 output:

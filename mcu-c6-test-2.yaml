@@ -56,7 +56,7 @@ light:
   - platform: esp32_rmt_led_strip
     name: LED
     id: led
-    rgb_order: GRB
+    channel_colors: GRB
     pin: 8
     num_leds: 1
     # rmt_channel: 0
