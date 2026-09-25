@@ -278,7 +278,7 @@ light:
   - platform: esp32_rmt_led_strip
     name: Presence Light
     id: neo
-    rgb_order: GRB
+    channel_colors: GRB
     pin: 23
     num_leds: 3
     # rmt_channel: 0
