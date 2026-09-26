@@ -204,7 +204,7 @@ nspanel_lovelace:
   id: nspanel_id
   sleep_timeout: 10
   locale:
-    language: nspanel/sk.json
+    language: sk
     temperature_unit: celcius
   screensaver:
     time_id: ha_time
