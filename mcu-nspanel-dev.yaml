@@ -39,8 +39,6 @@ esp32:
     advanced:
       minimum_chip_revision: 3.0
       sram1_as_iram: true
-      include_builtin_idf_components:
-        - esp_http_client
 
 external_components:
   # - source:
@@ -51,8 +49,10 @@ external_components:
   #   components: [nspanel_lovelace]
   - source:
       type: git
-      url: https://github.com/olicooper/esphome-nspanel-lovelace-native
-      ref: dev
+      # url: https://github.com/olicooper/esphome-nspanel-lovelace-native
+      # ref: dev
+      url: https://github.com/randybb/esphome-nspanel-lovelace-native
+      ref: devices
     refresh: 0s
     components: [nspanel_lovelace]
   # - source: components
@@ -84,7 +84,6 @@ api:
         song: string
       then:
         - lambda: 'id(nspanel_id).notify_on_screensaver(heading, message, 10000);'
-        # - lambda: 'id(nspanel_id).send_custom_command("notify~" + heading + "~" + message);'
         - rtttl.play:
             rtttl: !lambda 'return song;'
         # - delay: 10s
@@ -203,15 +202,37 @@ uart:
 nspanel_lovelace:
   id: nspanel_id
   sleep_timeout: 10
+  experimental_vertical_ui: true
   locale:
     language: sk
     temperature_unit: celcius
   screensaver:
     time_id: ha_time
-    time_format: '%H:%M~$name_day'
+    time_format: '%H:%M'
     date_format: '%A, %d. %b. %Y'
     weather:
       entity_id: sensor.weather_forecast_daily
+      # entity_id: weather.openweathermap
+      # forecast_method: service
+      icon_color: [255, 255, 255]
+    entities:
+      - entity_id: sensor.zigbee_office_r_temperature
+        icon:
+          value: home-thermometer-outline
+          color: [255, 255, 255]
+        precision: 1
+    # type: screensaver2
+    ## Custom entities, filled into the layout slots in order after the weather items.
+    ## Use 'entity_id: delete' to leave a slot empty.
+    ##   screensaver:  weather main + 4 forecast items, 1 extra entity switches to the alternative layout (max 6 items)
+    ##   screensaver2: weather main only, then 3 left + 6 bottom + 5 indicator icons (max 15 items)
+    # entities:
+    #   - entity_id: sensor.outside_humidity
+    #     name: Humidity
+    #     icon: water-percent
+    #   - entity_id: delete
+    #   - entity_id: binary_sensor.front_door
+
     # type: screensaver2
     # statusIcon1:
     #   entity: switch.office_r_light
@@ -281,7 +302,7 @@ nspanel_lovelace:
           entity_id: light.living_room
           icon: ceiling-light
         - name: TV
-          entity_id: light.tv_light
+          entity_id: light.mcu_tv_light_light
           icon: led-strip-variant
         - name: (Stôl)
           entity_id: light.dining_table_ambilight
@@ -293,7 +314,7 @@ nspanel_lovelace:
       title: Romanko
       entities:
         - name: Svetlo
-          entity_id: switch.office_r_light
+          entity_id: light.mcu_nspanel_office_r_light
           icon: wall-sconce-flat
         - name: LED pásik
           entity_id: light.office_r_desk_strip
@@ -305,40 +326,38 @@ nspanel_lovelace:
         - name: (Monitor)
           entity_id: light.office_r_display_lamp_ambilight
           icon: monitor-star
-        - name: Whitebox
-          entity_id: switch.whitebox
     - type: cardGrid
       title: Von
       entities:
         - name: Terasa
-          entity_id: light.patio_light
+          entity_id: light.patio_lights
           icon: lightbulb-group
         - name: Terasa
-          entity_id: switch.patio_relay
+          entity_id: switch.mcu_patio_relay
           icon: power-socket-fr
         - name: Vzadu
-          entity_id: switch.outside_light_back
+          entity_id: switch.mcu_nspanel_patio_outside_light_back
           icon: light-flood-down
         - name: Z. domček
-          entity_id: switch.shed_light
+          entity_id: switch.mcu_shed_light
           icon: wall-sconce-flat
           # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
         - name: Z. domček
-          entity_id: switch.shed_socket
+          entity_id: switch.mcu_shed_socket
           icon: power-socket-fr
           # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
         - name: Záhrada
-          entity_id: switch.garden_light
+          entity_id: switch.mcu_shed_garden_light
           icon: light-flood-down
           # state_template: '{{ is_state("binary_sensor.shed_status", "off") }}'
     - type: cardGrid
       title: Brána
       entities:
         - name: Otvoriť
-          entity_id: button.gate_open
+          entity_id: button.mcu_gate_open
           icon: gate-open
         - name: Zatvoriť
-          entity_id: button.gate_close
+          entity_id: button.mcu_gate_close
           icon: gate
         - name: Automatizácia
           entity_id: navigate.card_gate_automation
@@ -346,19 +365,19 @@ nspanel_lovelace:
       title: Závlaha
       entities:
         - name: A1
-          entity_id: switch.irrigation_valve_a1
+          entity_id: switch.mcu_well_irrigation_valve_a1
           icon: valve
         - name: A2
-          entity_id: switch.irrigation_valve_a2
+          entity_id: switch.mcu_well_irrigation_valve_a2
           icon: valve
         - name: A3
-          entity_id: switch.irrigation_valve_a3
+          entity_id: switch.mcu_well_irrigation_valve_a3
           icon: valve
         - name: A4
-          entity_id: switch.irrigation_valve_a4
+          entity_id: switch.mcu_well_irrigation_valve_a4
           icon: valve
         - name: A5
-          entity_id: switch.irrigation_valve_a5
+          entity_id: switch.mcu_well_irrigation_valve_a5
           icon: valve
         - name: Automatizácia
           entity_id: navigate.card_irrigation_automation
@@ -381,13 +400,13 @@ nspanel_lovelace:
       title: Zwift
       entities:
         - name: Svetlo
-          entity_id: light.basement_light
+          entity_id: light.mcu_basement_light
           icon: lightbulb-multiple
         - name: LED
           entity_id: light.exercise_room
           icon: led-strip-variant
         - name: Ventilátor
-          entity_id: light.exercise_room_fan
+          entity_id: light.mcu_dimmer_exercise_room_fan
           icon: fan
         - name: Automatizácia
           entity_id: navigate.card_exercise_automation
@@ -420,11 +439,6 @@ nspanel_lovelace:
           entity_id: automation.irrigation_patio
         - name: Rast trávy
           entity_id: automation.irrigation_grow_grass
-
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
 
 binary_sensor:
   - platform: gpio
@@ -526,10 +540,19 @@ sensor:
   - platform: template
     id: room_temperature_id
 
+time:
+  platform: homeassistant
+  id: ha_time
+  timezone: Europe/Bratislava
+
 text_sensor:
   - platform: homeassistant
     id: name_day
     entity_id: sensor.nameday_sk
+    on_value:
+      - lambda: |-
+          id(nspanel_id).set_time_format("%H:%M~" + x);
+          id(nspanel_id).update_time();
 
 # esp32_ble_tracker:
 #   scan_parameters:

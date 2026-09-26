@@ -5,10 +5,6 @@ substitutions:
   name_short: Bedroom
   area: Bedroom
   comment: NSPanel
-  panel_recv_topic: "tele/${device}/RESULT"
-  panel_send_topic: "cmnd/${device}/CustomSend"
-  tft_url: !secret tft_url
-
 
 esphome:
   name: mcu-${device}
@@ -20,6 +16,8 @@ esphome:
       - switch.turn_off: screen_power
       - delay: 1s
       - switch.turn_on: screen_power
+      - delay: 2s
+      - lambda: 'id(nspanel_id).set_display_dim(5, 80);'
 
 esp32:
   variant: esp32
@@ -33,15 +31,27 @@ esp32:
 external_components:
   - source:
       type: git
-      url: https://github.com/sairon/esphome-nspanel-lovelace-ui
-      ref: dev
+      url: https://github.com/randybb/esphome-nspanel-lovelace-native
+      ref: devices
+    refresh: 0s
     components: [nspanel_lovelace]
 
 packages:
   common: !include common/common.yaml
 
+script:
+  - id: apply_sleep_dim
+    then:
+      - lambda: |-
+          uint8_t dim;
+          if (id(bedroom_lights).state) dim = 5;              // sleepOverride
+          else if (id(sun_id).is_above_horizon(-6)) dim = 5;  // day
+          else dim = 0;                                       // night
+          id(nspanel_id).set_display_inactive_dim(dim);
+
 api:
-  # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+  homeassistant_services: true
+  homeassistant_states: true
   actions:
     - action: play_rtttl
       variables:
@@ -56,110 +66,20 @@ api:
         message: string
         song: string
       then:
-        - lambda: 'id(nspanel_id).send_custom_command("notify~" + heading + "~" + message);'
+        - lambda: 'id(nspanel_id).notify_on_screensaver(heading, message, 10000);'
         - rtttl.play:
             rtttl: !lambda 'return song;'
-        - delay: 10s
-        - lambda: 'id(nspanel_id).send_custom_command("notify~~");'
 
-    - action: update_tft
-      then:
-        - lambda: |-
-            id(nspanel_id).upload_tft("${tft_url}");
-
-    - action: upload_tft
-      variables:
-        url: string
-      then:
-        - lambda: |-
-            id(nspanel_id).upload_tft(url);
-
-    # Service to send a command directly to the display. Useful for testing
-    - action: send_command
-      variables:
-        cmd: string
-      then:
-        - lambda: "id(nspanel_id).send_custom_command(cmd.c_str());"
-
-    # Service to pusblish to mqtt used for refreshin the panel
-    - action: publish_to_recv_topic
-      variables:
-        cmd: string
-      then:
-        - mqtt.publish:
-            topic: $panel_recv_topic
-            payload: !lambda "return cmd;"
-
-    # Service to send a command wake the screen
-    - action: wake
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("wake");'
-
-    # Service to send a command to show screensaver (some of the values are hardcoded)
-    - action: show_screensaver
-      then:
-        - mqtt.publish:
-            topic: $panel_recv_topic
-            payload: '{"CustomRecv":"event,sleepReached,cardGrid"}'
-    # Service to navigate to screen
-    - action: navigate_to_page
-      variables:
-        page: string
-      then:
-        - mqtt.publish_json:
-            topic: $panel_recv_topic
-            payload: |-
-              root["CustomRecv"] = "event,buttonPress2,navigate." + page + ",button";
-
-    # Service to send a command disable screensaver
-    - action: disable_screensaver
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("timeout~0");'
-
-    # Service to send a command enabled screensaver
-    - action: enable_screensaver
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("timeout~20");'
-
-    # Service to send a command wake the screen
-    - action: dim_0_to_100
-      variables:
-        intensity: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("dimmode~"+intensity+"~100");'
-
-    # Service to send a command To show the screen of a specific like
-    - action: show_entity
-      variables:
-        entity: string
-        title: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupLight~" + title + "~" + entity);'
-
-    # Service to send a command To show the screen of a specific like
-    - action: notify_on_screensaver
-      variables:
-        line1: string
-        line2: string
-      then:
-        - lambda: 'id(nspanel_id).send_custom_command("notify~" + line1 + "~" + line2);'
-        - rtttl.play: "short:d=4,o=5,b=100:16e6"
-
-    # Service to send a command To show the screen of a specific like
-    # interaction of the buttons are on implemented yet
     - action: notify_fullscreen
       variables:
         title: string
         description: string
         button1: string
         button2: string
-        time_secs: string
+        timeout: int
+        icon: string
       then:
-        # show notification screen
-        - lambda: 'id(nspanel_id).send_custom_command("pageType~popupNotify");'
-        # set values on notification screen
-        # color defined as number created in binary and converted to decimal (rrrrggggbbbbaaaa)
-        - lambda: 'id(nspanel_id).send_custom_command("entityUpdateDetail~id~"+ title + "~65535~" + button1 +"~3840~" + button2 + "~61440~" + description + "~65535~" + time_secs);'
+        - lambda: 'id(nspanel_id).notify_on_screensaver(title, description, timeout);'
         - rtttl.play: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"
 
 uart:
@@ -168,24 +88,59 @@ uart:
   rx_pin: 17
   baud_rate: 115200
 
-mqtt:
-  id: mqtt_client
-  broker: !secret mqtt_ip
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-  discovery: false
-  idf_send_async: true
-  reboot_timeout: 0s
-
 nspanel_lovelace:
   id: nspanel_id
-  mqtt_recv_topic: $panel_recv_topic
-  mqtt_send_topic: $panel_send_topic
+  sleep_timeout: 10
+  experimental_vertical_ui: true
+  locale:
+    language: sk
+    temperature_unit: celcius
+  screensaver:
+    time_id: ha_time
+    time_format: '%H:%M'
+    date_format: '%A, %d. %b. %Y'
+    weather:
+      entity_id: sensor.weather_forecast_daily
+      icon_color: [255, 255, 255]
+    entities:
+      - entity_id: sensor.zigbee_bedroom_temperature
+        icon:
+          value: home-thermometer-outline
+          color: [255, 255, 255]
+        precision: 1
+  cards:
+    - type: cardGrid
+      title: Spálňa
+      entities:
+        - name: TV
+          entity_id: switch.mcu_socket_01_relay
+          icon: television-classic
+        - name: Raid
+          entity_id: switch.mcu_socket_02_relay
+          icon: emoticon-dead
+        - name: ""
+          entity_id: switch.mcu_socket_03_relay
+          icon: power-socket-fr
+        - name: Svetlo
+          entity_id: light.mcu_nspanel_bedroom_light
+          icon: wall-sconce-flat
+        - name: Nočná lampa J
+          entity_id: light.mcu_bedroom_lamp_right_light
+          icon: lamp
+        - name: Nočná lampa R
+          entity_id: light.mcu_bedroom_lamp_left_light
+          icon: lamp
+
+    - type: cardThermo
+      title: Kúrenie
+      thermo_entity_id: climate.bt_trv_bedroom
 
 time:
   - platform: homeassistant
     id: ha_time
     timezone: Europe/Bratislava
+    on_time_sync:
+      - script.execute: apply_sleep_dim
 
 binary_sensor:
   - platform: gpio
@@ -195,10 +150,7 @@ binary_sensor:
       inverted: true
     on_click:
       - light.toggle: light_1
-      - mqtt.publish_json:
-          topic: $panel_recv_topic
-          payload: |-
-            root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
+      - lambda: 'id(nspanel_id).render_default_page();'
 
   - platform: gpio
     name: Right Button
@@ -212,10 +164,13 @@ binary_sensor:
           action: light.toggle
           data:
             entity_id: light.bedroom_lamps
-      - mqtt.publish_json:
-          topic: $panel_recv_topic
-          payload: |-
-            root["CustomRecv"] = "event,buttonPress2,navigate.cardGrid_main,button";
+      - lambda: 'id(nspanel_id).render_default_page();'
+
+  - platform: homeassistant       # sleepOverride
+    id: bedroom_lights
+    entity_id: light.bedroom_lights
+    on_state:
+      - script.execute: apply_sleep_dim
 
 light:
   - platform: binary
@@ -236,6 +191,20 @@ output:
   #   platform: gpio
   #   pin:
   #     number: 19
+
+sun:
+  id: sun_id
+  time_id: ha_time
+  latitude: 48.15°
+  longitude: 17.11°
+  on_sunrise:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
+  on_sunset:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
 
 switch:
   - platform: gpio
@@ -265,13 +234,19 @@ sensor:
     resistor: 11.2kOhm
 
   - platform: ntc
+    name: Temperature
     id: temperature
     sensor: resistance_sensor
     calibration:
       b_constant: 3950
       reference_temperature: 25°C
       reference_resistance: 10kOhm
-    name: Temperature
 
-  - platform: template
-    id: room_temperature_id
+text_sensor:
+  - platform: homeassistant
+    id: name_day
+    entity_id: sensor.nameday_sk
+    on_value:
+      - lambda: |-
+          id(nspanel_id).set_time_format("%H:%M~" + x);
+          id(nspanel_id).update_time();
