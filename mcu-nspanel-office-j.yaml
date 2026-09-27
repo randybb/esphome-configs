@@ -38,6 +38,16 @@ external_components:
 packages:
   common: !include common/common.yaml
 
+script:
+  - id: apply_sleep_dim
+    then:
+      - lambda: |-
+          uint8_t dim;
+          if (id(bedroom_lights).state) dim = 5;              // sleepOverride
+          else if (id(sun_id).is_above_horizon(-6)) dim = 5;  // day
+          else dim = 0;                                       // night
+          id(nspanel_id).set_display_inactive_dim(dim);
+
 api:
   homeassistant_services: true
   homeassistant_states: true
@@ -134,6 +144,11 @@ nspanel_lovelace:
         - name: Auto-zatváranie
           entity_id: switch.gate_auto_close
 
+time:
+  - id: !extend ha_time
+    on_time_sync:
+      - script.execute: apply_sleep_dim
+
 binary_sensor:
   - platform: gpio
     name: Left Button
@@ -155,6 +170,12 @@ binary_sensor:
           data:
             entity_id: light.bedside_left
       - lambda: 'id(nspanel_id).render_default_page();'
+
+  - platform: homeassistant       # sleepOverride
+    id: bedroom_lights
+    entity_id: light.office_j_lights
+    on_state:
+      - script.execute: apply_sleep_dim
 
 output:
   - platform: ledc
@@ -180,6 +201,20 @@ light:
 #   # - platform: binary
 #   #   name: Relay 2
 #   #   output: relay_2
+
+sun:
+  id: sun_id
+  time_id: ha_time
+  latitude: 48.15°
+  longitude: 17.11°
+  on_sunrise:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
+  on_sunset:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
 
 switch:
   - platform: gpio
