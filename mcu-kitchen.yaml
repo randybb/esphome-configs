@@ -36,6 +36,7 @@ esp32:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 api:
   reboot_timeout: 300s

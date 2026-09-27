@@ -19,6 +19,7 @@ esp32:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 spi:
   clk_pin: 23

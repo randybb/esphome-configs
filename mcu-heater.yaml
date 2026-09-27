@@ -37,6 +37,7 @@ external_components:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 # PINOUTS: M5ATOM
 # IR        G12

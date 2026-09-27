@@ -23,6 +23,7 @@ esp32:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 # GPIO21  UART TX
 # GPIO20  UART RX
