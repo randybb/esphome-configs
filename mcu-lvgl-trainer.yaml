@@ -4,6 +4,13 @@ substitutions:
   name: Trainer Display
   area: Basement
   comment: "${area} | Pain Cave"
+  light_basement: light.mcu_basement_2_light
+  light_workbench: light.mcu_basement_2_workbench_light
+  light_exercise: light.exercise_room
+  fan: light.mcu_dimmer_exercise_room_fan
+
+# Pages (480x320, navigation bar at the bottom):
+# clock, lights, training, fan, stopwatch, status
 
 esphome:
   name: mcu-${device}
@@ -16,7 +23,6 @@ esp32:
   flash_size: 16MB
   framework:
     type: esp-idf
-
 
 packages:
   common: !include common/common.yaml
@@ -36,71 +42,17 @@ spi:
   clk_pin: 47
   data_pins: [21, 48, 40, 39]
 
-color:
-  - id: my_red
-    red: 100%
-    green: 0%
-    blue: 0%
-  - id: my_orange
-    red: 100%
-    green: 50%
-    blue: 0%
-  - id: my_yellow
-    red: 100%
-    green: 100%
-    blue: 0%
-  - id: my_green
-    red: 0%
-    green: 100%
-    blue: 0%
-  - id: my_blue
-    red: 0%
-    green: 0%
-    blue: 100%
-  - id: my_teal
-    red: 0%
-    green: 100%
-    blue: 100%
-  - id: my_gray
-    red: 70%
-    green: 70%
-    blue: 70%
-  - id: my_white
-    red: 100%
-    green: 100%
-    blue: 100%
-
-font:
-  - file: "gfonts://Roboto"
-    id: Roboto_48
-    size: 48
-  - file: "gfonts://Roboto"
-    id: Roboto_36
-    size: 36
-  - file: "gfonts://Roboto"
-    id: Roboto_24
-    size: 24
-  - file: "gfonts://Roboto"
-    id: Roboto_12
-    size: 12
-  - file: "gfonts://Roboto"
-    id: font_std
-    size: 40
-    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
-  - file: "gfonts://Roboto@700"
-    id: font_title
-    size: 40
-    glyphs: "!\"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz/\\[]|&@#'"
-
 globals:
-  - id: bgcolor
-    type: Color
-    initial_value: "Color::random_color()"
-
-# power_supply:
-#   id: main_backlight
-#   pin: 1
-#   enable_on_boot: true
+  # stopwatch: accumulated time of finished runs + start of the current run
+  - id: sw_running
+    type: bool
+    initial_value: 'false'
+  - id: sw_start
+    type: uint32_t
+    initial_value: '0'
+  - id: sw_accum
+    type: uint32_t
+    initial_value: '0'
 
 output:
   - platform: ledc
@@ -119,7 +71,6 @@ display:
   - platform: mipi_spi
     model: AXS15231
     data_rate: 40MHz #20mhz is default
-    #spi_mode: MODE2
     id: main_display
     spi_id: display_qspi
     dimensions:
@@ -127,11 +78,6 @@ display:
       width: 320
     cs_pin: 45
     auto_clear_enabled: false
-    # show_test_card: true
-    # lambda: |-
-    #   it.fill(id(bgcolor));
-    #   it.print(it.get_width()/2, it.get_height()/2-20, id(font_title), TextAlign::CENTER, "ESPHome");
-    #   it.print(it.get_width()/2, it.get_height()/2+20, id(font_std), TextAlign::CENTER, "@UTBDK");
 
 touchscreen:
   - platform: axs15231
@@ -142,27 +88,8 @@ touchscreen:
     # interrupt_pin:
     # number: 3
     # ignore_strapping_warning: true
-    calibration:
-      x_min: 0
-      x_max: 479
-      y_min: 0
-      y_max: 319
-    transform:
-      swap_xy: true
-      mirror_x: false
-      mirror_y: true
-    # on_touch:
-    #   - lambda: |-
-    #       Color newColor;
-    #       do { newColor =  Color::random_color(); } while (newColor == id(bgcolor));
-    #       id(bgcolor) = newColor;
-
-    #       ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
-    #         touch.x,
-    #         touch.y,
-    #         touch.x_raw,
-    #         touch.y_raw
-    #       );
+    # no calibration/transform: the driver defaults to the native 320x480 panel and
+    # LVGL applies its own rotation to touch points
     on_release:
       - if:
           condition: lvgl.is_paused
@@ -183,107 +110,596 @@ uart:
 
 binary_sensor:
   - platform: homeassistant
-    id: exercise_room_light
-    entity_id: light.exercise_room
+    id: basement_light
+    entity_id: ${light_basement}
     trigger_on_initial_state: true
     on_state:
-      then:
-        lvgl.widget.update:
-          id: exercise_room_light_btn
+      - lvgl.widget.update:
+          id: basement_light_btn
           state:
             checked: !lambda return x;
   - platform: homeassistant
-    id: exercise_room_fan
-    entity_id: light.mcu_dimmer_exercise_room_fan
+    id: workbench_light
+    entity_id: ${light_workbench}
     trigger_on_initial_state: true
     on_state:
-      then:
-        lvgl.widget.update:
-          id: exercise_room_fan_btn
+      - lvgl.widget.update:
+          id: workbench_light_btn
           state:
             checked: !lambda return x;
+  - platform: homeassistant
+    id: exercise_light
+    entity_id: ${light_exercise}
+    trigger_on_initial_state: true
+    on_state:
+      - lvgl.widget.update:
+          id: exercise_light_btn
+          state:
+            checked: !lambda return x;
+      # brightness and color temperature only make sense while the light is on
+      - if:
+          condition:
+            lambda: return x;
+          then:
+            - lvgl.widget.show: exercise_controls
+          else:
+            - lvgl.widget.hide: exercise_controls
+  - platform: homeassistant
+    id: fan_on
+    entity_id: ${fan}
+    trigger_on_initial_state: true
+    on_state:
+      - script.execute: update_fan_buttons
+
+sensor:
+  - platform: homeassistant
+    id: fan_brightness
+    entity_id: ${fan}
+    attribute: brightness
+    on_value:
+      - script.execute: update_fan_buttons
+
+text_sensor:
+  # light attributes read as text: they are 'None' while the light is off
+  - platform: homeassistant
+    id: exercise_brightness
+    entity_id: ${light_exercise}
+    attribute: brightness
+    on_value:
+      - if:
+          condition:
+            lambda: return parse_number<float>(x).has_value();
+          then:
+            - lvgl.slider.update:
+                id: exercise_brightness_slider
+                value: !lambda return roundf(*parse_number<float>(x) * 100.0f / 255.0f);
+  - platform: homeassistant
+    id: exercise_color_temp
+    entity_id: ${light_exercise}
+    attribute: color_temp_kelvin
+    on_value:
+      - if:
+          condition:
+            lambda: return parse_number<float>(x).has_value();
+          then:
+            - lvgl.slider.update:
+                id: exercise_color_temp_slider
+                value: !lambda return *parse_number<float>(x);
+  # a running automation (e.g. its delay) has current > 0
+  - platform: homeassistant
+    id: training_start_running
+    entity_id: automation.zwift_enable_fan
+    attribute: current
+    on_value:
+      - script.execute: update_training_status
+  - platform: homeassistant
+    id: training_stop_running
+    entity_id: automation.zwift_disable_fan
+    attribute: current
+    on_value:
+      - script.execute: update_training_status
+
+script:
+  - id: update_fan_buttons
+    then:
+      - lambda: |-
+          // fan level rounded to the 10 % steps of the buttons, 0 = off
+          int pct = 0;
+          if (id(fan_on).state && !std::isnan(id(fan_brightness).state))
+            pct = (int) roundf(id(fan_brightness).state * 10.0f / 255.0f) * 10;
+          const int levels[] = {0, 50, 60, 70, 80, 90, 100};
+          lv_obj_t *matrix = id(fan_matrix)->obj;
+          for (int i = 0; i < 7; i++) {
+            if (levels[i] == pct)
+              lv_buttonmatrix_set_button_ctrl(matrix, i, LV_BUTTONMATRIX_CTRL_CHECKED);
+            else
+              lv_buttonmatrix_clear_button_ctrl(matrix, i, LV_BUTTONMATRIX_CTRL_CHECKED);
+          }
+      - lvgl.label.update:
+          id: fan_status_label
+          text: !lambda |-
+            if (!id(fan_on).state)
+              return std::string("Ventilátor vypnutý");
+            if (std::isnan(id(fan_brightness).state))
+              return std::string("Ventilátor zapnutý");
+            return str_sprintf("Ventilátor %.0f %%", id(fan_brightness).state * 100.0f / 255.0f);
+
+  - id: update_training_status
+    then:
+      - lvgl.label.update:
+          id: training_status_label
+          text: !lambda |-
+            if (id(training_start_running).state != "0" && !id(training_start_running).state.empty())
+              return std::string("Tréning sa spúšťa, ventilátor sa zapne o 10 min");
+            if (id(training_stop_running).state != "0" && !id(training_stop_running).state.empty())
+              return std::string("Tréning sa ukončuje, ventilátor sa vypne o 2 min");
+            return std::string("");
+
+  - id: update_stopwatch
+    then:
+      - lvgl.label.update:
+          id: stopwatch_label
+          text: !lambda |-
+            const uint32_t ms = id(sw_accum) + (id(sw_running) ? millis() - id(sw_start) : 0);
+            const uint32_t s = ms / 1000;
+            if (s >= 3600)
+              return str_sprintf("%u:%02u:%02u", s / 3600, (s / 60) % 60, s % 60);
+            return str_sprintf("%02u:%02u.%u", s / 60, s % 60, (ms / 100) % 10);
+      - lvgl.label.update:
+          id: stopwatch_start_label
+          text: !lambda |-
+            return std::string(id(sw_running) ? "Stop" : "Štart");
+
+  - id: update_status
+    then:
+      - lvgl.label.update:
+          id: status_label
+          text: !lambda |-
+            std::string out;
+            if (wifi::global_wifi_component->is_connected()) {
+              out = str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi());
+              // IPv6 first (skip link-local), then IPv4
+              char buf[network::IP_ADDRESS_BUFFER_SIZE];
+              for (bool v6 : {true, false}) {
+                for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+                  if (!ip.is_set() || ip.is_ip6() != v6)
+                    continue;
+                  ip.str_to(buf);
+                  if (v6 && strncmp(buf, "fe80", 4) == 0)
+                    continue;
+                  out += "\n    ";
+                  out += buf;
+                }
+              }
+            } else {
+              out = "WiFi: connecting...";
+            }
+            out += api::global_api_server->is_connected_with_state_subscription() ? "\nHome Assistant: connected"
+                                                                                  : "\nHome Assistant: waiting...";
+            const uint32_t up = millis() / 1000;
+            out += str_sprintf("\nESPHome %s  ·  up %ud %02u:%02u", ESPHOME_VERSION, up / 86400, (up / 3600) % 24,
+                               (up / 60) % 60);
+            return out;
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: clock_label
+          text: !lambda |-
+            auto now = id(ha_time).now();
+            if (!now.is_valid())
+              return std::string("--:--:--");
+            return now.strftime("%H:%M:%S");
+  - interval: 100ms
+    then:
+      - if:
+          condition:
+            and:
+              - lambda: return id(sw_running);
+              - lvgl.page.is_showing: stopwatch_page
+          then:
+            - script.execute: update_stopwatch
+  - interval: 2s
+    then:
+      - if:
+          condition:
+            lvgl.page.is_showing: status_page
+          then:
+            - script.execute: update_status
+
+image:
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 280x83
+    type: RGB565
+    transparency: alpha_channel
+
+font:
+  - file: "gfonts://Roboto@500"
+    id: font_digits
+    size: 110
+    glyphs: "0123456789:.-"
+  - file: "gfonts://Roboto"
+    id: font_ui
+    size: 24
+    glyphs: &sk_glyphs "ÁÄČĎÉÍĹĽŇÓÔŔŠŤÚÝŽáäčďéíĺľňóôŕšťúýž°·"
+    glyphsets: [GF_Latin_Kernel]
+  - file: "gfonts://Roboto@500"
+    id: font_button
+    size: 34
+    glyphs: *sk_glyphs
+    glyphsets: [GF_Latin_Kernel]
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 18
+    glyphs: *sk_glyphs
+    glyphsets: [GF_Latin_Kernel]
 
 lvgl:
   rotation: 90
   buffer_size: 100%
   log_level: WARN
   color_depth: 16
-  default_font: montserrat_18
-  #   on_idle:
-  #     - timeout: !lambda "return (id(display_timeout).state * 1000);"
-  #       then:
-  #         - logger.log: "LVGL is idle"
-  #         - light.turn_off:
-  #             id: display_backlight
-  #             transition_length: 2500ms
-  #         - lvgl.pause:
+  default_font: font_ui
+  bg_color: 0x000000
+  text_color: 0xFFFFFF
+  theme:
+    button:
+      bg_color: 0x2B2F36
+      radius: 12
+      checked:
+        bg_color: 0xE08A00
+    buttonmatrix:
+      bg_opa: TRANSP
+      border_width: 0
+      items:
+        bg_color: 0x2B2F36
+        text_color: 0xFFFFFF
+        radius: 12
+        checked:
+          bg_color: 0xE08A00
+    slider:
+      bg_color: 0x2B2F36
+      indicator:
+        bg_color: 0xE08A00
+      knob:
+        bg_color: 0xFFFFFF
   top_layer:
     widgets:
       - buttonmatrix:
+          id: nav_bar
           align: bottom_mid
-          # styles: header_footer
-          pad_all: 0
-          outline_width: 0
-          id: top_layer
-          # items:
-          #   styles: header_footer
+          width: 100%
+          height: 56
+          pad_all: 4
+          pad_column: 6
+          items:
+            text_font: montserrat_28
           rows:
             - buttons:
                 - id: page_prev
-                  text: "\uF053"
+                  text: ""
                   on_press:
                     then:
                       lvgl.page.previous:
                 - id: page_home
-                  text: "\uF015"
+                  text: ""
                   on_press:
                     then:
-                      lvgl.page.show: main_page
+                      lvgl.page.show: clock_page
                 - id: page_next
-                  text: "\uF054"
+                  text: ""
                   on_press:
                     then:
                       lvgl.page.next:
   pages:
-    - id: main_page
+    # 1: clock (default after boot)
+    - id: clock_page
       widgets:
         - label:
-            text: "ESPHome LVGL Display"
+            id: clock_label
             align: CENTER
-            text_align: CENTER
-            text_color: 0xFFFFFF
-    - id: excercise_page
+            y: -28
+            text_font: font_digits
+            text: "--:--:--"
+
+    # 2: basement lights
+    - id: lights_page
+      pad_all: 10
       widgets:
-        - label:
-            align: CENTER
-            text: 'Hello World!'
         - button:
-            id: exercise_room_light_btn
+            id: basement_light_btn
             align: TOP_LEFT
-            width: 100
-            height: 70
+            width: 148
+            height: 80
             checkable: true
             widgets:
-            - label:
-                align: CENTER
-                text: 'Light'
+              - label:
+                  align: CENTER
+                  text: "Pivnica"
             on_click:
-            - homeassistant.action:
-                action: light.toggle
-                data:
-                    entity_id: light.exercise_room
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: ${light_basement}
         - button:
-            id: exercise_room_fan_btn
-            align: TOP_RIGHT
-            width: 100
-            height: 70
+            id: workbench_light_btn
+            align: TOP_MID
+            width: 148
+            height: 80
             checkable: true
             widgets:
-            - label:
-                align: CENTER
-                text: 'Fan'
+              - label:
+                  align: CENTER
+                  text: "Pracovný stôl"
             on_click:
-            - homeassistant.action:
-                action: light.toggle
-                data:
-                    entity_id: light.mcu_dimmer_exercise_room_fan
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: ${light_workbench}
+        - button:
+            id: exercise_light_btn
+            align: TOP_RIGHT
+            width: 148
+            height: 80
+            checkable: true
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Posilka"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: ${light_exercise}
+        - obj:
+            id: exercise_controls
+            hidden: true
+            y: 110
+            width: 460
+            height: 120
+            pad_all: 0
+            bg_opa: TRANSP
+            border_width: 0
+            scrollbar_mode: "OFF"
+            widgets:
+              - label:
+                  x: 4
+                  y: 0
+                  text_font: font_small
+                  text: "Posilka jas"
+              - slider:
+                  id: exercise_brightness_slider
+                  x: 14
+                  y: 32
+                  width: 430
+                  height: 16
+                  min_value: 1
+                  max_value: 100
+                  value: 100
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: ${light_exercise}
+                          brightness_pct: !lambda return (int) x;
+              - label:
+                  x: 4
+                  y: 62
+                  text_font: font_small
+                  text: "Posilka teplota  (2700 – 6500 K)"
+              - slider:
+                  id: exercise_color_temp_slider
+                  x: 14
+                  y: 94
+                  width: 430
+                  height: 16
+                  min_value: 2700
+                  max_value: 6500
+                  value: 2700
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: ${light_exercise}
+                          color_temp_kelvin: !lambda return (int) x;
+
+    # 3: training start / stop
+    - id: training_page
+      pad_all: 10
+      widgets:
+        - button:
+            align: TOP_LEFT
+            y: 10
+            width: 222
+            height: 150
+            bg_color: 0x1E7D32
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_button
+                  text: "Štart"
+            on_click:
+              - homeassistant.action:
+                  action: automation.trigger
+                  data:
+                    entity_id: automation.zwift_enable_fan
+        - button:
+            align: TOP_RIGHT
+            y: 10
+            width: 222
+            height: 150
+            bg_color: 0xB71C1C
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_button
+                  text: "Stop"
+            on_click:
+              - homeassistant.action:
+                  action: automation.trigger
+                  data:
+                    entity_id: automation.zwift_disable_fan
+        - label:
+            id: training_status_label
+            align: TOP_MID
+            y: 185
+            width: 440
+            text_align: CENTER
+            text_font: font_small
+            text: ""
+
+    # 4: fan
+    - id: fan_page
+      pad_all: 10
+      widgets:
+        - buttonmatrix:
+            id: fan_matrix
+            align: TOP_MID
+            width: 460
+            height: 180
+            pad_row: 8
+            pad_column: 8
+            one_checked: true
+            items:
+              text_font: font_button
+            rows:
+              - buttons:
+                  - text: "Vyp"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_off
+                          data:
+                            entity_id: ${fan}
+                  - text: "50"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "50"
+                  - text: "60"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "60"
+                  - text: "70"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "70"
+              - buttons:
+                  - text: "80"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "80"
+                  - text: "90"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "90"
+                  - text: "100"
+                    control:
+                      checkable: true
+                    on_press:
+                      - homeassistant.action:
+                          action: light.turn_on
+                          data:
+                            entity_id: ${fan}
+                            brightness_pct: "100"
+        - label:
+            id: fan_status_label
+            align: TOP_MID
+            y: 200
+            text_font: font_small
+            text: ""
+
+    # 5: stopwatch
+    - id: stopwatch_page
+      pad_all: 10
+      widgets:
+        - label:
+            id: stopwatch_label
+            align: TOP_MID
+            y: 10
+            text_font: font_digits
+            text: "00:00.0"
+        - button:
+            align: TOP_LEFT
+            y: 150
+            width: 222
+            height: 90
+            widgets:
+              - label:
+                  id: stopwatch_start_label
+                  align: CENTER
+                  text_font: font_button
+                  text: "Štart"
+            on_click:
+              - lambda: |-
+                  if (id(sw_running)) {
+                    id(sw_accum) += millis() - id(sw_start);
+                    id(sw_running) = false;
+                  } else {
+                    id(sw_start) = millis();
+                    id(sw_running) = true;
+                  }
+              - script.execute: update_stopwatch
+        - button:
+            align: TOP_RIGHT
+            y: 150
+            width: 222
+            height: 90
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_button
+                  text: "Reset"
+            on_click:
+              - lambda: |-
+                  id(sw_accum) = 0;
+                  id(sw_start) = millis();
+              - script.execute: update_stopwatch
+
+    # 6: status
+    - id: status_page
+      on_load:
+        - script.execute: update_status
+      widgets:
+        - image:
+            src: esphome_logo
+            align: TOP_MID
+            y: 8
+        - label:
+            align: TOP_MID
+            y: 96
+            text: "${name}"
+        - label:
+            id: status_label
+            x: 20
+            y: 130
+            text_font: font_small
+            text: ""
