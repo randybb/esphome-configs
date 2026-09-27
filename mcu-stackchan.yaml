@@ -464,9 +464,9 @@ spi:
 
 image:
   - platform: file
-    file: assets/images/esphome-logo-text-on-dark.svg
+    file: assets/images/made-for-esphome-white-on-black.svg
     id: esphome_logo
-    resize: 280x56
+    resize: 230x68
     type: RGB565
     transparency: alpha_channel
   - platform: file
@@ -545,22 +545,36 @@ display:
       if (id(show_status)) {
         first_draw = true;
         it.fill(id(face_bg));
-        it.image(160, 45, id(esphome_logo), ImageAlign::CENTER);
+        it.image(160, 46, id(esphome_logo), ImageAlign::CENTER);
         it.print(160, 95, id(font_title), id(face_fg), TextAlign::CENTER, "${name}");
 
         if (wifi_ok) {
-          it.printf(20, 135, id(font_status), id(status_ok), "WiFi: %s  (%d dBm)",
-                    id(ip_address_sensor).state.c_str(), rssi);
+          it.printf(20, 114, id(font_status), id(status_ok), "WiFi: connected  (%d dBm)", rssi);
+          // one global IPv6 (skip link-local) and one IPv4 address
+          int y = 133;
+          char buf[network::IP_ADDRESS_BUFFER_SIZE];
+          for (bool v6 : {true, false}) {
+            for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+              if (!ip.is_set() || ip.is_ip6() != v6)
+                continue;
+              ip.str_to(buf);
+              if (v6 && strncmp(buf, "fe80", 4) == 0)
+                continue;
+              it.print(30, y, id(font_status), id(status_dim), buf);
+              y += 19;
+              break;
+            }
+          }
         } else {
-          it.print(20, 135, id(font_status), id(status_wait), "WiFi: connecting...");
+          it.print(20, 114, id(font_status), id(status_wait), "WiFi: connecting...");
         }
 
         const bool api_ok = api::global_api_server->is_connected();
-        it.print(20, 162, id(font_status), api_ok ? id(status_ok) : id(status_wait),
+        it.print(20, 172, id(font_status), api_ok ? id(status_ok) : id(status_wait),
                  api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...");
 
         if (batt >= 0) {
-          it.printf(20, 189, id(font_status), batt <= 20 && !charging ? id(status_low) : id(status_dim),
+          it.printf(20, 191, id(font_status), batt <= 20 && !charging ? id(status_low) : id(status_dim),
                     "Battery: %d%%%s", batt, charging ? " (charging)" : "");
         }
         it.printf(20, 212, id(font_status), id(status_dim), "ESPHome %s", ESPHOME_VERSION);
