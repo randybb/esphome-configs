@@ -1,0 +1,695 @@
+substitutions:
+  device: stackchan
+  name: StackChan
+  area: DEV
+  comment: StackChan
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  on_boot:
+    - priority: -100
+      then:
+        - light.turn_on:
+            id: light_bar
+            brightness: 20%
+            red: 0%
+            green: 0%
+            blue: 100%
+        - component.update: display_tft
+
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  toolchain: esp-idf
+  framework:
+    type: esp-idf
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+packages:
+  common: !include common/common.yaml
+
+external_components:
+  - source: github://m5stack/esphome-yaml/components
+    components: [axp2101, aw88298, aw9523b, si12t, m5ioe1, ftservo, scs9009]
+    refresh: 0s
+
+globals:
+  - id: show_status
+    type: bool
+    initial_value: 'true'
+  - id: mouth_open
+    type: float
+    initial_value: '0.0'
+  - id: eyes_open
+    type: bool
+    initial_value: 'true'
+  - id: speaking
+    type: bool
+    initial_value: 'false'
+  - id: listening
+    type: bool
+    initial_value: 'false'
+  - id: gaze_x
+    type: int
+    initial_value: '0'
+  - id: gaze_y
+    type: int
+    initial_value: '0'
+
+i2c:
+  - id: i2c_bsp
+    sda: 12
+    scl: 11
+    frequency: 100kHz
+
+axp2101:
+  id: axp2101_pmu
+  i2c_id: i2c_bsp
+
+aw9523b:
+  id: aw9523b_hub
+  i2c_id: i2c_bsp
+  p0_drive_mode: PUSH_PULL
+
+m5ioe1:
+  id: m5ioe1_hub
+  i2c_id: i2c_bsp
+  reset: true
+
+output:
+  - platform: axp2101
+    id: lcd_backlight_output
+    type: range
+    channel: DLDO1
+    min_voltage: 2600
+    max_voltage: 3300
+  - platform: axp2101
+    channel: ALDO1
+    voltage: 1800
+  - platform: axp2101
+    channel: ALDO2
+    voltage: 3300
+  - platform: axp2101
+    channel: ALDO3
+    voltage: 3300
+  - platform: axp2101
+    channel: ALDO4
+    voltage: 3300
+  - platform: axp2101
+    channel: BLDO1
+    voltage: 2800
+  - platform: axp2101
+    channel: BLDO2
+    voltage: 1500
+  - platform: axp2101
+    channel: DCDC1
+    voltage: 3300
+  - platform: axp2101
+    channel: DCDC4
+    voltage: 1800
+  - platform: axp2101
+    channel: DCDC3
+    voltage: 3300
+  - platform: axp2101
+    channel: DCDC5
+    voltage: 3300
+
+switch:
+  - platform: gpio
+    id: boost_en
+    name: Boost
+    entity_category: config
+    pin:
+      aw9523b_id: aw9523b_hub
+      number: 15
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: gpio
+    id: usb_otg_en
+    name: USB OTG
+    entity_category: config
+    pin:
+      aw9523b_id: aw9523b_hub
+      number: 5
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: gpio
+    id: bus_out_en
+    name: BUS Out
+    entity_category: config
+    pin:
+      aw9523b_id: aw9523b_hub
+      number: 1
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: gpio
+    id: light_bar_en
+    internal: true
+    pin:
+      m5ioe1_id: m5ioe1_hub
+      number: 13
+      mode:
+        output: true
+        pullup: true
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    id: aw_rst
+    internal: true
+    pin:
+      aw9523b_id: aw9523b_hub
+      number: 2
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    id: cam_rst
+    internal: true
+    pin:
+      aw9523b_id: aw9523b_hub
+      number: 8
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    id: servo_power
+    internal: true
+    pin:
+      m5ioe1_id: m5ioe1_hub
+      number: 0
+      mode:
+        output: true
+        pullup: true
+    restore_mode: ALWAYS_ON
+
+i2s_audio:
+  - id: i2s_bus
+    i2s_lrclk_pin: 33
+    i2s_bclk_pin: 34
+    i2s_mclk_pin:
+      number: 0
+      ignore_strapping_warning: true
+
+audio_adc:
+  - platform: es7210
+    id: es7210_adc
+    i2c_id: i2c_bsp
+    bits_per_sample: 16bit
+    sample_rate: 16000
+    mic_gain: 36
+
+audio_dac:
+  - platform: aw88298
+    id: aw88298_dac
+    i2c_id: i2c_bsp
+    sample_rate: 48000
+
+microphone:
+  - platform: i2s_audio
+    id: stackchan_microphone
+    i2s_audio_id: i2s_bus
+    i2s_din_pin: 14
+    adc_type: external
+    sample_rate: 16000
+    bits_per_sample: 16bit
+
+speaker:
+  - platform: i2s_audio
+    id: speaker_id
+    i2s_audio_id: i2s_bus
+    dac_type: external
+    i2s_dout_pin: 13
+    audio_dac: aw88298_dac
+    sample_rate: 48000
+    buffer_duration: 100ms
+  - platform: mixer
+    id: mixer_speaker_id
+    output_speaker: speaker_id
+    num_channels: 1
+    source_speakers:
+      - id: announcement_spk_mixer_input
+      - id: media_spk_mixer_input
+  - platform: resampler
+    id: media_spk_resampling_input
+    output_speaker: media_spk_mixer_input
+  - platform: resampler
+    id: announcement_spk_resampling_input
+    output_speaker: announcement_spk_mixer_input
+
+media_player:
+  - platform: speaker
+    id: media_out
+    name: Player
+    buffer_size: 14000
+    # AW88298 maps volume linearly to -96..0 dB, the lower half is inaudible
+    volume_min: 0.5
+    volume_max: 1.0
+    media_pipeline:
+      speaker: media_spk_resampling_input
+      format: NONE
+    announcement_pipeline:
+      speaker: announcement_spk_resampling_input
+      format: NONE
+    on_announcement:
+      - script.execute: release_i2s_bus
+    on_play:
+      - script.execute: release_i2s_bus
+    on_idle:
+      - if:
+          condition:
+            not:
+              voice_assistant.is_running:
+          then:
+            - micro_wake_word.start:
+
+micro_wake_word:
+  id: mww
+  microphone: stackchan_microphone
+  models:
+    - model: okay_nabu
+  on_wake_word_detected:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+
+voice_assistant:
+  id: va
+  microphone: stackchan_microphone
+  media_player: media_out
+  micro_wake_word: mww
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  on_client_connected:
+    - micro_wake_word.start:
+    - delay: 2s
+    - lambda: id(show_status) = false;
+    - component.update: display_tft
+  on_client_disconnected:
+    - micro_wake_word.stop:
+    - lambda: id(show_status) = true;
+    - component.update: display_tft
+  on_listening:
+    - lambda: |-
+        id(listening) = true;
+        id(gaze_x) = 0;
+        id(gaze_y) = 0;
+    - component.update: display_tft
+    - light.turn_on: {id: light_bar, brightness: 60%, red: 0%, green: 60%, blue: 100%}
+  on_stt_end:
+    - lambda: id(listening) = false;
+    - component.update: display_tft
+    - light.turn_on: {id: light_bar, brightness: 40%, red: 80%, green: 50%, blue: 0%}
+  on_tts_start:
+    - lambda: id(speaking) = true;
+    - light.turn_on: {id: light_bar, brightness: 60%, red: 0%, green: 100%, blue: 20%}
+  on_end:
+    - wait_until:
+        not:
+          media_player.is_announcing: media_out
+    - lambda: |-
+        id(speaking) = false;
+        id(listening) = false;
+        id(mouth_open) = 0.0f;
+    - component.update: display_tft
+    - light.turn_on: {id: light_bar, brightness: 20%, red: 0%, green: 0%, blue: 100%}
+    - wait_until:
+        not: voice_assistant.is_running
+    - micro_wake_word.start:
+  on_error:
+    - light.turn_on: {id: light_bar, brightness: 60%, red: 100%, green: 0%, blue: 0%}
+
+script:
+  # mic and speaker share one I2S bus - the mic must be released before playback
+  - id: release_i2s_bus
+    mode: single
+    then:
+      - if:
+          condition:
+            microphone.is_capturing:
+          then:
+            - micro_wake_word.stop:
+            # stop VA only while it is listening (e.g. continued conversation), not during its own response
+            - if:
+                condition:
+                  lambda: return id(listening);
+                then:
+                  - voice_assistant.stop:
+            - wait_until:
+                condition:
+                  not:
+                    microphone.is_capturing:
+                timeout: 2s
+
+interval:
+  - interval: 1s  # status screen refresh until Home Assistant connects
+    then:
+      - if:
+          condition:
+            lambda: return id(show_status);
+          then:
+            - component.update: display_tft
+  - interval: 90ms
+    then:
+      - lambda: |-
+          if (id(speaking)) {
+            id(mouth_open) = 0.15f + (esp_random() % 85) / 100.0f;
+            id(display_tft).update();
+          } else if (id(mouth_open) > 0) {
+            id(mouth_open) = 0;
+            id(display_tft).update();
+          }
+  - interval: 3s  # blinking
+    then:
+      - delay: !lambda return esp_random() % 3000;
+      - lambda: id(eyes_open) = false;
+      - component.update: display_tft
+      - delay: 150ms
+      - lambda: id(eyes_open) = true;
+      - component.update: display_tft
+  - interval: 7s  # looking around while idle
+    then:
+      - lambda: |-
+          if (!id(speaking) && !id(listening)) {
+            id(gaze_x) = (int) (esp_random() % 21) - 10;
+            id(gaze_y) = (int) (esp_random() % 11) - 5;
+            id(display_tft).update();
+          }
+
+spi:
+  - id: spi_bus
+    clk_pin: 36
+    mosi_pin: 37
+
+image:
+  - platform: file
+    file: assets/images/esphome-logo-text-on-dark.svg
+    id: esphome_logo
+    resize: 280x56
+    type: RGB565
+    transparency: alpha_channel
+  - platform: file
+    file: mdi:ear-hearing
+    id: icon_listening
+    resize: 28x28
+    type: BINARY
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_title
+    size: 24
+  - file: "gfonts://Roboto"
+    id: font_status
+    size: 16
+
+color:
+  - id: status_ok
+    red: 30%
+    green: 85%
+    blue: 40%
+  - id: status_wait
+    red: 100%
+    green: 70%
+    blue: 0%
+  - id: status_low
+    red: 100%
+    green: 20%
+    blue: 20%
+  - id: status_dim
+    red: 55%
+    green: 55%
+    blue: 55%
+  - id: face_fg
+    red: 100%
+    green: 100%
+    blue: 100%
+  - id: face_bg
+    red: 0%
+    green: 0%
+    blue: 0%
+
+display:
+  - platform: mipi_spi
+    id: display_tft
+    model: M5CORE
+    dc_pin: 35
+    reset_pin:
+      aw9523b_id: aw9523b_hub
+      number: 9
+    cs_pin:
+      number: 3
+      ignore_strapping_warning: true
+    data_rate: 40MHz
+    invert_colors: true
+    update_interval: never
+    auto_clear_enabled: false
+    lambda: |-
+      static bool first_draw = true;
+      static bool dot_shown = false;
+      static bool bar_drawn = false;
+      static int last_bars = -1, last_batt = -2;
+      static bool last_charging = false;
+
+      const bool wifi_ok = wifi::global_wifi_component->is_connected();
+      const int8_t rssi = wifi_ok ? wifi::global_wifi_component->wifi_rssi() : -127;
+      const int wifi_bars = !wifi_ok ? 0 : rssi > -55 ? 4 : rssi > -65 ? 3 : rssi > -75 ? 2 : 1;
+      const int batt = std::isnan(id(battery_level).state) ? -1 : (int) roundf(id(battery_level).state);
+      const bool charging = id(battery_charging).state;
+
+      // status screen until Home Assistant connects
+      if (id(show_status)) {
+        first_draw = true;
+        it.fill(id(face_bg));
+        it.image(160, 45, id(esphome_logo), ImageAlign::CENTER);
+        it.print(160, 95, id(font_title), id(face_fg), TextAlign::CENTER, "${name}");
+
+        if (wifi_ok) {
+          it.printf(20, 135, id(font_status), id(status_ok), "WiFi: %s  (%d dBm)",
+                    id(ip_address_sensor).state.c_str(), rssi);
+        } else {
+          it.print(20, 135, id(font_status), id(status_wait), "WiFi: connecting...");
+        }
+
+        const bool api_ok = api::global_api_server->is_connected();
+        it.print(20, 162, id(font_status), api_ok ? id(status_ok) : id(status_wait),
+                 api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...");
+
+        if (batt >= 0) {
+          it.printf(20, 189, id(font_status), batt <= 20 && !charging ? id(status_low) : id(status_dim),
+                    "Battery: %d%%%s", batt, charging ? " (charging)" : "");
+        }
+        it.printf(20, 212, id(font_status), id(status_dim), "ESPHome %s", ESPHOME_VERSION);
+        it.printf(300, 212, id(font_status), id(status_dim), TextAlign::TOP_RIGHT, "up %us",
+                  (unsigned) (millis() / 1000));
+        return;
+      }
+
+      // stack-chan face: 2 eyes + mouth, 320x240
+      // the whole screen is cleared only once, then just the face areas, so that only the
+      // changed region is sent over SPI instead of the whole 150 kB buffer
+      if (first_draw) {
+        it.fill(id(face_bg));
+        first_draw = false;
+        bar_drawn = false;
+      } else {
+        it.filled_rectangle(70, 78, 181, 31, id(face_bg));   // eyes including gaze range
+        it.filled_rectangle(105, 130, 111, 38, id(face_bg)); // mouth
+        if (dot_shown && !id(listening)) {
+          it.filled_rectangle(254, 2, 28, 28, id(face_bg));
+        }
+      }
+      dot_shown = id(listening);
+
+      // status bar (battery top-left, wifi top-right), redrawn only when something changes
+      if (!bar_drawn || wifi_bars != last_bars || batt != last_batt || charging != last_charging) {
+        bar_drawn = true;
+        last_bars = wifi_bars;
+        last_batt = batt;
+        last_charging = charging;
+        it.filled_rectangle(4, 4, 90, 22, id(face_bg));
+        it.filled_rectangle(288, 4, 28, 22, id(face_bg));
+
+        // battery: outline, terminal nub and fill proportional to the charge
+        if (batt >= 0) {
+          const Color c = charging ? id(status_ok) : batt <= 20 ? id(status_low) : id(status_dim);
+          it.rectangle(8, 8, 26, 13, c);
+          it.filled_rectangle(34, 12, 2, 5, c);
+          it.filled_rectangle(10, 10, 22 * batt / 100, 9, c);
+          it.printf(40, 6, id(font_status), c, "%d%%", batt);
+        }
+
+        // wifi: 4 bars, unused ones dimmed; red when disconnected
+        for (int i = 0; i < 4; i++) {
+          const int h = 4 + 3 * i;
+          const Color c = !wifi_ok ? id(status_low) : i < wifi_bars ? id(status_dim) : Color(40, 40, 40);
+          it.filled_rectangle(290 + i * 6, 21 - h, 4, h, c);
+        }
+      }
+      const int ex = id(gaze_x), ey = id(gaze_y);
+      const int eye_y = 93 + ey, eye_r = 8;
+      const int lx = 90 + ex, rx = 230 + ex;
+
+      if (id(eyes_open)) {
+        it.filled_circle(lx, eye_y, eye_r, id(face_fg));
+        it.filled_circle(rx, eye_y, eye_r, id(face_fg));
+      } else {
+        it.filled_rectangle(lx - eye_r, eye_y - 2, eye_r * 2, 4, id(face_fg));
+        it.filled_rectangle(rx - eye_r, eye_y - 2, eye_r * 2, 4, id(face_fg));
+      }
+
+      const float m = id(mouth_open);
+      const int mw = 90 - (int) (40 * m);
+      const int mh = 4 + (int) (26 * m);
+      it.filled_rectangle(160 - mw / 2 + ex / 2, 148 - mh / 2 + ey / 2, mw, mh, id(face_fg));
+
+      if (id(listening)) {
+        it.image(254, 2, id(icon_listening), id(face_fg), id(face_bg));  // left of the wifi bars
+      }
+
+touchscreen:
+  - platform: ft63x6
+    id: touch_lcd
+    i2c_id: i2c_bsp
+    reset_pin:
+      aw9523b_id: aw9523b_hub
+      number: 0
+    on_touch:
+      - voice_assistant.start:
+
+esp32_camera:
+  id: camera_id
+  name: Camera
+  i2c_id: i2c_bsp
+  setup_priority: -200  # after power rails and IO expanders
+  pixel_format: RGB565
+  max_framerate: 15 fps
+  frame_buffer_count: 1
+  # GC0308 has no JPEG, convert RGB565 -> JPEG for HA (as in BSP); runs in the main loop, so no periodic frames
+  jpeg_quality: 12
+  idle_framerate: 0 fps
+  vsync_pin:
+    number: 46
+    ignore_strapping_warning: true
+  href_pin: 38
+  external_clock:
+    pin: 2
+    frequency: 20MHz
+  pixel_clock_pin:
+    number: 45
+    ignore_strapping_warning: true
+  data_pins: [39, 40, 41, 42, 15, 16, 48, 47]
+  resolution: 320x240
+  frame_buffer_location: PSRAM
+
+sensor:
+  - platform: axp2101
+    id: axp2101_sensor
+    battery_level:
+      id: battery_level
+      name: Battery Level
+      filters:
+        - delta: 1.0
+      on_value:
+        - component.update: display_tft
+    battery_charging:
+      id: battery_charging
+      name: Battery Charging
+      on_state:
+        - component.update: display_tft
+  - platform: ltr_als_ps
+    i2c_id: i2c_bsp
+    address: 0x23
+    type: ALS_PS
+    ambient_light:
+      id: ambient_light
+      name: Ambient Light
+    ps_counts:
+      id: proximity_counts
+      name: Proximity Counts
+  - platform: ina226
+    i2c_id: i2c_bsp
+    address: 0x41
+    shunt_resistance: 0.01 ohm
+    max_current: 3.2A
+    current:
+      id: ina226_current
+      name: Current
+    power:
+      id: ina226_power
+      name: Power
+    bus_voltage:
+      id: ina226_bus_voltage
+      name: Bus Voltage
+
+si12t:
+  id: touch_hub
+  i2c_id: i2c_bsp
+
+text_sensor:
+  - platform: si12t
+    id: head_touch_1
+    name: Head Touch 1
+    channel: CH_1
+    update_interval: 500ms
+  - platform: si12t
+    id: head_touch_2
+    name: Head Touch 2
+    channel: CH_2
+    update_interval: 500ms
+  - platform: si12t
+    id: head_touch_3
+    name: Head Touch 3
+    channel: CH_3
+    update_interval: 500ms
+
+uart:
+  - id: uart_servo
+    tx_pin: 6
+    rx_pin: 7
+    baud_rate: 1000000
+
+scs9009:
+
+ftservo:
+  - platform: scs9009
+    id: x_servo
+    address: 1
+  - platform: scs9009
+    id: y_servo
+    address: 2
+
+number:
+  - platform: ftservo
+    ftservo_id: x_servo
+    angle:
+      id: servo_x_angle
+      name: Servo X Angle
+      min_value: -164
+      max_value: 164
+      use_raw_angle: false
+      angle_offset: 164
+      step: 5
+
+light:
+  - platform: m5ioe1
+    id: light_bar
+    name: Light Bar
+    num_led: 12
+  - platform: monochromatic
+    id: lcd_backlight
+    name: LCD Backlight
+    output: lcd_backlight_output
+    restore_mode: ALWAYS_ON
+    
+remote_transmitter:
+  id: ir_tx
+  pin: 5
+  carrier_duty_percent: 50%
+  non_blocking: true
+
+remote_receiver:
+  id: ir_rx
+  pin: 10
+
+time:
+  - platform: bm8563
+    id: rtc_time
+    i2c_id: i2c_bsp
+    update_interval: never
+  - !include common/time/homeassistant.yaml
