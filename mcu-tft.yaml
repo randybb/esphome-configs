@@ -50,6 +50,20 @@ color:
     hex: ff0000
   - id: my_white
     hex: ffffff
+  - id: status_ok
+    hex: 4dd966
+  - id: status_wait
+    hex: ffb300
+  - id: status_dim
+    hex: 8c8c8c
+
+image:
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 220x65
+    type: RGB565
+    transparency: alpha_channel
 
 font:
   - file: "gfonts://Roboto"
@@ -108,6 +122,46 @@ display:
     invert_colors: false
     lambda: |-
       it.fill(Color::BLACK);
+
+      // status screen until Home Assistant connects (240x320)
+      if (!api::global_api_server->is_connected_with_state_subscription()) {
+        const int cx = it.get_width() / 2;
+        it.image(cx, 48, id(esphome_logo), ImageAlign::CENTER);
+        it.print(cx, 100, id(roboto_24), id(my_white), TextAlign::CENTER, "${name}");
+
+        int y = 130;
+        if (wifi::global_wifi_component->is_connected()) {
+          it.printf(8, y, id(roboto_16), id(status_ok), "WiFi: connected  (%d dBm)",
+                    wifi::global_wifi_component->wifi_rssi());
+          y += 22;
+          // IPv6 first (skip link-local), then IPv4
+          char buf[network::IP_ADDRESS_BUFFER_SIZE];
+          for (bool v6 : {true, false}) {
+            for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+              if (!ip.is_set() || ip.is_ip6() != v6 || y > 200)
+                continue;
+              ip.str_to(buf);
+              if (v6 && strncmp(buf, "fe80", 4) == 0)
+                continue;
+              it.print(8, y, id(roboto_12), id(status_dim), buf);
+              y += 16;
+            }
+          }
+        } else {
+          it.print(8, y, id(roboto_16), id(status_wait), "WiFi: connecting...");
+          y += 22;
+        }
+        y += 8;
+        it.print(8, y, id(roboto_16), api::global_api_server->is_connected() ? id(status_ok) : id(status_wait),
+                 api::global_api_server->is_connected() ? "Home Assistant: connected" : "Home Assistant: waiting...");
+
+        it.printf(8, it.get_height() - 8, id(roboto_12), id(status_dim), TextAlign::BOTTOM_LEFT, "ESPHome %s",
+                  ESPHOME_VERSION);
+        it.printf(it.get_width() - 8, it.get_height() - 8, id(roboto_12), id(status_dim), TextAlign::BOTTOM_RIGHT,
+                  "up %us", (unsigned) (millis() / 1000));
+        return;
+      }
+
       it.print(0, 0, id(b612_12), id(my_white), TextAlign::TOP_LEFT, "HELLO WORLD!");
       it.print(0, 14, id(b612_12), id(my_green), TextAlign::TOP_LEFT, "HELLO WORLD!");
       it.print(0, 28, id(b612_12), id(my_magenta), TextAlign::TOP_LEFT, "HELLO WORLD!");
