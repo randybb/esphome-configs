@@ -1,0 +1,306 @@
+---
+substitutions:
+  device: lvgl-4848s040
+  name: LVGL 4848S040
+  area: DEV
+  comment: "${area} | Guition ESP32-S3-4848S040"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  on_boot:
+    - priority: -100
+      then:
+        - lvgl.page.show: status_page
+
+esp32:
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    # PSRAM bandwidth for the RGB panel (not set by ESPHome); without it the
+    # image shifts during flash/WiFi activity
+    sdkconfig_options:
+      CONFIG_ESP32S3_DATA_CACHE_64KB: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+packages:
+  common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+
+# PINOUTS: Guition ESP32-S3-4848S040, 4", 480x480, ST7701S, capacitive
+## Display (RGB, pins in the mipi_rgb model)
+# CS        39
+# SCK       48  ST7701S init (3-wire SPI)
+# SDA       47
+# DE        18
+# HSYNC     16
+# VSYNC     17
+# PCLK      21
+# BL        38
+## Capacitive Touch (GT911)
+# TP_SDA    19
+# TP_SCL    45
+## Relays (86 box variant)
+# RELAY1    40
+# RELAY2     2
+# RELAY3     1
+
+api:
+  # status page until Home Assistant connects (log viewers don't subscribe to states)
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          api.connected:
+            state_subscription_only: true
+        then:
+          - lvgl.page.show: main_page
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+              state_subscription_only: true
+        then:
+          - lvgl.page.show: status_page
+
+i2c:
+  - id: i2c_main
+    sda: 19
+    scl: 45
+    scan: true
+
+spi:
+  - id: lcd_spi
+    clk_pin: 48
+    mosi_pin: 47
+
+display:
+  - platform: mipi_rgb
+    model: GUITION-4848S040
+    id: main_display
+    spi_id: lcd_spi
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - platform: gt911
+    id: main_touch
+    display: main_display
+    i2c_id: i2c_main
+    # the mipi_rgb model mirrors the image on both axes, touch has to follow
+    transform:
+      mirror_x: true
+      mirror_y: true
+
+output:
+  - platform: ledc
+    id: gpio_backlight_pwm
+    pin: 38
+    frequency: 1220
+
+light:
+  - platform: monochromatic
+    id: back_light
+    name: Backlight
+    output: gpio_backlight_pwm
+    restore_mode: ALWAYS_ON
+
+script:
+  - id: update_status
+    then:
+      - lambda: |-
+          // same colors as the other status screens: ok green, waiting orange, details gray
+          static const uint32_t OK = 0x4DD966, WAIT = 0xFFB300;
+          auto set = [](lv_obj_t *label, const std::string &text, uint32_t color) {
+            lv_label_set_text(label, text.c_str());
+            lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
+          };
+
+          const bool wifi_ok = wifi::global_wifi_component->is_connected();
+          set(id(status_wifi),
+              wifi_ok ? str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi())
+                      : std::string("WiFi: connecting..."),
+              wifi_ok ? OK : WAIT);
+
+          // IPv6 first (skip link-local), then IPv4
+          std::string ips;
+          if (wifi_ok) {
+            char buf[network::IP_ADDRESS_BUFFER_SIZE];
+            for (bool v6 : {true, false}) {
+              for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+                if (!ip.is_set() || ip.is_ip6() != v6)
+                  continue;
+                ip.str_to(buf);
+                if (v6 && strncmp(buf, "fe80", 4) == 0)
+                  continue;
+                if (!ips.empty())
+                  ips += "\n";
+                ips += buf;
+              }
+            }
+          }
+          lv_label_set_text(id(status_ips), ips.c_str());
+          if (ips.empty())
+            lv_obj_add_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+          else
+            lv_obj_remove_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+
+          const bool api_ok = api::global_api_server->is_connected();
+          set(id(status_ha), api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...",
+              api_ok ? OK : WAIT);
+
+          const uint32_t up = millis() / 1000;
+          lv_label_set_text(id(status_footer),
+                            str_sprintf("ESPHome %s  ·  up %ud %02u:%02u:%02u", ESPHOME_VERSION, up / 86400,
+                                        (up / 3600) % 24, (up / 60) % 60, up % 60).c_str());
+
+interval:
+  - interval: 1s
+    then:
+      - lvgl.label.update:
+          id: clock_label
+          text: !lambda |-
+            auto now = id(ha_time).now();
+            if (!now.is_valid())
+              return std::string("--:--");
+            return now.strftime("%H:%M");
+      - if:
+          condition:
+            lvgl.page.is_showing: status_page
+          then:
+            - script.execute: update_status
+
+image:
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 320x95
+    type: RGB565
+    transparency: alpha_channel
+
+font:
+  - file: "gfonts://Roboto@500"
+    id: font_clock
+    size: 150
+    glyphs: "0123456789:-"
+  - file: "gfonts://Roboto"
+    id: font_title
+    size: 32
+  - file: "gfonts://Roboto"
+    id: font_status
+    size: 20
+    glyphs: "·"
+    glyphsets: [GF_Latin_Kernel]
+
+lvgl:
+  log_level: WARN
+  color_depth: 16
+  bg_color: 0x000000
+  text_color: 0xFFFFFF
+  theme:
+    buttonmatrix:
+      bg_opa: TRANSP
+      border_width: 0
+      items:
+        bg_color: 0x2B2F36
+        text_color: 0xFFFFFF
+        radius: 12
+        checked:
+          bg_color: 0xE08A00
+  top_layer:
+    widgets:
+      # same navigation bar as on mcu-lvgl-trainer
+      - buttonmatrix:
+          id: nav_bar
+          align: bottom_mid
+          width: 100%
+          height: 60
+          pad_all: 4
+          pad_column: 6
+          items:
+            text_font: montserrat_28
+          rows:
+            - buttons:
+                - id: page_prev
+                  text: ""
+                  on_press:
+                    then:
+                      lvgl.page.previous:
+                - id: page_home
+                  text: ""
+                  on_press:
+                    then:
+                      lvgl.page.show: main_page
+                - id: page_next
+                  text: ""
+                  on_press:
+                    then:
+                      lvgl.page.next:
+  pages:
+    # 1: clock
+    - id: main_page
+      widgets:
+        - label:
+            id: clock_label
+            align: CENTER
+            y: -30
+            text_font: font_clock
+            text: "--:--"
+
+    # 2: status (shown until Home Assistant connects)
+    - id: status_page
+      on_load:
+        - script.execute: update_status
+      widgets:
+        - image:
+            src: esphome_logo
+            align: TOP_MID
+            y: 16
+        - label:
+            align: TOP_MID
+            y: 120
+            text_font: font_title
+            text: "${name}"
+        - obj:
+            id: status_lines
+            x: 24
+            y: 170
+            width: 440
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            layout:
+              type: flex
+              flex_flow: column
+              pad_row: 6
+            widgets:
+              - label:
+                  id: status_wifi
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_ips
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  pad_left: 20
+                  text: ""
+              - label:
+                  id: status_ha
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_footer
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  text: ""
