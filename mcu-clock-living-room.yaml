@@ -51,11 +51,6 @@ globals:
     restore_value: no
     initial_value: "false"
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 binary_sensor:
   - platform: gpio
     name: Button

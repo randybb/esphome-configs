@@ -491,8 +491,7 @@ sensor:
   #   name: Dallas Temp 4
   #   one_wire_id: hub_1
 
-time:
-  - !include common/time/homeassistant.yaml
+# time:
   # - platform: sntp
   #   id: sntp_time
   #   timezone: Europe/Bratislava

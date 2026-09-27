@@ -122,8 +122,7 @@ switch:
     on_turn_off:
       - light.turn_off: light_red
 
-time:
-  - !include common/time/homeassistant.yaml
+# time:
 #   - platform: homeassistant
 #     timezone: Europe/Bratislava
 #     on_time:

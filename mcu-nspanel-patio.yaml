@@ -214,11 +214,6 @@ nspanel_lovelace:
         - name: Rast trávy
           entity_id: automation.irrigation_grow_grass
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 binary_sensor:
   - platform: gpio
     name: Left Button

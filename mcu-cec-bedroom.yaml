@@ -31,11 +31,6 @@ packages:
 
 debug:
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 i2c:
   # - id: i2c0
   sda: 32

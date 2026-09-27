@@ -185,11 +185,6 @@ nspanel_lovelace:
         - name: Auto-zatváranie
           entity_id: switch.gate_auto_close
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 binary_sensor:
   - platform: gpio
     name: Left Button

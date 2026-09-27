@@ -242,11 +242,6 @@ binary_sensor:
 #     on_clockwise:
 #       - display_menu.down:
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 # display:
 #   - platform: tm1637
 #     id: tm1637_display

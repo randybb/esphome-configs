@@ -540,11 +540,6 @@ sensor:
   - platform: template
     id: room_temperature_id
 
-time:
-  platform: homeassistant
-  id: ha_time
-  timezone: Europe/Bratislava
-
 text_sensor:
   - platform: homeassistant
     id: name_day

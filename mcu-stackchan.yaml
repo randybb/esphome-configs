@@ -883,4 +883,3 @@ time:
     id: rtc_time
     i2c_id: i2c_bsp
     update_interval: never
-  - !include common/time/homeassistant.yaml

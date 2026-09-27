@@ -187,5 +187,3 @@ switch:
       - switch.turn_off: relay_off # bi-stable relay so no need to keep on
     interlock: [relay_on]
 
-time:
-  - !include common/time/homeassistant.yaml

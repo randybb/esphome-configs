@@ -109,5 +109,3 @@ switch:
       number: 19
       mode: OUTPUT
 
-time:
-  - !include common/time/homeassistant.yaml

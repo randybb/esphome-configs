@@ -2,7 +2,7 @@
 substitutions:
   device: pow-washer
   name: Washer POW
-  comment: 
+  comment: "spare"
   area: Washroom
   update_interval: 10s
 
@@ -186,6 +186,3 @@ switch:
       - delay: 500ms
       - switch.turn_off: relay_off # bi-stable relay so no need to keep on
     interlock: [relay_on]
-
-time:
-  - !include common/time/homeassistant.yaml

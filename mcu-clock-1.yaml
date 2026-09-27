@@ -109,11 +109,6 @@ globals:
     restore_value: no
     initial_value: "false"
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 display:
   - platform: tm1637
     id: tm1637_display

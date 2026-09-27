@@ -21,5 +21,8 @@ text_sensor:
   - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/ethernet_info.yaml
 
+time:
+  - <<: !include time/homeassistant.yaml
+
 network:
   enable_ipv6: true

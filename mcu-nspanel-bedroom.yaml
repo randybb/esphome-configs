@@ -136,9 +136,7 @@ nspanel_lovelace:
       thermo_entity_id: climate.bt_trv_bedroom
 
 time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
+  - id: !extend ha_time
     on_time_sync:
       - script.execute: apply_sleep_dim
 

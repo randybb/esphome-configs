@@ -54,11 +54,6 @@ packages:
 # Relay1    G22
 # Relay2    G19
 
-time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
-
 i2c:
   # - id: i2c0
   #   sda: 26

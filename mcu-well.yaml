@@ -358,5 +358,3 @@ valve:
     close_action:
       - switch.turn_off: irrigation_relay_8
 
-time:
-  - !include common/time/homeassistant.yaml

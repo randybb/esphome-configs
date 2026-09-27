@@ -228,9 +228,7 @@ button:
       - pzemac.reset_energy: pzemac_l3
 
 time:
-  - platform: homeassistant
-    id: ha_time
-    timezone: Europe/Bratislava
+  - id: !extend ha_time
     on_time:
       - cron: '0 0 0 * * *'
         then:

@@ -158,10 +158,6 @@ text_sensor:
     icon: mdi:clock-start
     internal: True
 
-time:
-  - platform: homeassistant
-    id: time_comp
-
 number:
   - platform: template
     initial_value: 0

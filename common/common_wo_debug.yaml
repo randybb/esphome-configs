@@ -27,3 +27,6 @@ text_sensor:
   - <<: !include text_sensor/git_ref.yaml
   - <<: !include text_sensor/version.yaml
   - <<: !include text_sensor/wifi_info.yaml
+
+time:
+  - <<: !include time/homeassistant.yaml

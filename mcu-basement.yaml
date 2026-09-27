@@ -139,8 +139,7 @@ switch:
     id: relay_2
 
 time:
-  - platform: homeassistant
-    timezone: Europe/Bratislava
+  - id: !extend ha_time
     on_time:
       - seconds: 0
         minutes: /15

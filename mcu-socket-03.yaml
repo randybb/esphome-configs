@@ -144,8 +144,7 @@ switch:
 #     number: GPIO00
 #     inverted: True
 
-time:
-  - !include common/time/homeassistant.yaml
+# time:
 #   - platform: homeassistant
 #     timezone: Europe/Bratislava
 #     on_time:
