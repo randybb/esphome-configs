@@ -10,8 +10,10 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
-  platformio_options:
-    board_build.flash_mode: dio
+  on_boot:
+    - priority: -100
+      then:
+        - lvgl.page.show: status_page
 
 esp32:
   variant: esp32s3
@@ -19,9 +21,9 @@ esp32:
   toolchain: esp-idf
   framework:
     type: esp-idf
-    # Required to achieve sufficient PSRAM bandwidth
+    # PSRAM bandwidth for the RGB panel (not set by ESPHome); without it the
+    # image shifts during flash/WiFi activity
     sdkconfig_options:
-      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: y
       CONFIG_ESP32S3_DATA_CACHE_64KB: y
       CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
       CONFIG_SPIRAM_RODATA: y
@@ -32,6 +34,7 @@ psram:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 # PINOUTS: ESP32 Cheap Yellow Display, 4.3", IPS, Capacitive
 ## Display
@@ -63,6 +66,7 @@ packages:
 # HSYNC     39
 # VSYNC     41
 # DE        40
+# BL         2
 ## Capacitive Touch
 # TP_INT
 # TP_RST    38
@@ -89,575 +93,248 @@ packages:
 # 3         19  TP_SDA
 # 4         20  TP_SCL
 
+api:
+  # status page until Home Assistant connects (log viewers don't subscribe to states)
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          api.connected:
+            state_subscription_only: true
+        then:
+          - lvgl.page.show: main_page
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+              state_subscription_only: true
+        then:
+          - lvgl.page.show: status_page
+
 i2c:
   - id: i2c_main
     sda: 19
     scl: 20
     scan: true
 
+# same pins and timing as the 5" Sunton board, pclk lowered for the 4.3" panel
 display:
-  - platform: rpi_dpi_rgb
+  - platform: mipi_rgb
+    model: ESP32-8048S050
     id: main_display
     color_order: RGB
     invert_colors: true
+    pclk_frequency: 12.5MHz
     update_interval: never
     auto_clear_enabled: false # takes 2.8 seconds to clear the display
-    dimensions:
-      width: 800
-      height: 480
-    de_pin: 40
-    hsync_pin: 39
-    vsync_pin: 41
-    pclk_pin: 42
-    pclk_frequency: 12.5MHz
-    hsync_pulse_width: 4
-    hsync_front_porch: 8
-    hsync_back_porch: 8
-    vsync_pulse_width: 4
-    vsync_front_porch: 8
-    vsync_back_porch: 8
-    data_pins:
-      red:
-        - 45        # R1
-        - 48        # R2
-        - 47        # R3
-        - 21        # R4
-        - 14        # R5
-      green:
-        - 5         # G0
-        - 6         # G1
-        - 7         # G2
-        - 15        # G3
-        - 16        # G4
-        - 4         # G5
-      blue:
-        - 8         # B1
-        - 3         # B2
-        - 46        # B3
-        - 9         # B4
-        - 1         # B5
 
+touchscreen:
+  - platform: gt911
+    id: main_touch
+    display: main_display
+    i2c_id: i2c_main
+    reset_pin: 38
 
-# Define a PWM output on the ESP32
 output:
   - platform: ledc
+    id: gpio_backlight_pwm
     pin: 2
     frequency: 1220
-    id: gpio_backlight_pwm
 
 light:
   - platform: monochromatic
-    output: gpio_backlight_pwm
     id: back_light
+    name: Backlight
+    output: gpio_backlight_pwm
     restore_mode: ALWAYS_ON
 
-text_sensor:
-  - platform: template
-    # name: Uptime Human Readable
-    id: uptime_human
-    icon: mdi:clock-start
-    internal: True
-
-number:
-  - platform: template
-    initial_value: 0
-    id: counting_number
-    internal: True
-    min_value: -10
-    max_value: 10
-    step: 1
-    optimistic: True
-
-# debug:
-#   update_interval: 5s
-
-sensor:
-  - platform: uptime
-    id: uptime_counter
-    update_interval: 1s
-    accuracy_decimals: 0
-    on_raw_value:
-      then:
-        - light.turn_on:
-            id: back_light
-            brightness: 90%
-        - number.increment:
-            id: counting_number
-            cycle: True
-        - script.execute: update_display
-  # - platform: debug
-  #   free:
-  #     name: "${name} Heap Free"
-  #   block:
-  #     name: "${name} Heap Max Block"
-  #   loop_time:
-  #     name: "${name} Loop Time"
-  #   psram:
-  #     name: "${name} Free PSRAM"
-  - platform: uptime
-    # name: Uptime Sensor
-    internal: True
-    id: uptime_sensor
-    update_interval: 1s
-    on_raw_value:
-      then:
-        - text_sensor.template.publish:
-            id: uptime_human
-            state: !lambda |-
-              int seconds = round(id(uptime_sensor).raw_state);
-              int days = seconds / (24 * 3600);
-              seconds = seconds % (24 * 3600);
-              int hours = seconds / 3600;
-              seconds = seconds % 3600;
-              int minutes = seconds /  60;
-              seconds = seconds % 60;
-              return (
-                ("Uptime ") +
-                (days ? to_string(days) + "d " : "") +
-                (hours ? to_string(hours) + "h " : "") +
-                (minutes ? to_string(minutes) + "m " : "") +
-                (to_string(seconds) + "s")
-              ).c_str();
-
 script:
-  - id: update_display
+  - id: update_status
     then:
-      # - lvgl.indicator.line.update:
-      #     id: power_meter_input
-      #     value: !lambda return id(counting_number).state;
+      - lambda: |-
+          // same colors as the other status screens: ok green, waiting orange, details gray
+          static const uint32_t OK = 0x4DD966, WAIT = 0xFFB300;
+          auto set = [](lv_obj_t *label, const std::string &text, uint32_t color) {
+            lv_label_set_text(label, text.c_str());
+            lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
+          };
+
+          const bool wifi_ok = wifi::global_wifi_component->is_connected();
+          set(id(status_wifi),
+              wifi_ok ? str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi())
+                      : std::string("WiFi: connecting..."),
+              wifi_ok ? OK : WAIT);
+
+          // IPv6 first (skip link-local), then IPv4
+          std::string ips;
+          if (wifi_ok) {
+            char buf[network::IP_ADDRESS_BUFFER_SIZE];
+            for (bool v6 : {true, false}) {
+              for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+                if (!ip.is_set() || ip.is_ip6() != v6)
+                  continue;
+                ip.str_to(buf);
+                if (v6 && strncmp(buf, "fe80", 4) == 0)
+                  continue;
+                if (!ips.empty())
+                  ips += "\n";
+                ips += buf;
+              }
+            }
+          }
+          lv_label_set_text(id(status_ips), ips.c_str());
+          if (ips.empty())
+            lv_obj_add_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+          else
+            lv_obj_remove_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+
+          const bool api_ok = api::global_api_server->is_connected();
+          set(id(status_ha), api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...",
+              api_ok ? OK : WAIT);
+
+          const uint32_t up = millis() / 1000;
+          lv_label_set_text(id(status_footer),
+                            str_sprintf("ESPHome %s  ·  up %ud %02u:%02u:%02u", ESPHOME_VERSION, up / 86400,
+                                        (up / 3600) % 24, (up / 60) % 60, up % 60).c_str());
+interval:
+  - interval: 1s
+    then:
       - lvgl.label.update:
-          id: battery_kw
+          id: clock_label
           text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
-            return buf;
-      - lvgl.label.update:
-          id: battery_status
-          text_color: 0xFF0000
-          #text: "charging"
-          text: "discharging"
-      - lvgl.label.update:
-          id: battery_soc
-          text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1f%%", id(counting_number).state);
-            return buf;
-      - lvgl.label.update:
-          id: solar_kw
-          text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
-            return buf;
-      # - lvgl.img.update:
-      #     id: img_solar_power
-      #     src: solar_power_icon
-      #     img_recolor: 0xFFF000 #mixes this color with the base image
-      #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-      #     #bg_color: 0xFFFFFF
-      # # - lvgl.indicator.line.update:
-      # #     id: power_meter_input2
-      # #     value: !lambda return id(counting_number).state;
-      - lvgl.label.update:
-          id: battery_kw2
-          text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
-            return buf;
-      - lvgl.label.update:
-          id: battery_status2
-          text_color: 0xFF0000
-          #text: "charging"
-          text: "discharging"
-      - lvgl.label.update:
-          id: battery_soc2
-          text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1f%%", id(counting_number).state);
-            return buf;
-      - lvgl.label.update:
-          id: solar_kw2
-          text: !lambda |-
-            static char buf[8];
-            snprintf(buf, sizeof(buf), "%.1fkW", id(counting_number).state);
-            return buf;
-      # - lvgl.img.update:
-      #     id: img_solar_power2
-      #     src: solar_power_icon
-      #     img_recolor: 0xFFF000 #mixes this color with the base image
-      #     #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-      #     #bg_color: 0xFFFFFF
+            auto now = id(ha_time).now();
+            if (!now.is_valid())
+              return std::string("--:--");
+            return now.strftime("%H:%M");
+      - if:
+          condition:
+            lvgl.page.is_showing: status_page
+          then:
+            - script.execute: update_status
 
 image:
-  - file: mdi:sun-wireless-outline
-    #"solar-power-invert.png"
-    # mdi:solar-power
-    # mdi:battery-charging-outline
-    # mdi:battery-arrow-up-outline
-    # mdi:battery-arrow-down-outline
-    id: solar_power_icon
-    resize: 50x50
-    type: BINARY
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 400x118
+    type: RGB565
+    transparency: alpha_channel
 
-  - file: mdi:battery-arrow-down-outline
-    id: home_battery_icon
-    resize: 30x30
-    type: BINARY
+font:
+  - file: "gfonts://Roboto@500"
+    id: font_clock
+    size: 200
+    glyphs: "0123456789:-"
+  - file: "gfonts://Roboto"
+    id: font_title
+    size: 40
+  - file: "gfonts://Roboto"
+    id: font_status
+    size: 26
+    glyphs: "·"
+    glyphsets: [GF_Latin_Kernel]
 
 lvgl:
-  log_level: INFO
+  log_level: WARN
   color_depth: 16
-  #buffer_size: 25%
-  bg_color: 0
-  border_width: 0
-  outline_width: 0
-  shadow_width: 0
-  text_font: unscii_16
-  align: center
-  style_definitions:
-    - id: meter_style
-      text_font: unscii_8
-      #state_default: null
-    - id: font_style
-      text_font: MONTSERRAT_24
-      #text_font: unscii_16
-      align: center
-      text_color: 0xFFFFFF
-      #bg_opa: cover
+  bg_color: 0x000000
+  text_color: 0xFFFFFF
+  theme:
+    buttonmatrix:
       bg_opa: TRANSP
-      bg_color: 0
-      radius: 4
-      pad_all: 2
-    - id: details_style
-      text_font: MONTSERRAT_18
-      align: center
-      text_color: 0xFFFFFF
-      #bg_opa: cover
-      bg_opa: TRANSP
-      bg_color: 0
-      radius: 4
-      pad_all: 2
-  widgets:
-    - obj: # Meter
-        height: 240
-        width: 240
-        #bg_opa: TRANSP
-        bg_color: 0
-        border_width: 0
-        outline_width: 0
-        shadow_width: 0
-        pad_all: 4
-        align: TOP_LEFT
-        #scrollbar_mode: "off"
-        widgets:
-          - meter: # Gradient color  arc
-              height: 100%
-              width: 100%
-              border_width: 0
-              outline_width: 0
-              align: center
-              bg_color: 0
-              styles: meter_style
-              #bg_opa: TRANSP
-              scales:
-                angle_range: 180 # sets the total angle to 180 = starts mid left and ends mid right
-                range_to: 10
-                range_from: -10
-                ticks:
-                  count: 0
-                indicators:
-                  - line:
-                      id: power_meter_input
-                      width: 8
-                      color: 0xFFFFFF
-                      r_mod: 12 #sets line length by this much difference from the scale default radius
-                      value: 50
-                  # - image:
-                  #     id: power_meter_input_img
-                  - arc:
-                      color: 0xFF3000
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: -10
-                      end_value: 0
-                  - arc:
-                      color: 0x00FF00
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: 0
-                      end_value: 10
-          #- canvas:
-          - arc: # black arc to erase middle part of meter indicator line
-              height: 160
-              width: 160
-              align: center
-              arc_color: 0x000000 # background color
-              arc_width: 150
-              start_angle: 0
-              end_angle: 360
-              indicator:
-                arc_width: 150
-                arc_color: 0x000000
-          - label: # gauge lower and higher range indicators
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: -99
-              text: "-10"
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: 99
-              text: "+10"
-          - label:
-              styles: font_style
-              id: battery_status
-              y: -35 #negative = higher
-          - label:
-              styles: font_style
-              id: battery_kw
-              y: -60
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_40 # override font size
-              id: battery_soc
-              y: 0
-          - label:
-              styles: font_style
-              id: solar_kw
-              text_color: 0xFFFF00
-              y: 90
-          #- img:
-          #    src: home_battery_icon
-              #id: img_solar_power
-              #align: center
-              #img_recolor: 0xFFFFFF
-              #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              #y: -35
-              #x: -60
-          - image:
-              src: solar_power_icon
-              id: img_solar_power
-              align: center
-              image_recolor: 0xFFFF00
-              image_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              y: 50
-              #x: -60
-    - obj: # Meter
-        height: 240
-        width: 240
-        #bg_opa: TRANSP
-        bg_color: 0
-        border_width: 0
-        outline_width: 0
-        shadow_width: 0
-        pad_all: 4
-        align: TOP_MID
-        #scrollbar_mode: "off"
-        widgets:
-          - meter: # Gradient color  arc
-              height: 100%
-              width: 100%
-              border_width: 0
-              outline_width: 0
-              align: center
-              bg_color: 0
-              styles: meter_style
-              #bg_opa: TRANSP
-              scales:
-                angle_range: 180 # sets the total angle to 180 = starts mid left and ends mid right
-                range_to: 10
-                range_from: -10
-                ticks:
-                  count: 0
-                indicators:
-                  - line:
-                      id: power_meter_input2
-                      width: 8
-                      color: 0xFFFFFF
-                      r_mod: 12 #sets line length by this much difference from the scale default radius
-                      value: 50
-                  # - image:
-                  #     id: power_meter_input_img2
-                  - arc:
-                      color: 0xFF3000
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: -10
-                      end_value: 0
-                  - arc:
-                      color: 0x00FF00
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: 0
-                      end_value: 10
-          #- canvas:
-          - arc: # black arc to erase middle part of meter indicator line
-              height: 160
-              width: 160
-              align: center
-              arc_color: 0x000000 # background color
-              arc_width: 150
-              start_angle: 0
-              end_angle: 360
-              indicator:
-                arc_width: 150
-                arc_color: 0x000000
-          - label: # gauge lower and higher range indicators
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: -99
-              text: "-10"
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: 99
-              text: "+10"
-          - label:
-              styles: font_style
-              id: battery_status2
-              y: -35 #negative = higher
-          - label:
-              styles: font_style
-              id: battery_kw2
-              y: -60
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_40 # override font size
-              id: battery_soc2
-              y: 0
-          - label:
-              styles: font_style
-              id: solar_kw2
-              text_color: 0xFFFF00
-              y: 90
-          #- img:
-          #    src: home_battery_icon
-              #id: img_solar_power
-              #align: center
-              #img_recolor: 0xFFFFFF
-              #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              #y: -35
-              #x: -60
-          - image:
-              src: solar_power_icon
-              id: img_solar_power2
-              align: center
-              image_recolor: 0xFFFF00
-              image_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              y: 50
-              #x: -60
-    - obj: # Meter
-        height: 240
-        width: 240
-        #bg_opa: TRANSP
-        bg_color: 0
-        border_width: 0
-        outline_width: 0
-        shadow_width: 0
-        pad_all: 4
-        align: BOTTOM_LEFT
-        #scrollbar_mode: "off"
-        widgets:
-          - meter: # Gradient color  arc
-              height: 100%
-              width: 100%
-              border_width: 0
-              outline_width: 0
-              align: center
-              bg_color: 0
-              styles: meter_style
-              #bg_opa: TRANSP
-              scales:
-                angle_range: 180 # sets the total angle to 180 = starts mid left and ends mid right
-                range_to: 10
-                range_from: -10
-                ticks:
-                  count: 0
-                indicators:
-                  - line:
-                      id: power_meter_input3
-                      width: 8
-                      color: 0xFFFFFF
-                      r_mod: 12 #sets line length by this much difference from the scale default radius
-                      value: 50
-                  # - image:
-                  #     id: power_meter_input_img3
-                  - arc:
-                      color: 0xFF3000
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: -10
-                      end_value: 0
-                  - arc:
-                      color: 0x00FF00
-                      r_mod: 10 #radius difference from the scale default radius
-                      width: 20
-                      start_value: 0
-                      end_value: 10
-          #- canvas:
-          - arc: # black arc to erase middle part of meter indicator line
-              height: 160
-              width: 160
-              align: center
-              arc_color: 0x000000 # background color
-              arc_width: 150
-              start_angle: 0
-              end_angle: 360
-              indicator:
-                arc_width: 150
-                arc_color: 0x000000
-          - label: # gauge lower and higher range indicators
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: -99
-              text: "-10"
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_18 # override font size
-              y: 8 #negative = higher
-              x: 99
-              text: "+10"
-          - label:
-              styles: font_style
-              id: battery_status3
-              y: -35 #negative = higher
-          - label:
-              styles: font_style
-              id: battery_kw3
-              y: -60
-          - label:
-              styles: font_style
-              text_font: MONTSERRAT_40 # override font size
-              id: battery_soc3
-              y: 0
-          - label:
-              styles: font_style
-              id: solar_kw3
-              text_color: 0xFFFF00
-              y: 90
-          #- img:
-          #    src: home_battery_icon
-              #id: img_solar_power
-              #align: center
-              #img_recolor: 0xFFFFFF
-              #img_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              #y: -35
-              #x: -60
-          - image:
-              src: solar_power_icon
-              id: img_solar_power3
-              align: center
-              image_recolor: 0xFFFF00
-              image_recolor_opa: 100% #opacity defaults to 0% = must set this for recolor to take effect
-              #bg_color: 0xFFFFFF
-              y: 50
-              #x: -60
+      border_width: 0
+      items:
+        bg_color: 0x2B2F36
+        text_color: 0xFFFFFF
+        radius: 12
+        checked:
+          bg_color: 0xE08A00
+  top_layer:
+    widgets:
+      # same navigation bar as on mcu-lvgl-trainer
+      - buttonmatrix:
+          id: nav_bar
+          align: bottom_mid
+          width: 100%
+          height: 64
+          pad_all: 4
+          pad_column: 6
+          items:
+            text_font: montserrat_28
+          rows:
+            - buttons:
+                - id: page_prev
+                  text: "\uF053"
+                  on_press:
+                    then:
+                      lvgl.page.previous:
+                - id: page_home
+                  text: "\uF015"
+                  on_press:
+                    then:
+                      lvgl.page.show: main_page
+                - id: page_next
+                  text: "\uF054"
+                  on_press:
+                    then:
+                      lvgl.page.next:
+  pages:
+    # 1: clock
+    - id: main_page
+      widgets:
+        - label:
+            id: clock_label
+            align: CENTER
+            y: -32
+            text_font: font_clock
+            text: "--:--"
+
+    # 2: status (shown until Home Assistant connects)
+    - id: status_page
+      on_load:
+        - script.execute: update_status
+      widgets:
+        - image:
+            src: esphome_logo
+            align: TOP_MID
+            y: 16
+        - label:
+            align: TOP_MID
+            y: 140
+            text_font: font_title
+            text: "${name}"
+        - obj:
+            id: status_lines
+            x: 60
+            y: 196
+            width: 700
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            layout:
+              type: flex
+              flex_flow: column
+              pad_row: 8
+            widgets:
+              - label:
+                  id: status_wifi
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_ips
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  pad_left: 30
+                  text: ""
+              - label:
+                  id: status_ha
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_footer
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  text: ""

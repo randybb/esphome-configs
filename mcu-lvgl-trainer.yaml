@@ -241,8 +241,8 @@ script:
       - lvgl.label.update:
           id: stopwatch_label
           text: !lambda |-
-            const uint32_t ms = id(sw_accum) + (id(sw_running) ? millis() - id(sw_start) : 0);
-            const uint32_t s = ms / 1000;
+            const unsigned ms = id(sw_accum) + (id(sw_running) ? millis() - id(sw_start) : 0);
+            const unsigned s = ms / 1000;
             if (s >= 3600)
               return str_sprintf("%u:%02u:%02u", s / 3600, (s / 60) % 60, s % 60);
             return str_sprintf("%02u:%02u.%u", s / 60, s % 60, (ms / 100) % 10);
@@ -253,35 +253,51 @@ script:
 
   - id: update_status
     then:
-      - lvgl.label.update:
-          id: status_label
-          text: !lambda |-
-            std::string out;
-            if (wifi::global_wifi_component->is_connected()) {
-              out = str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi());
-              // IPv6 first (skip link-local), then IPv4
-              char buf[network::IP_ADDRESS_BUFFER_SIZE];
-              for (bool v6 : {true, false}) {
-                for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
-                  if (!ip.is_set() || ip.is_ip6() != v6)
-                    continue;
-                  ip.str_to(buf);
-                  if (v6 && strncmp(buf, "fe80", 4) == 0)
-                    continue;
-                  out += "\n    ";
-                  out += buf;
-                }
-              }
-            } else {
-              out = "WiFi: connecting...";
-            }
-            out += api::global_api_server->is_connected_with_state_subscription() ? "\nHome Assistant: connected"
-                                                                                  : "\nHome Assistant: waiting...";
-            const uint32_t up = millis() / 1000;
-            out += str_sprintf("\nESPHome %s  ·  up %ud %02u:%02u", ESPHOME_VERSION, up / 86400, (up / 3600) % 24,
-                               (up / 60) % 60);
-            return out;
+      - lambda: |-
+          // same colors as the other status screens: ok green, waiting orange, details gray
+          static const uint32_t OK = 0x4DD966, WAIT = 0xFFB300;
+          auto set = [](lv_obj_t *label, const std::string &text, uint32_t color) {
+            lv_label_set_text(label, text.c_str());
+            lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
+          };
 
+          const bool wifi_ok = wifi::global_wifi_component->is_connected();
+          set(id(status_wifi),
+              wifi_ok ? str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi())
+                      : std::string("WiFi: connecting..."),
+              wifi_ok ? OK : WAIT);
+
+          // IPv6 first (skip link-local), then IPv4
+          std::string ips;
+          if (wifi_ok) {
+            char buf[network::IP_ADDRESS_BUFFER_SIZE];
+            for (bool v6 : {true, false}) {
+              for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+                if (!ip.is_set() || ip.is_ip6() != v6)
+                  continue;
+                ip.str_to(buf);
+                if (v6 && strncmp(buf, "fe80", 4) == 0)
+                  continue;
+                if (!ips.empty())
+                  ips += "\n";
+                ips += buf;
+              }
+            }
+          }
+          lv_label_set_text(id(status_ips), ips.c_str());
+          if (ips.empty())
+            lv_obj_add_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+          else
+            lv_obj_remove_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+
+          const bool api_ok = api::global_api_server->is_connected();
+          set(id(status_ha), api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...",
+              api_ok ? OK : WAIT);
+
+          const uint32_t up = millis() / 1000;
+          lv_label_set_text(id(status_footer),
+                            str_sprintf("ESPHome %s  ·  up %ud %02u:%02u:%02u", ESPHOME_VERSION, up / 86400,
+                                        (up / 3600) % 24, (up / 60) % 60, up % 60).c_str());
 interval:
   - interval: 1s
     then:
@@ -698,9 +714,37 @@ lvgl:
             align: TOP_MID
             y: 96
             text: "${name}"
-        - label:
-            id: status_label
+        - obj:
+            id: status_lines
             x: 20
-            y: 130
-            text_font: font_small
-            text: ""
+            y: 126
+            width: 440
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            layout:
+              type: flex
+              flex_flow: column
+              pad_row: 4
+            widgets:
+              - label:
+                  id: status_wifi
+                  text_font: font_small
+                  text: ""
+              - label:
+                  id: status_ips
+                  text_font: font_small
+                  text_color: 0x8C8C8C
+                  pad_left: 16
+                  text: ""
+              - label:
+                  id: status_ha
+                  text_font: font_small
+                  text: ""
+              - label:
+                  id: status_footer
+                  text_font: font_small
+                  text_color: 0x8C8C8C
+                  text: ""
