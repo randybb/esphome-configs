@@ -38,8 +38,14 @@ external_components:
   - source: github://m5stack/esphome-yaml/components
     components: [axp2101, aw88298, aw9523b, si12t, m5ioe1, ftservo, scs9009]
     refresh: 0s
+  - source: github://randybb/esphome-components
+    components: [audio_spectrum]
+    refresh: 1d
 
 globals:
+  - id: in_love
+    type: bool
+    initial_value: 'false'
   - id: show_status
     type: bool
     initial_value: 'true'
@@ -220,9 +226,14 @@ speaker:
     audio_dac: aw88298_dac
     sample_rate: 48000
     buffer_duration: 100ms
+  # pass-through that computes the spectrum shown on the display while music plays
+  - platform: audio_spectrum
+    id: spectrum
+    output_speaker: speaker_id
+    bands: 20
   - platform: mixer
     id: mixer_speaker_id
-    output_speaker: speaker_id
+    output_speaker: spectrum
     num_channels: 1
     source_speakers:
       - id: announcement_spk_mixer_input
@@ -316,6 +327,23 @@ voice_assistant:
     - light.turn_on: {id: light_bar, brightness: 60%, red: 100%, green: 0%, blue: 0%}
 
 script:
+  # short tap on the head starts the assistant
+  - id: head_tap
+    then:
+      - if:
+          condition:
+            not: voice_assistant.is_running
+          then:
+            - voice_assistant.start:
+  # stroking the head shows the in-love face for a while
+  - id: head_stroke
+    mode: restart
+    then:
+      - lambda: id(in_love) = true;
+      - component.update: display_tft
+      - delay: 5s
+      - lambda: id(in_love) = false;
+      - component.update: display_tft
   # mic and speaker share one I2S bus - the mic must be released before playback
   - id: release_i2s_bus
     mode: single
@@ -338,6 +366,63 @@ script:
                 timeout: 2s
 
 interval:
+  - interval: 80ms  # spectrum analyzer frame rate while music plays
+    then:
+      - if:
+          condition:
+            and:
+              - media_player.is_playing: media_out
+              - not: voice_assistant.is_running
+          then:
+            - component.update: display_tft
+  # head touch gestures: a touch episode ends after 250 ms without contact;
+  # tap = short episode, stroke = longer episode that reaches the pads one after another
+  - interval: 50ms
+    then:
+      - lambda: |-
+          static bool active = false;
+          static uint32_t start = 0, last_on = 0;
+          static uint32_t first_on[3];
+          const bool on[3] = {id(head_touch_1).state != "No touch", id(head_touch_2).state != "No touch",
+                              id(head_touch_3).state != "No touch"};
+          const uint32_t now = millis();
+
+          if (on[0] || on[1] || on[2]) {
+            if (!active) {
+              active = true;
+              start = now;
+              first_on[0] = first_on[1] = first_on[2] = 0;
+            }
+            for (int i = 0; i < 3; i++)
+              if (on[i] && first_on[i] == 0)
+                first_on[i] = now;
+            last_on = now;
+            return;
+          }
+          if (!active || now - last_on < 250)
+            return;
+          active = false;
+
+          const uint32_t duration = last_on - start;
+          int pads = 0;
+          uint32_t earliest = UINT32_MAX, latest = 0;
+          for (int i = 0; i < 3; i++) {
+            if (first_on[i] == 0)
+              continue;
+            pads++;
+            earliest = std::min(earliest, first_on[i]);
+            latest = std::max(latest, first_on[i]);
+          }
+          const uint32_t spread = latest - earliest;
+          ESP_LOGD("head_touch", "duration %u ms, pads %d, spread %u ms, order 1:%d 2:%d 3:%d", (unsigned) duration,
+                   pads, (unsigned) spread, first_on[0] ? (int) (first_on[0] - earliest) : -1,
+                   first_on[1] ? (int) (first_on[1] - earliest) : -1, first_on[2] ? (int) (first_on[2] - earliest) : -1);
+
+          if (pads >= 2 && spread >= 150 && duration >= 400) {
+            id(head_stroke).execute();
+          } else if (duration <= 600) {
+            id(head_tap).execute();
+          }
   - interval: 1s  # status screen refresh until Home Assistant connects
     then:
       - if:
@@ -407,6 +492,10 @@ color:
     red: 100%
     green: 70%
     blue: 0%
+  - id: love_red
+    red: 100%
+    green: 25%
+    blue: 45%
   - id: status_low
     red: 100%
     green: 20%
@@ -483,11 +572,24 @@ display:
       // stack-chan face: 2 eyes + mouth, 320x240
       // the whole screen is cleared only once, then just the face areas, so that only the
       // changed region is sent over SPI instead of the whole 150 kB buffer
-      if (first_draw) {
+      const bool love = id(in_love);
+      const bool music = id(media_out).state == media_player::MEDIA_PLAYER_STATE_PLAYING && !id(va).is_running();
+      // switching between face, in-love face and spectrum repaints everything
+      static int last_mode = -1;
+      const int mode = music ? 2 : love ? 1 : 0;
+      if (mode != last_mode) {
+        last_mode = mode;
+        first_draw = true;
+      }
+
+      // the in-love face is drawn outside the partially cleared areas, so it always repaints everything
+      static bool spectrum_reset = true;
+      if (first_draw || love) {
         it.fill(id(face_bg));
         first_draw = false;
         bar_drawn = false;
-      } else {
+        spectrum_reset = true;
+      } else if (!music) {
         it.filled_rectangle(70, 78, 181, 31, id(face_bg));   // eyes including gaze range
         it.filled_rectangle(105, 130, 111, 38, id(face_bg)); // mouth
         if (dot_shown && !id(listening)) {
@@ -521,11 +623,85 @@ display:
           it.filled_rectangle(290 + i * 6, 21 - h, 4, h, c);
         }
       }
+      // Winamp style spectrum analyzer instead of the face while music plays.
+      // Only the segments that changed since the last frame are drawn or cleared, which keeps both the
+      // pixel work and the SPI transfer small.
+      if (music) {
+        static float peak[32];
+        static uint32_t peak_time[32];
+        static int prev_segs[32], prev_cap[32];
+        const uint32_t now = millis();
+        const int bands = std::min<int>(id(spectrum).get_bands(), 32);
+        const int x0 = 12, x1 = 308, top = 40, bottom = 228;
+        const int slot = (x1 - x0) / bands, bar_w = slot - 3;
+        const int seg_h = 5;  // 4 px LED segment + 1 px gap
+        const int max_segs = (bottom - top) / seg_h;
+        if (spectrum_reset) {
+          spectrum_reset = false;
+          for (int b = 0; b < 32; b++) {
+            peak[b] = 0.0f;
+            prev_segs[b] = 0;
+            prev_cap[b] = -1;
+          }
+        }
+        auto seg_y = [&](int s) { return bottom - (s + 1) * seg_h + 1; };
+        for (int b = 0; b < bands; b++) {
+          const float level = id(spectrum).get_level(b);
+          const int x = x0 + b * slot + 1;
+          const int segs = std::min(max_segs, (int) (level * max_segs));
+
+          // peak caps hold for a moment, then fall slowly
+          if (level >= peak[b]) {
+            peak[b] = level;
+            peak_time[b] = now;
+          } else if (now - peak_time[b] > 400) {
+            peak[b] = std::max(0.0f, peak[b] - 0.03f);
+          }
+          const int cap = peak[b] > 0.0f ? std::min(max_segs - 1, std::max(segs, (int) (peak[b] * max_segs))) : -1;
+
+          // the old cap is cleared first; bar segments drawn below repaint anything it overlapped
+          if (prev_cap[b] >= 0 && prev_cap[b] != cap)
+            it.filled_rectangle(x, seg_y(prev_cap[b]), bar_w, seg_h - 1, id(face_bg));
+
+          if (segs > prev_segs[b]) {
+            for (int s = prev_segs[b]; s < segs; s++) {
+              // green at the bottom, through yellow to red at the top
+              const float f = float(s) / float(max_segs - 1);
+              const Color c = f < 0.5f ? Color((uint8_t) (510 * f), 230, 0) : Color(255, (uint8_t) (460 * (1.0f - f)), 0);
+              it.filled_rectangle(x, seg_y(s), bar_w, seg_h - 1, c);
+            }
+          } else if (segs < prev_segs[b]) {
+            it.filled_rectangle(x, seg_y(prev_segs[b] - 1), bar_w, (prev_segs[b] - segs) * seg_h, id(face_bg));
+          }
+          prev_segs[b] = segs;
+
+          if (cap >= segs && cap >= 0 && (cap != prev_cap[b] || cap == segs)) {
+            const int cy = seg_y(cap) + seg_h - 3;
+            it.filled_rectangle(x, cy, bar_w, 2, id(status_dim));
+          }
+          prev_cap[b] = cap;
+        }
+        return;
+      }
+
       const int ex = id(gaze_x), ey = id(gaze_y);
       const int eye_y = 93 + ey, eye_r = 8;
       const int lx = 90 + ex, rx = 230 + ex;
 
-      if (id(eyes_open)) {
+      if (love) {
+        // heart eyes, blush and a wide smile
+        for (int cx : {lx, rx}) {
+          it.filled_circle(cx - 6, eye_y - 3, 7, id(love_red));
+          it.filled_circle(cx + 6, eye_y - 3, 7, id(love_red));
+          it.filled_triangle(cx - 13, eye_y - 1, cx + 13, eye_y - 1, cx, eye_y + 14, id(love_red));
+        }
+        it.filled_circle(60 + ex, 130 + ey, 12, Color(90, 20, 40));
+        it.filled_circle(260 + ex, 130 + ey, 12, Color(90, 20, 40));
+        if (!id(speaking)) {
+          it.filled_circle(160 + ex / 2, 132 + ey / 2, 30, id(face_fg));
+          it.filled_circle(160 + ex / 2, 122 + ey / 2, 30, id(face_bg));
+        }
+      } else if (id(eyes_open)) {
         it.filled_circle(lx, eye_y, eye_r, id(face_fg));
         it.filled_circle(rx, eye_y, eye_r, id(face_fg));
       } else {
@@ -534,9 +710,11 @@ display:
       }
 
       const float m = id(mouth_open);
-      const int mw = 90 - (int) (40 * m);
-      const int mh = 4 + (int) (26 * m);
-      it.filled_rectangle(160 - mw / 2 + ex / 2, 148 - mh / 2 + ey / 2, mw, mh, id(face_fg));
+      if (!love || id(speaking)) {
+        const int mw = 90 - (int) (40 * m);
+        const int mh = 4 + (int) (26 * m);
+        it.filled_rectangle(160 - mw / 2 + ex / 2, 148 - mh / 2 + ey / 2, mw, mh, id(face_fg));
+      }
 
       if (id(listening)) {
         it.image(254, 2, id(icon_listening), id(face_fg), id(face_bg));  // left of the wifi bars
@@ -620,23 +798,36 @@ sensor:
 si12t:
   id: touch_hub
   i2c_id: i2c_bsp
+  # report low-strength touches too, not only medium/high
+  intr_level: OUTPUT_ALL
 
 text_sensor:
   - platform: si12t
     id: head_touch_1
     name: Head Touch 1
     channel: CH_1
-    update_interval: 500ms
+    # lower level = lower touch threshold: SENS_LEVEL_1 = 0.7 % capacitance change (default level 3 is 1.2 %),
+    # SENS_LEVEL_0 made neighbouring pads trigger together
+    sensitivity: SENS_LEVEL_1
+    extend_threshold: false
+    update_interval: 100ms
+    internal: true
   - platform: si12t
     id: head_touch_2
     name: Head Touch 2
     channel: CH_2
-    update_interval: 500ms
+    sensitivity: SENS_LEVEL_1
+    extend_threshold: false
+    update_interval: 100ms
+    internal: true
   - platform: si12t
     id: head_touch_3
     name: Head Touch 3
     channel: CH_3
-    update_interval: 500ms
+    sensitivity: SENS_LEVEL_1
+    extend_threshold: false
+    update_interval: 100ms
+    internal: true
 
 uart:
   - id: uart_servo
