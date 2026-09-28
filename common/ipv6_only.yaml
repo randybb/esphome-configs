@@ -10,7 +10,7 @@ external_components:
   # audio HTTP reader over IPv6 (dual-stack hosts resolve A first), drop once in #19750
   - source: github://randybb/esphome-components
     components: [audio]
-    refresh: 1d
+    refresh: 1h
 
 wifi:
   networks:

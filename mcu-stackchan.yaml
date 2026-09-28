@@ -40,8 +40,8 @@ external_components:
     components: [axp2101, aw88298, aw9523b, si12t, m5ioe1, ftservo, scs9009]
     refresh: 0s
   - source: github://randybb/esphome-components
-    components: [audio_spectrum]
-    refresh: 1d
+    components: [audio_spectrum, speaker]  # speaker: esphome#19862, drop once merged
+    refresh: 1h
 
 globals:
   - id: in_love

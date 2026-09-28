@@ -21,6 +21,12 @@ esp32:
 packages:
   common: !include common/common.yaml
 
+external_components:
+  # speaker media player: skip a failed playlist item (esphome#19862), drop once merged
+  - source: github://randybb/esphome-components
+    components: [speaker]
+    refresh: 1h
+
 api:
   actions:
     # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
@@ -127,16 +133,15 @@ media_player:
   - platform: speaker
     id: media_out
     name: Player
-    codec_support_enabled: false
     buffer_size: 14000
     media_pipeline:
       speaker: media_spk_resampling_input
-      # format: WAV
+      format: WAV  # only the WAV decoder is built (was codec_support_enabled: false)
       # num_channels: 1
       # sample_rate: 8000  # Lower sample rate
     announcement_pipeline:
       speaker: announcement_spk_resampling_input
-      # format: WAV
+      format: WAV
       # num_channels: 1
       # sample_rate: 8000  # Lower sample rate
     on_play:

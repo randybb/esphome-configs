@@ -20,6 +20,12 @@ esp32:
 packages:
   common: !include common/common.yaml
 
+external_components:
+  # speaker media player: skip a failed playlist item (esphome#19862), drop once merged
+  - source: github://randybb/esphome-components
+    components: [speaker]
+    refresh: 1h
+
 api:
   actions:
     # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
