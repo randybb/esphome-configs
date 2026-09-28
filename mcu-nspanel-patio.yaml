@@ -156,8 +156,11 @@ binary_sensor:
       inverted: true
     on_click:
       if:
+        # mcu-patio online -> toggle its lights; otherwise (no API or relay_2 cut its power) the relay
         condition:
-          api.connected:
+          and:
+            - api.connected:
+            - binary_sensor.is_on: patio_status
         then:
           - homeassistant.action:
               action: light.toggle
@@ -168,6 +171,10 @@ binary_sensor:
           - lambda: 'id(nspanel_id).render_next_page();'
         else:
           - switch.toggle: relay_2
+
+  - platform: homeassistant
+    id: patio_status
+    entity_id: binary_sensor.patio_status
 
 switch:
   - platform: gpio
