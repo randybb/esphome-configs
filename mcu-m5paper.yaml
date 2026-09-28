@@ -4,13 +4,18 @@ substitutions:
   name: M5Paper
   area: DEV
   comment: M5Paper
-  weather_entity: weather.openweathermap
+  waste_calendar: calendar.https_www_hviezdoslavov_sk_kalendar_icalfeed_category_0_ongoing_1
+  # contacts + manual
+  birthday_calendars: calendar.birthdays, calendar.narodeniny
 
 # Power modes
-# - USB: always on, WiFi + API, forecast refreshed every hour and redrawn every 15 min
-# - battery: RTC wakes the board every 15 min (off 1:00-5:00), it draws the forecast
-#   from EEPROM and powers itself off; WiFi only to refresh the forecast every 6 h
-# Screens: status (after power-on, until Home Assistant connects) and forecast
+# - USB: always on, WiFi + API, events refreshed and redrawn after midnight
+# - battery: RTC wakes the board at 00:05, it refreshes the events, draws them and powers
+#   itself off; the RTC timer lasts at most 255 min, so the wake-ups on the way to
+#   midnight only re-arm it
+# The power button (and USB) also connects to WiFi: the events are refreshed on every
+# Home Assistant connection outside the battery cycle.
+# Screens: status (after power-on, until Home Assistant connects) and calendar
 # The mode is detected by trying to power off: on USB the board keeps running.
 
 esphome:
@@ -19,7 +24,7 @@ esphome:
   area: ${area}
   comment: ${comment}
   includes:
-    - include/m5paper_weather.h
+    - include/m5paper_calendar.h
   on_boot:
     - priority: 600
       then:
@@ -33,8 +38,8 @@ esphome:
               const uint8_t clear[2] = {reg, uint8_t(status & ~0x05)};
               id(i2c_main)->write(0x51, clear, 2);
             }
-            m5paper_weather::load(id(i2c_main), m5paper_weather::forecast());
-            ESP_LOGI("m5paper", "Wake-up: %s, forecast: %u h", id(rtc_wake) ? "RTC" : "power-on", m5paper_weather::forecast().count);
+            m5paper_calendar::load(m5paper_calendar::events());
+            ESP_LOGI("m5paper", "Wake-up: %s, events: %u", id(rtc_wake) ? "RTC" : "power-on", m5paper_calendar::events().count);
     - priority: -100
       then:
         - if:
@@ -65,6 +70,7 @@ psram:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 globals:
   - id: show_status
@@ -76,8 +82,8 @@ globals:
   - id: rtc_wake
     type: bool
     initial_value: 'false'
-  # battery cycle running: forecast screen regardless of the connection state
-  - id: weather_page
+  # battery cycle running: calendar screen regardless of the connection state
+  - id: calendar_page
     type: bool
     initial_value: 'false'
   - id: fetch_done
@@ -92,7 +98,7 @@ wifi:
   on_connect:
     - if:
         condition:
-          lambda: return id(show_status) && !id(weather_page);
+          lambda: return id(show_status) && !id(calendar_page);
         then:
           - component.update: m5paper_display
 
@@ -108,21 +114,18 @@ api:
           - lambda: id(show_status) = false;
     - if:
         condition:
-          lambda: return !id(weather_page);
+          lambda: return !id(calendar_page);
         then:
           - component.update: m5paper_display
-    # outside the battery cycle: refresh a forecast older than an hour
+    # outside the battery cycle (power button, USB) WiFi is up anyway: always refresh
     - if:
         condition:
           and:
-            - lambda: |-
-                const auto &fc = m5paper_weather::forecast();
-                const auto now = id(rtc_time).now();
-                return !id(weather_page) && (!fc.valid() || !now.is_valid() || now.timestamp - fc.fetched_at >= 3600);
+            - lambda: return !id(calendar_page);
             - api.connected:
                 state_subscription_only: true
         then:
-          - script.execute: fetch_forecast
+          - script.execute: fetch_events
   on_client_disconnected:
     - if:
         condition:
@@ -133,13 +136,13 @@ api:
           - lambda: id(show_status) = true;
           - if:
               condition:
-                lambda: return !id(weather_page);
+                lambda: return !id(calendar_page);
               then:
                 - component.update: m5paper_display
 
 # I2C devices (i2c_main)
 # 0x44 SHT30
-# 0x50 FM24C02 EEPROM (forecast storage, see include/m5paper_weather.h)
+# 0x50 FM24C02 EEPROM (unused)
 # 0x51 BM8563 RTC
 # 0x5D GT911 touch (docs say 0x14; the driver tries 0x5D, then 0x14)
 
@@ -185,76 +188,80 @@ switch:
     internal: true
 
 script:
-  # One wake-up on battery: refresh the forecast if it is old, draw it, power off
+  # One wake-up on battery: refresh the events if they are old, draw them, power off
   - id: battery_cycle
     mode: single
     then:
-      - lambda: id(weather_page) = true;
+      - lambda: id(calendar_page) = true;
       - wait_until:
           condition:
             lambda: return id(rtc_time).now().is_valid();
           timeout: 10s
       - if:
+          # RTC wake-up on the way to midnight: nothing to draw
           condition:
             lambda: |-
-              const auto &fc = m5paper_weather::forecast();
               const auto now = id(rtc_time).now();
-              return !fc.valid() || !now.is_valid() || now.timestamp - fc.fetched_at >= 6 * 3600 - 600;
+              return id(rtc_wake) && now.is_valid() && now.hour != 0;
           then:
-            - wifi.enable:
-            - wait_until:
-                condition:
-                  api.connected:
-                    state_subscription_only: true
-                timeout: 45s
+            - script.execute: try_sleep
+          else:
             - if:
                 condition:
-                  api.connected:
-                    state_subscription_only: true
+                  lambda: return m5paper_calendar::stale(id(rtc_time).now());
                 then:
-                  - script.execute: fetch_forecast
+                  - wifi.enable:
                   - wait_until:
                       condition:
-                        lambda: return id(fetch_done);
-                      timeout: 15s
-      - wait_until:
-          condition:
-            lambda: return !std::isnan(id(current_temperature).state);
-          timeout: 5s
-      - component.update: m5paper_display
-      # let the e-paper refresh finish before cutting power
-      - delay: 4s
-      - script.execute: try_sleep
+                        api.connected:
+                          state_subscription_only: true
+                      timeout: 45s
+                  - if:
+                      condition:
+                        api.connected:
+                          state_subscription_only: true
+                      then:
+                        - script.execute: fetch_events
+                        - wait_until:
+                            condition:
+                              lambda: return id(fetch_done);
+                            timeout: 15s
+            - component.update: m5paper_display
+            # let the e-paper refresh finish before cutting power
+            - delay: 4s
+            - script.execute: try_sleep
 
-  - id: fetch_forecast
+  # today and the next 31 days (the month grid and the list)
+  - id: fetch_events
     mode: single
     then:
       - lambda: id(fetch_done) = false;
       - homeassistant.action:
-          action: weather.get_forecasts
+          action: calendar.get_events
           data:
-            entity_id: ${weather_entity}
-            type: hourly
+            entity_id: ${waste_calendar}, ${birthday_calendars}
+            start_date_time: !lambda return id(rtc_time).now().strftime("%Y-%m-%d 00:00:00");
+            duration: "744:00:00"
           capture_response: true
           on_success:
             - lambda: |-
-                auto &fc = m5paper_weather::forecast();
-                if (m5paper_weather::parse(response, "${weather_entity}", id(rtc_time).now().timestamp, fc)) {
-                  const bool saved = m5paper_weather::save(id(i2c_main), fc);
-                  ESP_LOGI("m5paper", "Forecast: %u h%s", fc.count, saved ? "" : " (EEPROM write failed)");
+                auto &ev = m5paper_calendar::events();
+                if (m5paper_calendar::parse(response, "${waste_calendar}", id(rtc_time).now().timestamp, ev)) {
+                  const bool saved = m5paper_calendar::save(ev);
+                  ESP_LOGI("m5paper", "Events: %u%s", ev.count, saved ? "" : " (flash write failed)");
                 } else {
-                  ESP_LOGW("m5paper", "Forecast: unexpected response");
+                  ESP_LOGW("m5paper", "Events: unexpected response");
                 }
                 id(fetch_done) = true;
             # the battery cycle draws on its own
             - if:
                 condition:
-                  lambda: return !id(weather_page);
+                  lambda: return !id(calendar_page);
                 then:
                   - component.update: m5paper_display
           on_error:
             - lambda: |-
-                ESP_LOGW("m5paper", "Forecast: %s", error.c_str());
+                ESP_LOGW("m5paper", "Events: %s", error.c_str());
                 id(fetch_done) = true;
 
   # Arm the RTC and cut power; if we are still running afterwards, we are on USB
@@ -262,22 +269,21 @@ script:
     mode: single
     then:
       - lambda: |-
-          // next quarter hour, 1:00-5:00 in one go
-          int duration = 900;
+          // next 00:05; the timer lasts at most 255 min, so get there in steps
+          const int MAX = 255 * 60;
+          int duration = MAX;
           const auto now = id(rtc_time).now();
           if (now.is_valid()) {
             const int sod = now.hour * 3600 + now.minute * 60 + now.second;
-            int next = (sod / 900 + 1) * 900;
-            if (next - sod < 90)  // the 1/60 Hz RTC timer may wake us up to a minute early
-              next += 900;
-            const int next_hour = (next / 3600) % 24;
-            if (next_hour >= 1 && next_hour < 5)
-              next = (next / 86400) * 86400 + 5 * 3600;
-            duration = next - sod;
+            int left = (86400 + 300 - sod) % 86400;
+            if (left < 600)  // just drawn: the 1/60 Hz RTC timer may wake us up to a minute early
+              left += 86400;
+            // leave at least 20 min for the last step, so it cannot fall into the case above
+            duration = left > MAX ? std::min(MAX, left - 1200) : left;
           }
           if (duration > 255)  // longer timers count whole minutes
             duration = (duration + 59) / 60 * 60;
-          id(sleep_s) = std::min(duration, 255 * 60);
+          id(sleep_s) = std::min(duration, MAX);
           ESP_LOGI("m5paper", "Powering off for %d s", id(sleep_s));
       - bm8563.start_timer:
           duration: !lambda return id(sleep_s);
@@ -292,7 +298,8 @@ script:
       - lambda: |-
           ESP_LOGI("m5paper", "Still running, USB power");
           id(usb_mode) = true;
-          id(weather_page) = false;
+          id(rtc_wake) = false;
+          id(calendar_page) = false;
           id(show_status) = !api::global_api_server->is_connected_with_state_subscription();
       - wifi.enable:
       - component.update: m5paper_display
@@ -321,21 +328,24 @@ time:
       - bm8563.write_time
       - if:
           condition:
-            lambda: return !id(weather_page);
+            lambda: return !id(calendar_page);
           then:
             - component.update: m5paper_display
     on_time:
+      # new day
       - seconds: 0
-        minutes: /15
+        minutes: 0
+        hours: 0
         then:
           - if:
               condition:
-                lambda: return !id(show_status) && !id(weather_page);
+                lambda: return !id(show_status) && !id(calendar_page);
               then:
                 - component.update: m5paper_display
-      # USB mode: keep the stored forecast fresh for battery mode
+      # USB mode: keep the stored events fresh for battery mode
       - seconds: 0
         minutes: 5
+        hours: 0
         then:
           - if:
               condition:
@@ -344,7 +354,7 @@ time:
                   - api.connected:
                       state_subscription_only: true
               then:
-                - script.execute: fetch_forecast
+                - script.execute: fetch_events
   - platform: bm8563
     id: rtc_time
 
@@ -388,10 +398,10 @@ button:
     on_press:
       - component.update: m5paper_display
   - platform: template
-    name: Refresh Forecast
+    name: Refresh Calendar
     entity_category: config
     on_press:
-      - script.execute: fetch_forecast
+      - script.execute: fetch_events
 
 sensor:
   - platform: sht3xd
@@ -429,8 +439,7 @@ sensor:
           max_value: 100
 
 .image_defaults:
-  icon_large: &icon_large {platform: file, type: BINARY, transparency: chroma_key, resize: 150x150}
-  icon_small: &icon_small {platform: file, type: BINARY, transparency: chroma_key, resize: 44x44}
+  icon: &icon {platform: file, type: BINARY, transparency: chroma_key}
 
 image:
   - platform: file
@@ -439,37 +448,11 @@ image:
     resize: 460x136
     type: GRAYSCALE
     transparency: alpha_channel
-  # weather icons, same order as m5paper_weather::CONDITIONS
-  - {<<: *icon_large, file: "mdi:weather-night", id: wl_clear_night}
-  - {<<: *icon_large, file: "mdi:weather-cloudy", id: wl_cloudy}
-  - {<<: *icon_large, file: "mdi:alert-circle-outline", id: wl_exceptional}
-  - {<<: *icon_large, file: "mdi:weather-fog", id: wl_fog}
-  - {<<: *icon_large, file: "mdi:weather-hail", id: wl_hail}
-  - {<<: *icon_large, file: "mdi:weather-lightning", id: wl_lightning}
-  - {<<: *icon_large, file: "mdi:weather-lightning-rainy", id: wl_lightning_rainy}
-  - {<<: *icon_large, file: "mdi:weather-partly-cloudy", id: wl_partlycloudy}
-  - {<<: *icon_large, file: "mdi:weather-pouring", id: wl_pouring}
-  - {<<: *icon_large, file: "mdi:weather-rainy", id: wl_rainy}
-  - {<<: *icon_large, file: "mdi:weather-snowy", id: wl_snowy}
-  - {<<: *icon_large, file: "mdi:weather-snowy-rainy", id: wl_snowy_rainy}
-  - {<<: *icon_large, file: "mdi:weather-sunny", id: wl_sunny}
-  - {<<: *icon_large, file: "mdi:weather-windy", id: wl_windy}
-  - {<<: *icon_large, file: "mdi:weather-windy-variant", id: wl_windy_variant}
-  - {<<: *icon_small, file: "mdi:weather-night", id: ws_clear_night}
-  - {<<: *icon_small, file: "mdi:weather-cloudy", id: ws_cloudy}
-  - {<<: *icon_small, file: "mdi:alert-circle-outline", id: ws_exceptional}
-  - {<<: *icon_small, file: "mdi:weather-fog", id: ws_fog}
-  - {<<: *icon_small, file: "mdi:weather-hail", id: ws_hail}
-  - {<<: *icon_small, file: "mdi:weather-lightning", id: ws_lightning}
-  - {<<: *icon_small, file: "mdi:weather-lightning-rainy", id: ws_lightning_rainy}
-  - {<<: *icon_small, file: "mdi:weather-partly-cloudy", id: ws_partlycloudy}
-  - {<<: *icon_small, file: "mdi:weather-pouring", id: ws_pouring}
-  - {<<: *icon_small, file: "mdi:weather-rainy", id: ws_rainy}
-  - {<<: *icon_small, file: "mdi:weather-snowy", id: ws_snowy}
-  - {<<: *icon_small, file: "mdi:weather-snowy-rainy", id: ws_snowy_rainy}
-  - {<<: *icon_small, file: "mdi:weather-sunny", id: ws_sunny}
-  - {<<: *icon_small, file: "mdi:weather-windy", id: ws_windy}
-  - {<<: *icon_small, file: "mdi:weather-windy-variant", id: ws_windy_variant}
+  # same order as m5paper_calendar::Kind
+  - {<<: *icon, file: "mdi:cake-variant", id: icon_birthday, resize: 32x32}
+  - {<<: *icon, file: "mdi:trash-can", id: icon_waste, resize: 32x32}
+  - {<<: *icon, file: "mdi:cake-variant", id: mark_birthday, resize: 18x18}
+  - {<<: *icon, file: "mdi:trash-can", id: mark_waste, resize: 18x18}
 
 font:
   - file: "gfonts://Roboto"
@@ -486,22 +469,14 @@ font:
     glyphs: *sk_glyphs
     glyphsets: [GF_Latin_Kernel]
   - file: "gfonts://Roboto"
-    id: font_tiny
+    id: font_footer
     size: 18
-    glyphs: "0123456789% "
+    glyphs: "0123456789abcdef:. "
   - file: "gfonts://Roboto@500"
     id: font_date
     size: 34
     glyphs: *sk_glyphs
     glyphsets: [GF_Latin_Kernel]
-  - file: "gfonts://Roboto@500"
-    id: font_hour
-    size: 28
-    glyphs: "0123456789-°"
-  - file: "gfonts://Roboto"
-    id: font_temp
-    size: 110
-    glyphs: "0123456789.,-°C "
 
 color:
   - id: ink
@@ -528,11 +503,9 @@ display:
       const int w = it.get_width();
       const int cx = w / 2;
       const float batt = id(battery_level).state;
-      const float temp = id(current_temperature).state;
-      const float hum = id(current_humidity).state;
 
       // status screen after power-on, until Home Assistant connects
-      if (id(show_status) && !id(weather_page)) {
+      if (id(show_status) && !id(calendar_page)) {
         it.image(cx, 200, id(esphome_logo), ImageAlign::CENTER);
         it.print(cx, 320, id(font_title), id(ink), TextAlign::CENTER, "${name}");
 
@@ -561,85 +534,125 @@ display:
                  api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...");
         if (!std::isnan(batt))
           it.printf(40, 670, id(font_status), id(ink), "Battery: %.0f%%  (%.2f V)", batt, id(battery_voltage).state);
-        it.printf(40, 720, id(font_status), id(ink), "Forecast: %u h stored", m5paper_weather::forecast().count);
+        it.printf(40, 720, id(font_status), id(ink), "Calendar: %u events stored", m5paper_calendar::events().count);
         it.printf(40, 900, id(font_small), id(ink), "ESPHome %s", ESPHOME_VERSION);
         return;
       }
 
-      // forecast screen
-      using namespace m5paper_weather;
-      image::Image *large[] = {id(wl_clear_night), id(wl_cloudy),    id(wl_exceptional),   id(wl_fog),
-                               id(wl_hail),        id(wl_lightning), id(wl_lightning_rainy), id(wl_partlycloudy),
-                               id(wl_pouring),     id(wl_rainy),     id(wl_snowy),         id(wl_snowy_rainy),
-                               id(wl_sunny),       id(wl_windy),     id(wl_windy_variant)};
-      image::Image *small[] = {id(ws_clear_night), id(ws_cloudy),    id(ws_exceptional),   id(ws_fog),
-                               id(ws_hail),        id(ws_lightning), id(ws_lightning_rainy), id(ws_partlycloudy),
-                               id(ws_pouring),     id(ws_rainy),     id(ws_snowy),         id(ws_snowy_rainy),
-                               id(ws_sunny),       id(ws_windy),     id(ws_windy_variant)};
-      static const char *const DAYS[] = {"Nedeľa", "Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota"};
+      // calendar screen
+      using namespace m5paper_calendar;
+      image::Image *icons[] = {id(icon_birthday), id(icon_waste)};
+      image::Image *marks[] = {id(mark_birthday), id(mark_waste)};
+      static const char *const DAYS[] = {"Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota", "Nedeľa"};
+      static const char *const DAYS_SHORT[] = {"Po", "Ut", "St", "Št", "Pi", "So", "Ne"};
+      static const char *const MONTHS[] = {"Január", "Február", "Marec",     "Apríl",   "Máj",      "Jún",
+                                           "Júl",    "August",  "September", "Október", "November", "December"};
 
-      const auto &fc = m5paper_weather::forecast();
+      const auto &ev = m5paper_calendar::events();
       const auto now = id(rtc_time).now();
+      if (!now.is_valid()) {
+        it.print(cx, 400, id(font_status), id(ink), TextAlign::CENTER, "Čas nie je k dispozícii");
+        return;
+      }
+      const int32_t today = local_day(now);
 
       // header: date, battery
-      if (now.is_valid())
-        it.printf(24, 16, id(font_date), id(ink), "%s %d. %d.", DAYS[(now.day_of_week + 6) % 7], now.day_of_month,
-                  now.month);
+      it.printf(24, 16, id(font_date), id(ink), "%s %d. %d.", DAYS[weekday(today)], now.day_of_month, now.month);
       if (!std::isnan(batt))
         it.printf(w - 24, 22, id(font_small), id(ink), TextAlign::TOP_RIGHT, "%.0f %%", batt);
 
-      const Hour *cur = now.is_valid() ? fc.at(now.timestamp) : nullptr;
-      if (cur == nullptr) {
-        it.print(cx, 230, id(font_status), id(ink), TextAlign::CENTER, "Predpoveď nie je k dispozícii");
-      } else {
-        // current hour
-        if (cur->cond < NUM_CONDITIONS)
-          it.image(24, 80, large[cur->cond], id(ink));
-        if (cur->temp2 != NO_TEMP)
-          it.printf(200, 70, id(font_temp), id(ink), "%.0f°", cur->temp2 / 2.0f);
-        it.print(204, 200, id(font_status), id(ink), condition_name(cur->cond));
-        if (cur->wind != NO_VALUE)
-          it.printf(204, 245, id(font_small), id(ink), "vietor %u km/h", cur->wind);
-        if (cur->pop != NO_VALUE)
-          it.printf(204, 280, id(font_small), id(ink), "zrážky %u %%", cur->pop);
-
-        // next 24 hours: 3 columns x 8 rows
-        const uint32_t first = (now.timestamp / 3600 + 1) * 3600;
-        const int top = 440, row_h = 60, col_w = w / 3;
-        for (int i = 0; i < 24; i++) {
-          const Hour *h = fc.at(first + i * 3600);
-          if (h == nullptr)
-            break;
-          const int x = (i / 8) * col_w + 12;
-          const int y = top + (i % 8) * row_h;
-          const auto t = ESPTime::from_epoch_local(first + i * 3600);
-          it.printf(x, y + 14, id(font_hour), id(ink), "%02d", t.hour);
-          if (h->cond < NUM_CONDITIONS)
-            it.image(x + 42, y + 8, small[h->cond], id(ink));
-          // temperature in line with the hour, lifted only to make room for the precipitation below
-          const bool show_pop = h->pop != NO_VALUE && h->pop >= 10;
-          if (h->temp2 != NO_TEMP)
-            it.printf(x + 94, show_pop ? y + 6 : y + 14, id(font_hour), id(ink), "%.0f°", h->temp2 / 2.0f);
-          if (show_pop)
-            it.printf(x + 94, y + 38, id(font_tiny), id(ink), "%u %%", h->pop);
+      // month grid; days with events get the icons of their kinds
+      const int32_t first = days_from_civil(now.year, now.month, 1);
+      const int32_t next = now.month == 12 ? days_from_civil(now.year + 1, 1, 1) : days_from_civil(now.year, now.month + 1, 1);
+      const int dim = next - first, lead = weekday(first);
+      uint8_t kinds[32] = {};
+      for (int i = 0; i < ev.count; i++) {
+        if (ev.items[i].day >= first && ev.items[i].day < next)
+          kinds[ev.items[i].day - first + 1] |= 1 << ev.items[i].kind;
+      }
+      const int col_w = 70, row_h = 54, gx = (w - 7 * col_w) / 2, gy = 150;
+      it.printf(cx, 70, id(font_status), id(ink), TextAlign::TOP_CENTER, "%s %d", MONTHS[now.month - 1], now.year);
+      for (int c = 0; c < 7; c++)
+        it.print(gx + c * col_w + col_w / 2, 116, id(font_small), id(ink), TextAlign::TOP_CENTER, DAYS_SHORT[c]);
+      for (int d = 1; d <= dim; d++) {
+        const int cell = lead + d - 1;
+        const int x = gx + (cell % 7) * col_w, y = gy + (cell / 7) * row_h;
+        const bool is_today = first + d - 1 == today;
+        if (is_today)
+          it.filled_rectangle(x + 3, y + 1, col_w - 6, row_h - 2, id(ink));
+        const Color fg = is_today ? id(paper) : id(ink);
+        it.printf(x + col_w / 2, y + 4, id(font_small), fg, TextAlign::TOP_CENTER, "%d", d);
+        const int n = __builtin_popcount(kinds[d]);
+        int mx = x + (col_w - n * 20) / 2;
+        for (int k = 0; k < 2; k++) {
+          if (kinds[d] & (1 << k)) {
+            it.image(mx, y + 32, marks[k], fg);
+            mx += 20;
+          }
         }
-        for (int c = 1; c < 3; c++)
-          it.vertical_line(c * col_w, top, 8 * row_h, id(ink));
       }
 
-      // indoor
-      it.horizontal_line(24, 340, w - 48, id(ink));
-      it.printf(cx, 380, id(font_status), id(ink), TextAlign::CENTER, "Doma %.1f °C · %.0f %%", temp, hum);
-      it.horizontal_line(24, 420, w - 48, id(ink));
-
-      // footer
-      if (fc.valid()) {
-        const auto f = ESPTime::from_epoch_local(fc.fetched_at);
-        it.printf(24, 944, id(font_small), id(ink), TextAlign::BOTTOM_LEFT, "predpoveď %d. %d. %02d:%02d",
-                  f.day_of_month, f.month, f.hour, f.minute);
+      // next 14 days; waste collection today or tomorrow is inverted: put the bin out
+      const int top = 490, list_h = 50, max_rows = 8;
+      it.horizontal_line(24, top - 12, w - 48, id(ink));
+      int rows = 0, more = 0;
+      for (int i = 0; i < ev.count; i++) {
+        const Event &e = ev.items[i];
+        if (e.day < today || e.day >= today + 14)
+          continue;
+        if (rows == max_rows) {
+          more++;
+          continue;
+        }
+        const int y = top + rows++ * list_h;
+        const bool urgent = e.kind == WASTE && e.day <= today + 1;
+        if (urgent)
+          it.filled_rectangle(16, y, w - 32, list_h - 4, id(ink));
+        const Color fg = urgent ? id(paper) : id(ink);
+        const int ty = y + (list_h - 4) / 2;
+        if (e.day == today)
+          it.print(28, ty, id(font_small), fg, TextAlign::CENTER_LEFT, "Dnes");
+        else if (e.day == today + 1)
+          it.print(28, ty, id(font_small), fg, TextAlign::CENTER_LEFT, "Zajtra");
+        else {
+          const auto t = ESPTime::from_epoch_local(uint32_t(e.day) * 86400 + 43200);
+          it.printf(28, ty, id(font_small), fg, TextAlign::CENTER_LEFT, "%s %d. %d.", DAYS_SHORT[weekday(e.day)],
+                    t.day_of_month, t.month);
+        }
+        if (e.kind < 2)
+          it.image(150, ty - 16, icons[e.kind], fg);
+        it.start_clipping(194, y, w - 28, y + list_h);
+        if (e.minute == ALL_DAY)
+          it.print(194, ty, id(font_small), fg, TextAlign::CENTER_LEFT, e.summary);
+        else
+          it.printf(194, ty, id(font_small), fg, TextAlign::CENTER_LEFT, "%02d:%02d %s", e.minute / 60, e.minute % 60,
+                    e.summary);
+        it.end_clipping();
       }
-      if (now.is_valid())
-        it.printf(w - 24, 944, id(font_small), id(ink), TextAlign::BOTTOM_RIGHT, "%02d:%02d", now.hour, now.minute);
+      if (!ev.valid())
+        it.print(cx, top + 20, id(font_small), id(ink), TextAlign::TOP_CENTER, "Kalendár nie je k dispozícii");
+      else if (rows == 0)
+        it.print(cx, top + 20, id(font_small), id(ink), TextAlign::TOP_CENTER, "Žiadne udalosti v najbližších 14 dňoch");
+      else if (more > 0)
+        it.printf(w - 28, top + rows * list_h, id(font_small), id(ink), TextAlign::TOP_RIGHT, "+%d ďalšie", more);
+
+      // footer: IPv6 address (only while WiFi is up), last download
+      it.horizontal_line(24, 910, w - 48, id(ink));
+      char buf[network::IP_ADDRESS_BUFFER_SIZE];
+      for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+        if (!ip.is_set() || !ip.is_ip6())
+          continue;
+        ip.str_to(buf);
+        if (strncmp(buf, "fe80", 4) != 0) {
+          it.print(24, 944, id(font_footer), id(ink), TextAlign::BOTTOM_LEFT, buf);
+          break;
+        }
+      }
+      if (ev.valid()) {
+        const auto f = ESPTime::from_epoch_local(ev.fetched_at);
+        it.printf(w - 24, 944, id(font_footer), id(ink), TextAlign::BOTTOM_RIGHT, "%d. %d. %02d:%02d", f.day_of_month,
+                  f.month, f.hour, f.minute);
+      }
 
 touchscreen:
   - platform: gt911
