@@ -123,6 +123,9 @@ inline bool parse(ArduinoJson::JsonObjectConst response, const char *entity, uin
     }
     Hour &hour = out.hours[out.count++];
     hour.cond = condition_code(item["condition"] | "");
+    // OpenWeatherMap reports "sunny" for clear nights too; no UV means the sun is down
+    if (hour.cond == condition_code("sunny") && (item["uv_index"] | 1.0f) == 0.0f)
+      hour.cond = condition_code("clear-night");
     float temp = item["temperature"] | NAN;
     hour.temp2 = std::isnan(temp) ? NO_TEMP : int8_t(std::max(-127L, std::min(127L, lroundf(temp * 2))));
     float wind = item["wind_speed"] | NAN;

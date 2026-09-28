@@ -616,9 +616,11 @@ display:
           it.printf(x, y + 14, id(font_hour), id(ink), "%02d", t.hour);
           if (h->cond < NUM_CONDITIONS)
             it.image(x + 42, y + 8, small[h->cond], id(ink));
+          // temperature in line with the hour, lifted only to make room for the precipitation below
+          const bool show_pop = h->pop != NO_VALUE && h->pop >= 10;
           if (h->temp2 != NO_TEMP)
-            it.printf(x + 94, y + 6, id(font_hour), id(ink), "%.0f°", h->temp2 / 2.0f);
-          if (h->pop != NO_VALUE && h->pop >= 10)
+            it.printf(x + 94, show_pop ? y + 6 : y + 14, id(font_hour), id(ink), "%.0f°", h->temp2 / 2.0f);
+          if (show_pop)
             it.printf(x + 94, y + 38, id(font_tiny), id(ink), "%u %%", h->pop);
         }
         for (int c = 1; c < 3; c++)
