@@ -1,0 +1,42 @@
+---
+# NSPanel screensaver dims to 0 at night (sun below -6°), unless the room lights are on.
+#   packages:
+#     sleep_dim: !include
+#       file: common/nspanel_sleep_dim.yaml
+#       vars:
+#         sleep_override_entity: light.bedroom_lights
+script:
+  - id: apply_sleep_dim
+    then:
+      - lambda: |-
+          uint8_t dim;
+          if (id(sleep_override).state) dim = 5;              // sleepOverride
+          else if (id(sun_id).is_above_horizon(-6)) dim = 5;  // day
+          else dim = 0;                                       // night
+          id(nspanel_id).set_display_inactive_dim(dim);
+
+time:
+  - id: !extend ha_time
+    on_time_sync:
+      - script.execute: apply_sleep_dim
+
+binary_sensor:
+  - platform: homeassistant       # sleepOverride
+    id: sleep_override
+    entity_id: ${sleep_override_entity}
+    on_state:
+      - script.execute: apply_sleep_dim
+
+sun:
+  id: sun_id
+  time_id: ha_time
+  latitude: 48.15°
+  longitude: 17.11°
+  on_sunrise:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
+  on_sunset:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
