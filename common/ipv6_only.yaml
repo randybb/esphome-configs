@@ -14,6 +14,15 @@ wifi:
       ssid: !secret wifi_ssid_ipv6
       password: !secret wifi_password_ipv6
 
+esp32:
+  framework:
+    components:
+      # mdns 1.12.0 + fix for "A 0.0.0.0" without IPv4 (espressif/esp-protocols PR pending), drop once released
+      - name: espressif/mdns
+        source: https://github.com/randybb/esp-protocols.git
+        ref: mdns-v1.12.0-zero-ipv4-test
+        path: components/mdns
+
 network:
   enable_ipv6: true
   enable_ipv4: false
