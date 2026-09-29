@@ -1,4 +1,12 @@
 ---
+# Hardware: IKEA VINDRIKTNING (modded) + M5Stack M5Stamp Pico
+# Pinout:
+#   GPIO21  PM1006 UART                -> particle_uart (uart tx_pin)
+#   GPIO22  PM1006 UART                -> particle_uart (uart rx_pin)
+#   GPIO25  TZT 8-bit WS2812 5050 stick (8 LEDs, 7 visible outside; LEDs 1-7 broken), disabled
+#   GPIO27  Onboard RGB LED (1x WS2812, inside), unused
+#   GPIO32  Grove SDA                  -> i2c (i2c sda)
+#   GPIO33  Grove SCL                  -> i2c (i2c scl)
 substitutions:
   device: air-office-r
   name: Office R Air
@@ -45,65 +53,59 @@ uart:
 #       number: 39
 #       inverted: true
 
-light:
-  - platform: esp32_rmt_led_strip
-    # name: LED
-    id: neo
-    channel_colors: GRB
-    pin: 27
-    num_leds: 1
-    chipset: ws2812
-    restore_mode: ALWAYS_OFF
-  - platform: esp32_rmt_led_strip
-    name: NEO
-    id: neo_strip
-    channel_colors: GRB
-    pin: 25
-    num_leds: 7
-    chipset: ws2812
-    restore_mode: ALWAYS_OFF
-    effects:
-      - random:
-      - random:
-          name: "My Slow Random Effect"
-          transition_length: 30s
-          update_interval: 30s
-      - random:
-          name: "My Fast Random Effect"
-          transition_length: 4s
-          update_interval: 5s
-      - strobe:
-      - strobe:
-          name: Strobe Effect With Custom Values
-          colors:
-            - state: True
-              brightness: 100%
-              red: 100%
-              green: 90%
-              blue: 0%
-              duration: 500ms
-            - state: False
-              duration: 250ms
-            - state: True
-              brightness: 100%
-              red: 0%
-              green: 100%
-              blue: 0%
-              duration: 500ms
-      - flicker:
-      - flicker:
-          name: Flicker Effect With Custom Values
-          alpha: 95%
-          intensity: 1.5%
-      - addressable_rainbow:
-      - addressable_rainbow:
-          name: Rainbow Effect With Custom Values
-          speed: 10
-          width: 50
-      - addressable_scan:
-      - addressable_scan:
-          name: Scan Effect With Custom Values
-          move_interval: 100ms
+# LEDs disabled until the stick is fixed (LEDs after the first one light up randomly)
+# light:
+#   # only the first LED of the stick: the rest get garbage (broken DOUT after LED 0)
+#   - platform: esp32_rmt_led_strip
+#     name: NEO
+#     id: neo
+#     channel_colors: GRB
+#     pin: 25
+#     num_leds: 1
+#     chipset: ws2812
+#     restore_mode: ALWAYS_OFF
+#     effects:
+#       - random:
+#       - random:
+#           name: "My Slow Random Effect"
+#           transition_length: 30s
+#           update_interval: 30s
+#       - random:
+#           name: "My Fast Random Effect"
+#           transition_length: 4s
+#           update_interval: 5s
+#       - strobe:
+#       - strobe:
+#           name: Strobe Effect With Custom Values
+#           colors:
+#             - state: True
+#               brightness: 100%
+#               red: 100%
+#               green: 90%
+#               blue: 0%
+#               duration: 500ms
+#             - state: False
+#               duration: 250ms
+#             - state: True
+#               brightness: 100%
+#               red: 0%
+#               green: 100%
+#               blue: 0%
+#               duration: 500ms
+#       - flicker:
+#       - flicker:
+#           name: Flicker Effect With Custom Values
+#           alpha: 95%
+#           intensity: 1.5%
+#       - addressable_rainbow:
+#       - addressable_rainbow:
+#           name: Rainbow Effect With Custom Values
+#           speed: 10
+#           width: 50
+#       - addressable_scan:
+#       - addressable_scan:
+#           name: Scan Effect With Custom Values
+#           move_interval: 100ms
 
 sensor:
   # https://blissair.com/what-is-pm-2-5.htm
