@@ -4,13 +4,9 @@
 #     common: !include common/common.yaml
 #     ipv6_only: !include common/ipv6_only.yaml
 external_components:
-  # network enable_ipv4 (esphome/esphome#19750), drop once merged
+  # network enable_ipv4 + audio HTTP reader over IPv6 (esphome/esphome#19750), drop once merged
   - source: github://pr#19750
-    components: [const, network, wifi]
-  # audio HTTP reader over IPv6 (dual-stack hosts resolve A first), drop once in #19750
-  - source: github://randybb/esphome-components
-    components: [audio]
-    refresh: 1h
+    components: [const, network, wifi, audio]
 
 wifi:
   networks:
