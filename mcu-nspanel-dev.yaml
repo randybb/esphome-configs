@@ -1,4 +1,18 @@
 ---
+# Hardware: Sonoff NSPanel (EU)
+# Pinout:
+#   GPIO2   IO2
+#   GPIO4   Screen power                  -> Screen Power (switch gpio) (inverted)
+#   GPIO14  Left button                   -> Left Button (binary_sensor gpio) (inverted)
+#   GPIO16  Display UART TX               -> display_uart (uart tx_pin)
+#   GPIO17  Display UART RX               -> display_uart (uart rx_pin)
+#   GPIO19  Relay 2                       -> Relay 2 (switch gpio)
+#   GPIO21  Buzzer                        -> buzzer_out (output ledc)
+#   GPIO22  Relay 1                       -> Relay 1 (switch gpio)
+#   GPIO23  Relay 3 (no relay, connector)
+#   GPIO27  Right button                  -> Right Button (binary_sensor gpio) (inverted)
+#   GPIO37  ALS (light sensor)
+#   GPIO38  NTC temperature (ADC)         -> ntc_source (sensor adc)
 substitutions:
   device: nspanel-dev
   name: NSPanel DEV
@@ -60,6 +74,7 @@ external_components:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  nspanel_popup: !include common/nspanel_popup.yaml
   # common: !include common/common_dev.yaml
 
 # web_server:
@@ -440,6 +455,13 @@ nspanel_lovelace:
           entity_id: automation.irrigation_patio
         - name: Rast trávy
           entity_id: automation.irrigation_grow_grass
+
+    - type: cardEntities
+      title: Info
+      entities:
+        - name: Zariadenie
+          entity_id: button.nspanel_dev_info
+          icon: information-outline
 
 binary_sensor:
   - platform: gpio

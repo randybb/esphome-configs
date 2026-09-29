@@ -1,4 +1,18 @@
 ---
+# Hardware: Sonoff NSPanel (EU)
+# Pinout:
+#   GPIO2   IO2
+#   GPIO4   Screen power                  -> Screen Power (switch gpio) (inverted)
+#   GPIO14  Left button                   -> Left Button (binary_sensor gpio) (inverted)
+#   GPIO16  Display UART TX               -> display_uart (uart tx_pin)
+#   GPIO17  Display UART RX               -> display_uart (uart rx_pin)
+#   GPIO19  Relay 2
+#   GPIO21  Buzzer                        -> buzzer_out (output ledc)
+#   GPIO22  Relay 1                       -> relay_1 (output gpio)
+#   GPIO23  Relay 3 (no relay, connector)
+#   GPIO27  Right button                  -> Right Button (binary_sensor gpio) (inverted)
+#   GPIO37  ALS (light sensor)
+#   GPIO38  NTC temperature (ADC)         -> ntc_source (sensor adc)
 substitutions:
   device: nspanel-office-j
   name: Office J NSPanel
@@ -60,6 +74,13 @@ nspanel_lovelace:
           entity_id: switch.gate_auto_open
         - name: Auto-zatváranie
           entity_id: switch.gate_auto_close
+
+    - type: cardEntities
+      title: Info
+      entities:
+        - name: Zariadenie
+          entity_id: button.office_j_nspanel_info
+          icon: information-outline
 
 binary_sensor:
   - platform: gpio

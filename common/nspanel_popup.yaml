@@ -1,0 +1,98 @@
+---
+# NSPanel popups (popupNotify page), without changes to nspanel_lovelace:
+# - OTA progress
+# - device info (version, IPs) via the show_info API action
+# Needs nspanel_lovelace (id nspanel_id), its uart (id display_uart) and the
+# ota id ota_esphome (common/ota_esp32.yaml).
+# The component doesn't track these popups; the panel either reboots (OTA)
+# or goes back to the default page afterwards.
+api:
+  actions:
+    - action: show_info
+      then:
+        - script.execute: info_popup
+
+script:
+  - id: info_popup
+    mode: restart
+    then:
+      - lambda: |-
+          char build[Application::BUILD_TIME_STR_SIZE];
+          App.get_build_time_string(build);
+          std::string msg = "ESPHome " ESPHOME_VERSION "\r\n";
+          msg += build;
+          // global/ULA first, link-local last
+          std::vector<std::string> ips;
+          for (int pass = 0; pass < 2; pass++) {
+            for (auto &ip : wifi::global_wifi_component->wifi_sta_ip_addresses()) {
+              if (!ip.is_set()) continue;
+              char buf[network::IP_ADDRESS_BUFFER_SIZE];
+              ip.str_to(buf);
+              bool ll = strncmp(buf, "fe80", 4) == 0;
+              if (ll == (pass == 1)) ips.emplace_back(buf);
+            }
+          }
+          for (auto &ip : ips) msg += "\r\n" + ip;
+          id(nspanel_id).send_display_command("pageType~popupNotify");
+          id(nspanel_id).send_display_command(
+              "entityUpdateDetail~info~" + App.get_friendly_name() + "~65535~~65535~~65535~" + msg + "~65535~15");
+      - delay: 15s
+      - lambda: 'id(nspanel_id).render_default_page();'
+
+  # OTA blocks the main loop, and nspanel_lovelace only sends its queued
+  # commands from loop(), so these frames go straight to the uart in the
+  # component's format: 55 BB, length (LE), command, CRC16 (LE).
+  - id: ota_popup
+    parameters:
+      message: string
+    then:
+      - lambda: |-
+          auto send = [](const std::string &cmd) {
+            uint8_t hdr[4] = {0x55, 0xBB, uint8_t(cmd.size() & 0xFF), uint8_t(cmd.size() >> 8)};
+            uint16_t crc = crc16(hdr, 4);
+            crc = crc16(reinterpret_cast<const uint8_t *>(cmd.data()), cmd.size(), crc);
+            uint8_t tail[2] = {uint8_t(crc & 0xFF), uint8_t(crc >> 8)};
+            id(display_uart).write_array(hdr, 4);
+            id(display_uart).write_array(reinterpret_cast<const uint8_t *>(cmd.data()), cmd.size());
+            id(display_uart).write_array(tail, 2);
+            id(display_uart).flush();
+          };
+          send("dimmode~100~100");
+          send("pageType~popupNotify");
+          send("entityUpdateDetail~ota~Aktualizácia firmvéru~65535~~65535~~65535~" + message + "~65535~0");
+
+ota:
+  - id: !extend ota_esphome
+    on_begin:
+      - script.execute:
+          id: ota_popup
+          message: Nahrávam…
+    on_progress:
+      - lambda: |-
+          static int last = -1;
+          int pct = (int) x / 10 * 10;
+          if (pct != last) {
+            last = pct;
+            id(ota_popup)->execute("Nahrávam… " + std::to_string(pct) + " %");
+          }
+    on_end:
+      - script.execute:
+          id: ota_popup
+          message: Hotovo, reštartujem
+    on_error:
+      - script.execute:
+          id: ota_popup
+          message: Aktualizácia zlyhala
+      - delay: 5s
+      - lambda: |-
+          id(nspanel_id).set_display_dim(5, 80);
+          id(nspanel_id).render_default_page();
+
+button:
+  # put button.<device>_info on a card: the panel presses it through HA
+  - platform: template
+    name: Info
+    id: info_button
+    entity_category: diagnostic
+    on_press:
+      - script.execute: info_popup

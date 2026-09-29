@@ -31,6 +31,9 @@ esp32:
       minimum_chip_revision: 3.0
       sram1_as_iram: true
 
+packages:
+  popup: !include nspanel_popup.yaml
+
 external_components:
   - source:
       type: git
