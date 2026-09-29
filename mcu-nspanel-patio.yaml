@@ -37,6 +37,7 @@ nspanel_lovelace:
   cards:
     - type: cardGrid
       title: Kuchyňa / Obývačka
+      id: card_home
       entities:
         - name: Kuchyňa / Obývačka
           entity_id: light.kitchen
@@ -69,6 +70,7 @@ nspanel_lovelace:
 
     - type: cardGrid
       title: Von
+      id: card_outside
       entities:
         - name: Terasa
           entity_id: light.patio_lights
@@ -166,9 +168,7 @@ binary_sensor:
       inverted: true
     on_click:
       - switch.toggle: relay_1
-      - lambda: 'id(nspanel_id).render_default_page();'
-      - lambda: 'id(nspanel_id).render_next_page();'
-      - lambda: 'id(nspanel_id).render_next_page();'
+      - script.execute: show_outside_card
 
   - platform: gpio
     name: Right Button
@@ -187,9 +187,7 @@ binary_sensor:
               action: light.toggle
               data:
                 entity_id: light.patio_lights
-          - lambda: 'id(nspanel_id).render_default_page();'
-          - lambda: 'id(nspanel_id).render_next_page();'
-          - lambda: 'id(nspanel_id).render_next_page();'
+          - script.execute: show_outside_card
         else:
           - switch.toggle: relay_2
 
@@ -212,3 +210,12 @@ switch:
     pin:
       number: 19
 
+script:
+  # jump straight to the "Von" card (one render instead of home + next + next):
+  # make it the default page for a moment, render it, restore the home card
+  - id: show_outside_card
+    then:
+      - lambda: |-
+          id(nspanel_id).set_default_page("card_outside");
+          id(nspanel_id).render_default_page();
+          id(nspanel_id).set_default_page("card_home");
