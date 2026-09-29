@@ -1,4 +1,17 @@
 ---
+# Hardware: Guition JC3248W535
+# Pinout:
+#   GPIO1                              -> main_backlight (power_supply)
+#   GPIO4                              -> touchscreen_bus (i2c sda)
+#   GPIO8                              -> touchscreen_bus (i2c scl)
+#   GPIO21                             -> display_qspi (spi data_pins)
+#   GPIO39                             -> display_qspi (spi data_pins)
+#   GPIO40                             -> display_qspi (spi data_pins)
+#   GPIO45                             -> main_display (display mipi_spi cs_pin)
+#   GPIO47                             -> display_qspi (spi clk_pin)
+#   GPIO48                             -> display_qspi (spi data_pins)
+# I2C:
+#   0x3B  main_touch (touchscreen axs15231)
 substitutions:
   device: lvgl-eworkbench
   name: Electronics Workbench Display

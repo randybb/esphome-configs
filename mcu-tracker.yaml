@@ -1,4 +1,5 @@
 ---
+# Hardware: LilyGO T-PCIE
 substitutions:
   device: tracker
   name: Tracker

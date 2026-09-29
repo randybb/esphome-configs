@@ -1,4 +1,14 @@
 ---
+# Hardware: M5Stack ATOM Lite + ATOM Hub Switch
+# Pinout:
+#   GPIO21                             -> i2c (i2c scl)
+#   GPIO23                             -> modbus_uart (uart tx_pin)
+#   GPIO25                             -> i2c (i2c sda)
+#   GPIO26  Grove SDA
+#   GPIO32  Grove SCL
+#   GPIO33                             -> modbus_uart (uart rx_pin)
+# I2C:
+#   0x27  relay_module (pca9554)
 substitutions:
   device: well
   name: Well

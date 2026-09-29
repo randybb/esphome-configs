@@ -1,4 +1,25 @@
 ---
+# Hardware: M5Stack M5Paper
+# Pinout:
+#   GPIO2                              -> main_power (switch gpio)
+#   GPIO5                              -> ext_power (switch gpio)
+#   GPIO12                             -> spi (spi mosi_pin)
+#   GPIO13                             -> spi (spi miso_pin)
+#   GPIO14                             -> spi (spi clk_pin)
+#   GPIO15                             -> m5paper_display (display it8951 cs_pin)
+#   GPIO21                             -> i2c_main (i2c sda)
+#   GPIO22                             -> i2c_main (i2c scl)
+#   GPIO23                             -> m5paper_display (display it8951 reset_pin)
+#   GPIO27                             -> m5paper_display (display it8951 busy_pin)
+#   GPIO35                             -> Battery Voltage (sensor adc)
+#   GPIO36                             -> gt911_touchscreen (touchscreen gt911 interrupt_pin)
+#   GPIO37                             -> M5Paper Button UP (binary_sensor gpio) (inverted)
+#   GPIO38                             -> M5Paper Button Press (binary_sensor gpio) (inverted)
+#   GPIO39                             -> M5Paper Button Down (binary_sensor gpio) (inverted)
+# I2C:
+#   0x44  sensor sht3xd (sensor sht3xd)
+#   0x51  rtc_time (time bm8563)
+#   0x5D  gt911_touchscreen (touchscreen gt911)
 substitutions:
   device: m5paper
   name: M5Paper

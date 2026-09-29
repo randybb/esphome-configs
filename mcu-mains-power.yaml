@@ -1,4 +1,19 @@
 ---
+# Hardware: M5Stack ATOM Lite
+# Pinout:
+#   GPIO1   UART0 TX
+#   GPIO3   UART0 RX
+#   GPIO12  IR
+#   GPIO19  NC
+#   GPIO21  I2C1 SCL
+#   GPIO22  1-WIRE
+#   GPIO23  UART1 RX
+#   GPIO25  I2C1 SDA
+#   GPIO26  I2C0 SDA                   -> uart_modbus (uart rx_pin)
+#   GPIO27  NEO
+#   GPIO32  I2C0 SCL                   -> uart_modbus (uart tx_pin)
+#   GPIO33  UART1 TX
+#   GPIO39  BUTTON
 substitutions:
   device: mains-power
   name: Mains Power
@@ -27,21 +42,6 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# PINOUTS: M5ATOM
-# IR        G12
-# NEO       G27
-# BUTTON    G39
-# I2C0 SDA  G26
-# I2C0 SCL  G32
-# I2C1 SDA  G25
-# I2C1 SCL  G21
-# UART0 RX  G3
-# UART0 TX  G1
-# UART1 RX  G23
-# UART1 TX  G33
-# 1-WIRE    G22
-# NC        G19
 
 modbus:
   uart_id: uart_modbus

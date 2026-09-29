@@ -1,4 +1,14 @@
 ---
+# Hardware: M5Stack ATOM Lite
+# Pinout:
+#   GPIO19                             -> spi (spi mosi_pin)
+#   GPIO21                             -> rf_tx (remote_transmitter)
+#   GPIO22                             -> spi (spi miso_pin)
+#   GPIO23                             -> spi (spi clk_pin)
+#   GPIO25                             -> rf_rx (remote_receiver)
+#   GPIO26  Grove SDA
+#   GPIO32  Grove SCL
+#   GPIO33                             -> cc1101 (cc1101 cs_pin)
 substitutions:
   device: rf
   name: RF Bridge

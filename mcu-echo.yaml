@@ -1,4 +1,15 @@
 ---
+# Hardware: M5Stack ATOM Echo
+# Pinout:
+#   GPIO12                             -> Button (binary_sensor gpio) (inverted)
+#   GPIO19                             -> speaker_bus (i2s_audio i2s_bclk_pin)
+#   GPIO21                             -> led_red (output ledc)
+#   GPIO22                             -> speaker_id (speaker i2s_audio i2s_dout_pin)
+#   GPIO23                             -> led_status (light status_led); led_blue (output ledc)
+#   GPIO25                             -> led_green (output ledc)
+#   GPIO26  Grove SDA                  -> i2c (i2c sda)
+#   GPIO32  Grove SCL                  -> i2c (i2c scl)
+#   GPIO33                             -> speaker_bus (i2s_audio i2s_lrclk_pin)
 substitutions:
   device: echo
   name: Echo

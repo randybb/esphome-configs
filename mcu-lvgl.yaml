@@ -1,4 +1,88 @@
 ---
+# Hardware: Sunton ESP32-8048S043 (CYD 4.3", 800x480, capacitive touch)
+# Pinout:
+#   # Display
+#    R0        GND
+#    R1        GND
+#    R2        GND
+#    R3        45
+#    R4        48
+#    R5        47
+#    R6        21
+#    R7        14
+#    G0        GND
+#    G1        GND
+#    G2         5
+#    G3         6
+#    G4         7
+#    G5        15
+#    G6        16
+#    G7         4
+#    B0        GND
+#    B1        GND
+#    B2        GND
+#    B3         8
+#    B4         3
+#    B5        46
+#    B6         9
+#    B7         1
+#    DCLK      42
+#    HSYNC     39
+#    VSYNC     41
+#    DE        40
+#    BL         2
+#   # Capacitive Touch
+#    TP_INT
+#    TP_RST    38
+#    TP_SDA    19
+#    TP_SCL    20
+#   # SDCARD
+#    TF_CS     10
+#    SPI_MOSI  11
+#    SPI_CLK   12
+#    SPI_MISO  13
+#   # SPI Conector (HC1.25-4)
+#    SPI_CS    19
+#    SPI_MOSI  11
+#    SPI_CLK   12
+#    SPI_MISO  13
+#   # UART1 (SH1.0-4)
+#    1         GND
+#    2         3V3-ESP
+#    3         17
+#    4         18
+#   # UART1, USB Connector (Resistive) / I2C (Capacitive) (HC1.25-4)
+#    1         17
+#    2         18
+#    3         19  TP_SDA
+#    4         20  TP_SCL
+# Used:
+#   GPIO1   main_display (display mipi_rgb data_pins.blue)
+#   GPIO2   gpio_backlight_pwm (output ledc)
+#   GPIO3   main_display (display mipi_rgb data_pins.blue)
+#   GPIO4   main_display (display mipi_rgb data_pins.green)
+#   GPIO5   main_display (display mipi_rgb data_pins.green)
+#   GPIO6   main_display (display mipi_rgb data_pins.green)
+#   GPIO7   main_display (display mipi_rgb data_pins.green)
+#   GPIO8   main_display (display mipi_rgb data_pins.blue)
+#   GPIO9   main_display (display mipi_rgb data_pins.blue)
+#   GPIO14  main_display (display mipi_rgb data_pins.red)
+#   GPIO15  main_display (display mipi_rgb data_pins.green)
+#   GPIO16  main_display (display mipi_rgb data_pins.green)
+#   GPIO19  i2c_main (i2c sda)
+#   GPIO20  i2c_main (i2c scl)
+#   GPIO21  main_display (display mipi_rgb data_pins.red)
+#   GPIO38  main_touch (touchscreen gt911 reset_pin)
+#   GPIO39  main_display (display mipi_rgb hsync_pin)
+#   GPIO40  main_display (display mipi_rgb de_pin)
+#   GPIO41  main_display (display mipi_rgb vsync_pin)
+#   GPIO42  main_display (display mipi_rgb pclk_pin)
+#   GPIO45  main_display (display mipi_rgb data_pins.red)
+#   GPIO46  main_display (display mipi_rgb data_pins.blue)
+#   GPIO47  main_display (display mipi_rgb data_pins.red)
+#   GPIO48  main_display (display mipi_rgb data_pins.red)
+# I2C:
+#   0x5D  main_touch (touchscreen gt911)
 substitutions:
   device: lvgl
   name: LVGL
@@ -35,63 +119,6 @@ psram:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# PINOUTS: ESP32 Cheap Yellow Display, 4.3", IPS, Capacitive
-## Display
-# R0        GND
-# R1        GND
-# R2        GND
-# R3        45
-# R4        48
-# R5        47
-# R6        21
-# R7        14
-# G0        GND
-# G1        GND
-# G2         5
-# G3         6
-# G4         7
-# G5        15
-# G6        16
-# G7         4
-# B0        GND
-# B1        GND
-# B2        GND
-# B3         8
-# B4         3
-# B5        46
-# B6         9
-# B7         1
-# DCLK      42
-# HSYNC     39
-# VSYNC     41
-# DE        40
-# BL         2
-## Capacitive Touch
-# TP_INT
-# TP_RST    38
-# TP_SDA    19
-# TP_SCL    20
-## SDCARD
-# TF_CS     10
-# SPI_MOSI  11
-# SPI_CLK   12
-# SPI_MISO  13
-## SPI Conector (HC1.25-4)
-# SPI_CS    19
-# SPI_MOSI  11
-# SPI_CLK   12
-# SPI_MISO  13
-## UART1 (SH1.0-4)
-# 1         GND
-# 2         3V3-ESP
-# 3         17
-# 4         18
-## UART1, USB Connector (Resistive) / I2C (Capacitive) (HC1.25-4)
-# 1         17
-# 2         18
-# 3         19  TP_SDA
-# 4         20  TP_SCL
 
 api:
   # status page until Home Assistant connects (log viewers don't subscribe to states)

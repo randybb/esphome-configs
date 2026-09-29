@@ -1,4 +1,14 @@
 ---
+# Hardware: Apollo Automation ESK-1 ESPHome Starter Kit
+# Pinout:
+#   GPIO0                              -> i2c_1 (i2c scl)
+#   GPIO1                              -> i2c_1 (i2c sda)
+#   GPIO4                              -> Accessory Power (switch gpio)
+#   GPIO5                              -> Onboard RGB LED (light esp32_rmt_led_strip)
+#   GPIO14                             -> RGB LEDs (light esp32_rmt_led_strip)
+#   GPIO18                             -> buzzer_output (output ledc)
+# I2C:
+#   0x38  aht20 (sensor aht10)
 substitutions:
   device: apollo-dev #test
   name: Apollo DEV #test

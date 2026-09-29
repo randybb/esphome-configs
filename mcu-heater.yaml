@@ -1,4 +1,22 @@
 ---
+# Hardware: M5Stack ATOM Lite + ATOM Hub Switch
+# Pinout:
+#   GPIO1   UART0 TX
+#   GPIO3   UART0 RX
+#   GPIO12  IR
+#   GPIO19  NC                         -> Demand [heating_demand] (switch gpio)
+#   GPIO21  I2C1 SCL                   -> i2c (i2c scl)
+#   GPIO22  1-WIRE                     -> Demand [hot_water_demand] (switch gpio)
+#   GPIO23  UART1 RX                   -> uart_modbus (uart rx_pin)
+#   GPIO25  I2C1 SDA                   -> i2c (i2c sda)
+#   GPIO26  I2C0 SDA
+#   GPIO27  NEO
+#   GPIO32  I2C0 SCL
+#   GPIO33  UART1 TX                   -> uart_modbus (uart tx_pin)
+#   GPIO39  BUTTON
+# I2C:
+#   0x18  one_wire_bus (one_wire ds2482)
+#   0x27  pca9554_module (pca9554)
 substitutions:
   device: heater
   name: Heater
@@ -38,21 +56,6 @@ external_components:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# PINOUTS: M5ATOM
-# IR        G12
-# NEO       G27
-# BUTTON    G39
-# I2C0 SDA  G26
-# I2C0 SCL  G32
-# I2C1 SDA  G25
-# I2C1 SCL  G21
-# UART0 RX  G3
-# UART0 TX  G1
-# UART1 RX  G23
-# UART1 TX  G33
-# 1-WIRE    G22
-# NC        G19
 
 #logger:
 #  level: VERBOSE

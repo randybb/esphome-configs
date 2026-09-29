@@ -1,4 +1,5 @@
 ---
+# Hardware: Nordic nRF52840 DK
 esphome:
   name: mcu-nrf-dk
   friendly_name: mcu-nrf-dk

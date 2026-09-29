@@ -1,4 +1,21 @@
 ---
+# Hardware: ESP32-CAM (AI-Thinker style, runs hot)
+# Pinout:
+#   GPIO0                              -> Camera (esp32_camera)
+#   GPIO5                              -> Camera (esp32_camera data_pins)
+#   GPIO18                             -> Camera (esp32_camera data_pins)
+#   GPIO19                             -> Camera (esp32_camera data_pins)
+#   GPIO21                             -> Camera (esp32_camera data_pins)
+#   GPIO22                             -> Camera (esp32_camera pixel_clock_pin)
+#   GPIO23                             -> Camera (esp32_camera href_pin)
+#   GPIO25                             -> Camera (esp32_camera vsync_pin)
+#   GPIO26                             -> i2c_bus (i2c sda)
+#   GPIO27                             -> i2c_bus (i2c scl)
+#   GPIO32                             -> Enable (switch gpio)
+#   GPIO34                             -> Camera (esp32_camera data_pins)
+#   GPIO35                             -> Camera (esp32_camera data_pins)
+#   GPIO36                             -> Camera (esp32_camera data_pins)
+#   GPIO39                             -> Camera (esp32_camera data_pins)
 substitutions:
   device: cam-1
   name: Cam 1

@@ -1,4 +1,11 @@
 ---
+# Hardware: Sonoff Basic R2
+# Pinout:
+#   GPIO0   BUTTON                     -> Button (binary_sensor gpio) (inverted)
+#   GPIO1   TX PIN
+#   GPIO3   RX PIN
+#   GPIO12  RELAY                      -> Relay (switch gpio)
+#   GPIO13  LED1                       -> led (output gpio)
 substitutions:
   device: waterproof-socket
   name: Waterproof Socket
@@ -16,13 +23,6 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-
-# Sonoff Basic R2
-# GPIO00 - BUTTON
-# GPIO12 - RELAY
-# GPIO13 - LED1
-# GPIO03 - RX PIN
-# GPIO01 - TX PIN
 
 binary_sensor:
   - platform: gpio

@@ -1,4 +1,51 @@
 ---
+# Hardware: Guition ESP32-S3-4848S040
+# Pinout:
+#   # Display (RGB, pins in the mipi_rgb model)
+#    CS        39
+#    SCK       48  ST7701S init (3-wire SPI)
+#    SDA       47
+#    DE        18
+#    HSYNC     16
+#    VSYNC     17
+#    PCLK      21
+#    BL        38
+#   # Capacitive Touch (GT911)
+#    TP_SDA    19
+#    TP_SCL    45
+#   # Relays (86 box variant)
+#    RELAY1    40
+#    RELAY2     2
+#    RELAY3     1
+# Used:
+#   GPIO0   main_display (display mipi_rgb data_pins.red)
+#   GPIO3   main_display (display mipi_rgb data_pins.green)
+#   GPIO4   main_display (display mipi_rgb data_pins.blue)
+#   GPIO5   main_display (display mipi_rgb data_pins.blue)
+#   GPIO6   main_display (display mipi_rgb data_pins.blue)
+#   GPIO7   main_display (display mipi_rgb data_pins.blue)
+#   GPIO8   main_display (display mipi_rgb data_pins.green)
+#   GPIO9   main_display (display mipi_rgb data_pins.green)
+#   GPIO10  main_display (display mipi_rgb data_pins.green)
+#   GPIO11  main_display (display mipi_rgb data_pins.red)
+#   GPIO12  main_display (display mipi_rgb data_pins.red)
+#   GPIO13  main_display (display mipi_rgb data_pins.red)
+#   GPIO14  main_display (display mipi_rgb data_pins.red)
+#   GPIO15  main_display (display mipi_rgb data_pins.blue)
+#   GPIO16  main_display (display mipi_rgb hsync_pin)
+#   GPIO17  main_display (display mipi_rgb vsync_pin)
+#   GPIO18  main_display (display mipi_rgb de_pin)
+#   GPIO19  i2c_main (i2c sda)
+#   GPIO20  main_display (display mipi_rgb data_pins.green)
+#   GPIO21  main_display (display mipi_rgb pclk_pin)
+#   GPIO38  gpio_backlight_pwm (output ledc)
+#   GPIO39  main_display (display mipi_rgb cs_pin)
+#   GPIO45  i2c_main (i2c scl)
+#   GPIO46  main_display (display mipi_rgb data_pins.green)
+#   GPIO47  lcd_spi (spi mosi_pin)
+#   GPIO48  lcd_spi (spi clk_pin)
+# I2C:
+#   0x5D  main_touch (touchscreen gt911)
 substitutions:
   device: lvgl-4848s040
   name: LVGL 4848S040
@@ -34,24 +81,6 @@ psram:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# PINOUTS: Guition ESP32-S3-4848S040, 4", 480x480, ST7701S, capacitive
-## Display (RGB, pins in the mipi_rgb model)
-# CS        39
-# SCK       48  ST7701S init (3-wire SPI)
-# SDA       47
-# DE        18
-# HSYNC     16
-# VSYNC     17
-# PCLK      21
-# BL        38
-## Capacitive Touch (GT911)
-# TP_SDA    19
-# TP_SCL    45
-## Relays (86 box variant)
-# RELAY1    40
-# RELAY2     2
-# RELAY3     1
 
 api:
   # status page until Home Assistant connects (log viewers don't subscribe to states)

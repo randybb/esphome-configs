@@ -1,4 +1,10 @@
 ---
+# Hardware: ESP32 DevKit
+# Pinout:
+#   GPIO0                              -> Boot (binary_sensor gpio) (inverted)
+#   GPIO2                              -> LED (switch gpio)
+#   GPIO22                             -> can_bus (canbus esp32_can rx_pin)
+#   GPIO23                             -> can_bus (canbus esp32_can tx_pin)
 substitutions:
   device: can-node-1
   name: CAN Node 1

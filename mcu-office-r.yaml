@@ -1,4 +1,15 @@
 ---
+# Hardware: M5Stack M5Stamp C3
+# Pinout:
+#   GPIO0   I2C SDA
+#   GPIO1   I2C SCL
+#   GPIO2   NEO
+#   GPIO3   BUTTON
+#   GPIO4                              -> led_red (output ledc)
+#   GPIO5                              -> led_green (output ledc)
+#   GPIO6                              -> led_blue (output ledc)
+#   GPIO20  UART RX
+#   GPIO21  UART TX
 substitutions:
   device: office-r
   name: Office R
@@ -23,13 +34,6 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# GPIO21   UART TX
-# GPIO20   UART RX
-# GPIO0   I2C SDA
-# GPIO1   I2C SCL
-# GPIO2  NEO
-# GPIO3  BUTTON
 
 light:
   - platform: rgb

@@ -1,4 +1,15 @@
 ---
+# Hardware: BlitzWolf BW-SHP2/SHP6
+# Pinout:
+#   GPIO0   GPIO_LED1_INV Red LED (inverted), Power Status -> led_red (output gpio)
+#   GPIO1   GPIO_USER RXD, Optional sensor
+#   GPIO2   GPIO_LEDLNK_INV Blue LED (inverted), Link Status -> led_blue (output gpio)
+#   GPIO3   GPIO_USER TXD, Optional sensor
+#   GPIO5   GPIO_HJL_CF BL0937 or HJL-01 CF power -> sensor/hlw8012 (sensor hlw8012 cf_pin)
+#   GPIO12  GPIO_NRG_SEL_INV BL0937 or HJL-01 Sel output (0 = Voltage) -> sensor/hlw8012 (sensor hlw8012 sel_pin) (inverted)
+#   GPIO13  GPIO_KEY1 Button           -> Button (binary_sensor gpio) (inverted)
+#   GPIO14  GPIO_NRG_CF1 BL0937 or HJL-01 CF1 current / voltage -> sensor/hlw8012 (sensor hlw8012 cf1_pin)
+#   GPIO15  GPIO_REL1 Relay            -> Relay (switch gpio)
 substitutions:
   device: socket-02
   name: Socket 02
@@ -18,18 +29,6 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-
-# BlitzWolf BW-SHP2 and BW-SHP6 (ESP8285 - BL0937 or HJL-01 Energy Monitoring)
-# Pin 	  Name              Function
-# GPIO15 	GPIO_REL1         Relay
-# GPIO13 	GPIO_KEY1         Button
-# GPIO00 	GPIO_LED1_INV     Red LED (inverted), Power Status
-# GPIO02 	GPIO_LEDLNK_INV   Blue LED (inverted), Link Status
-# GPIO05  GPIO_HJL_CF       BL0937 or HJL-01 CF power
-# GPIO12  GPIO_NRG_SEL_INV  BL0937 or HJL-01 Sel output (0 = Voltage)
-# GPIO14  GPIO_NRG_CF1      BL0937 or HJL-01 CF1 current / voltage
-# GPIO01 	GPIO_USER         RXD, Optional sensor
-# GPIO03 	GPIO_USER         TXD, Optional sensor
 
 binary_sensor:
   - platform: gpio

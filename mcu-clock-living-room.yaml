@@ -1,4 +1,13 @@
 ---
+# Hardware: M5Stack M5Stamp Pico
+# Pinout:
+#   GPIO25                             -> rtttl_out (output ledc)
+#   GPIO27                             -> LED (light esp32_rmt_led_strip)
+#   GPIO32  Grove SDA                  -> i2c_main (i2c sda)
+#   GPIO33  Grove SCL                  -> i2c_main (i2c scl)
+#   GPIO39                             -> Button (binary_sensor gpio) (inverted)
+# I2C:
+#   0x24  tm1650_display (display tm1650)
 substitutions:
   device: clock-living-room
   name: Living room Clock

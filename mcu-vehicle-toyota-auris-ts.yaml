@@ -1,4 +1,6 @@
 ---
+# Hardware: M5Stack ATOM Lite
+# Pinout: see common/vehicle_base.yaml
 substitutions:
   device: vehicle-toyota-auris-ts
   name: Vehicle Toyota Auris TS

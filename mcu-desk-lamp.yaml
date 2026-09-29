@@ -1,4 +1,11 @@
 ---
+# Hardware: Xiaomi Mi Desk Lamp, brain transplant: M5Stack M5Stamp Pico (originally ESP8266)
+# Pinout:
+#   GPIO18  Warm White (GPIO_PWM2)     -> warm_white (output ledc)
+#   GPIO19  Cold White (GPIO_PWM1)     -> cold_white (output ledc)
+#   GPIO21  Rotary switch A pin (GPIO_ROT_A) -> rotary (sensor rotary_encoder pin_a)
+#   GPIO26  Rotary switch B pin (GPIO_ROT_B) -> rotary (sensor rotary_encoder pin_b)
+#   GPIO36  Button (GPIO_KEY1)         -> rotary_button (binary_sensor gpio) (inverted)
 substitutions:
   device: desk-lamp
   name: Desk Lamp
@@ -20,14 +27,6 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# Mi Desk Lamp
-# Pin 	  Function (Name)
-# GPIO18: Warm White (GPIO_PWM2)
-# GPIO19: Cold White (GPIO_PWM1)
-# GPIO21: Rotary switch A pin (GPIO_ROT_A)
-# GPIO26: Rotary switch B pin (GPIO_ROT_B)
-# GPIO36: Button (GPIO_KEY1)
 
 
 binary_sensor:

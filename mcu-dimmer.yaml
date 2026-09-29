@@ -1,4 +1,11 @@
 ---
+# Hardware: M5Stack M5Stamp Pico
+# Pinout:
+#   GPIO22                             -> dimmer1 (output ac_dimmer gate_pin)
+#   GPIO25                             -> dimmer1 (output ac_dimmer zero_cross_pin) (inverted)
+#   GPIO27                             -> LED (light esp32_rmt_led_strip)
+#   GPIO32  Grove SDA
+#   GPIO33  Grove SCL
 substitutions:
   device: dimmer
   name: Dimmer

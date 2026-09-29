@@ -1,4 +1,16 @@
 ---
+# Hardware: M5Stack M5Stamp S3
+# Pinout:
+#   GPIO0   Button
+#   GPIO1   I2C SDA                    -> i2c_rfid (i2c sda)
+#   GPIO2   I2C SDA, Notify LED        -> i2c_rfid (i2c scl)
+#   GPIO3                              -> notify_led (light esp32_rmt_led_strip)
+#   GPIO4   Buzzer                     -> buzzer (output ledc)
+#   GPIO19  U-
+#   GPIO20  U+
+#   GPIO21  RGB                        -> status_led (light esp32_rmt_led_strip)
+# I2C:
+#   0x24  pn532_module (pn532_i2c)
 substitutions:
   device: rfid-reader
   name: RFID Reader
@@ -44,15 +56,6 @@ packages:
 
 # logger:
 #   hardware_uart: UART0
-
-# GPIO20  U+
-# GPIO19  U-
-# GPIO0   Button
-# GPIO1   I2C SDA
-# GPIO2   I2C SDA
-# GPIO2   Notify LED
-# GPIO4   Buzzer
-# GPIO21  RGB
 
 api:
   actions:

@@ -1,4 +1,13 @@
 ---
+# Hardware: ESP32 DevKit
+# Pinout:
+#   GPIO17                             -> i2c (i2c sda)
+#   GPIO18                             -> i2c (i2c scl)
+#   GPIO19                             -> as3935_i2c (as3935_i2c irq_pin)
+#   GPIO22                             -> can_bus (canbus esp32_can rx_pin)
+#   GPIO23                             -> can_bus (canbus esp32_can tx_pin)
+# I2C:
+#   0x03  as3935_i2c (as3935_i2c)
 substitutions:
   device: can-node-2
   name: CAN Node 2

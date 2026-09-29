@@ -1,4 +1,12 @@
 ---
+# Hardware: Sonoff Dual R2
+# Pinout:
+#   GPIO0   Pin "button 0" on expansion header
+#   GPIO5   Relay #2 and green color on LED -> relay_2 (output gpio)
+#   GPIO9   Pin "button 1" on expansion header
+#   GPIO10  Push Button
+#   GPIO12  Relay #1 and red color on LED -> relay_1 (output gpio)
+#   GPIO13  Blue Status LED            -> status_led (status_led) (inverted)
 substitutions:
   device: basement-2
   name_short: Basement
@@ -17,14 +25,6 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-
-# Sonoff Dual R2
-# GPIO10	Push Button
-# GPIO00	Pin "button 0" on expansion header
-# GPIO09	Pin "button 1" on expansion header
-# GPIO12	Relay #1 and red color on LED
-# GPIO05	Relay #2 and green color on LED
-# GPIO13	Blue Status LED
 
 status_led:
   pin:

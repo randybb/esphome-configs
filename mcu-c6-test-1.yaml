@@ -1,4 +1,7 @@
 ---
+# Hardware: Espressif ESP32-C6-DevKitC-1
+# Pinout:
+#   GPIO8                              -> LED (light esp32_rmt_led_strip)
 substitutions:
   device: c6-test-1
   name: C6 TEST 1

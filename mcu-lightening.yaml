@@ -1,4 +1,14 @@
 ---
+# Hardware: M5Stack M5Stamp Pico
+# Pinout:
+#   GPIO22                             -> i2c (i2c scl)
+#   GPIO25                             -> i2c (i2c sda)
+#   GPIO26                             -> as3935_i2c (as3935_i2c irq_pin)
+#   GPIO27                             -> neo (light esp32_rmt_led_strip)
+#   GPIO32  Grove SDA
+#   GPIO33  Grove SCL
+# I2C:
+#   0x03  as3935_i2c (as3935_i2c)
 substitutions:
   device: lightening
   name: Lightening detector

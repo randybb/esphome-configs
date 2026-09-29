@@ -1,4 +1,8 @@
 ---
+# Hardware: Sonoff Mini
+# Pinout:
+#   GPIO12                             -> relay (output gpio)
+#   GPIO13                             -> led_blue (output gpio)
 substitutions:
   device: staircase-light
   name: Staircase

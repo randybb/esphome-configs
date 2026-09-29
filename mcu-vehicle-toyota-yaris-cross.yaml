@@ -1,4 +1,6 @@
 ---
+# Hardware: M5Stack ATOM Lite
+# Pinout: see common/vehicle_base.yaml
 substitutions:
   device: vehicle-toyota-yaris-cross
   name: Vehicle Toyota Yaris Cross

@@ -1,4 +1,13 @@
 ---
+# Hardware: M5Stack M5Stamp Pico
+# Pinout:
+#   GPIO22                             -> uart_distance (uart rx_pin)
+#   GPIO25                             -> uart_distance (uart tx_pin)
+#   GPIO26                             -> hdmi_cec (hdmi_cec)
+#   GPIO27                             -> LED (light esp32_rmt_led_strip)
+#   GPIO32  Grove SDA                  -> i2c (i2c sda)
+#   GPIO33  Grove SCL                  -> i2c (i2c scl)
+#   GPIO39                             -> Bedroom TV Button (binary_sensor gpio) (inverted)
 substitutions:
   device: cec-bedroom
   name: Bedroom TV

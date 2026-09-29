@@ -1,4 +1,23 @@
 ---
+# Hardware: Xiaomi Mi Bedside Lamp 2 (ESP-WROOM-32D, single core; RGBW LEDs)
+# Pinout (github.com/mmakaay/esphome-xiaomi_bslamp2, doc/technical_details.md):
+#   GPIO1   Debug pad TX
+#   GPIO2   Debug pad, free I/O
+#   GPIO3   Debug pad RX
+#   GPIO4   LEDs master switch 2
+#   GPIO5   LEDs blue PWM
+#   GPIO12  LEDs white PWM
+#   GPIO13  LEDs red PWM
+#   GPIO14  LEDs green PWM
+#   GPIO16  Front panel interrupt
+#   GPIO17  EEPROM I2C SDA
+#   GPIO18  EEPROM I2C SCL
+#   GPIO19  Front panel I2C SCL        -> front_panel_i2c (i2c scl)
+#   GPIO21  Front panel I2C SDA        -> front_panel_i2c (i2c sda)
+#   GPIO33  LEDs master switch 1
+# I2C:
+#   0x10  EEPROM-like IC on its own bus (GPIO17/18), not configured
+#   0x2C  Front panel
 substitutions:
   device: bedroom-lamp-right
   name: Bedroom Lamp Right
@@ -32,14 +51,6 @@ external_components:
 
 packages:
   common: !include common/common.yaml
-
-# Mi Desk Lamp
-# Pin 	  Function (Name)
-# GPIO02: Button (GPIO_KEY1)
-# GPIO04: Cold White (GPIO_PWM1)
-# GPIO05: Warm White (GPIO_PWM2)
-# GPIO12: Rotary switch A pin (GPIO_ROT_A)
-# GPIO13: Rotary switch B pin (GPIO_ROT_B)
 
 # ------------------------------------------------------------------------
 # Behavior: default

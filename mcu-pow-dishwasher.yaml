@@ -1,4 +1,16 @@
 ---
+# Hardware: Sonoff POW Elite
+# Pinout:
+#   GPIO0                              -> reset (binary_sensor gpio)
+#   GPIO2                              -> relay_on (switch gpio)
+#   GPIO4                              -> relay_off (switch gpio)
+#   GPIO5                              -> wifi_status_led (light status_led) (inverted)
+#   GPIO14                             -> tm1621_display (display tm1621 data_pin)
+#   GPIO16                             -> cse7766_uart (uart rx_pin)
+#   GPIO18                             -> led (output ledc) (inverted)
+#   GPIO25                             -> tm1621_display (display tm1621 cs_pin)
+#   GPIO26                             -> tm1621_display (display tm1621 read_pin)
+#   GPIO27                             -> tm1621_display (display tm1621 write_pin)
 substitutions:
   device: pow-dishwasher
   name: Dishwasher POW

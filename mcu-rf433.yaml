@@ -1,4 +1,9 @@
 ---
+# Hardware: Sonoff RF Bridge (obsolete)
+# Pinout:
+#   GPIO4                              -> remote_receiver (remote_receiver)
+#   GPIO5                              -> remote_transmitter (remote_transmitter)
+#   GPIO13                             -> status_led (status_led) (inverted)
 substitutions:
   device: rf433
   name: RF433 Bridge

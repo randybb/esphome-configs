@@ -1,4 +1,12 @@
 ---
+# Hardware: Sonoff Dual R2
+# Pinout:
+#   GPIO0   Pin "button 0" on expansion header -> Light Switch (binary_sensor gpio) (inverted)
+#   GPIO5   Relay #2 and green color on LED -> Socket 1 (switch gpio)
+#   GPIO9   Pin "button 1" on expansion header -> Door (binary_sensor gpio) (inverted)
+#   GPIO10  Push Button                -> Socket 1 Switch (binary_sensor gpio) (inverted)
+#   GPIO12  Relay #1 and red color on LED -> Sewage Treatment Aerator Pump [relay_1] (switch gpio)
+#   GPIO13  Blue Status LED            -> status_led (status_led) (inverted)
 substitutions:
   device: basement
   name: Basement
@@ -16,15 +24,6 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-
-# Sonoff Dual R2
-# Pin 	  Function
-# GPIO10	Push Button
-# GPIO00	Pin "button 0" on expansion header
-# GPIO09	Pin "button 1" on expansion header
-# GPIO12	Relay #1 and red color on LED
-# GPIO05	Relay #2 and green color on LED
-# GPIO13	Blue Status LED
 
 globals:
   - id: aerator_auto

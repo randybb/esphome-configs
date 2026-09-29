@@ -1,4 +1,14 @@
 ---
+# Hardware: M5Stack M5Stamp C3
+# Pinout:
+#   GPIO0   Grove SCL                  -> touchscreen/xpt2046 (touchscreen xpt2046 cs_pin)
+#   GPIO1   Grove SDA                  -> touchscreen/xpt2046 (touchscreen xpt2046 interrupt_pin)
+#   GPIO4                              -> spi (spi clk_pin)
+#   GPIO5                              -> spi (spi mosi_pin)
+#   GPIO6                              -> spi (spi miso_pin)
+#   GPIO7                              -> main_display (display mipi_spi cs_pin)
+#   GPIO8                              -> main_display (display mipi_spi dc_pin)
+#   GPIO10                             -> main_display (display mipi_spi reset_pin)
 substitutions:
   device: tft
   name: TFT

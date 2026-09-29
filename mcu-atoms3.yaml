@@ -1,4 +1,23 @@
 ---
+# Hardware: M5Stack AtomS3
+# Pinout:
+#   GPIO1   Grove SCL                  -> motor_in1 (output gpio)
+#   GPIO2   Grove SDA                  -> motor_in2 (output gpio)
+#   GPIO5                              -> canbus/esp32_can (canbus esp32_can tx_pin)
+#   GPIO6                              -> canbus/esp32_can (canbus esp32_can rx_pin)
+#   GPIO15                             -> display_tft (display mipi_spi cs_pin)
+#   GPIO16                             -> gpio_tft_backlight (output ledc)
+#   GPIO17                             -> spi (spi clk_pin)
+#   GPIO21                             -> spi (spi mosi_pin)
+#   GPIO33                             -> display_tft (display mipi_spi dc_pin)
+#   GPIO34                             -> display_tft (display mipi_spi reset_pin)
+#   GPIO38                             -> i2c_main (i2c sda)
+#   GPIO39                             -> i2c_main (i2c scl)
+#   GPIO41                             -> Button (binary_sensor gpio) (inverted)
+# I2C:
+#   0x21  pcf8574_hub (pcf8574)
+#   0x26  m5stack_relay_1 (m5stack_4relay)
+#   0x3C  lcd (display ssd1306_i2c)
 substitutions:
   device: atoms3
   name: AtomS3

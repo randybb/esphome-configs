@@ -1,4 +1,31 @@
 ---
+# Hardware: Olimex ESP32-POE-ISO
+# Pinout:
+#   # UEXT
+#       3V3    1 2   GND
+#     GPIO4    3 4   GPIO36  U1TXD/U1RXD
+#    GPIO16    5 6   GPIO13  I2C-SCL/I2C-SDA
+#    GPIO15    7 8   GPIO2   HS2_CMD/HS2_DATA0
+#    GPIO14    9 10  GPIO5   HS2_CLK/SPI_CS
+#
+#    SD/MMC; shared with UEXT, no CS!!!
+#    GPIO15  HS2_CMD
+#    GPIO14  HS2_CLK
+#    GPIO2   HS2_DATA0
+#
+#    GPIO34  BUT1
+#    GPIO35  Battery Measurment ADC
+#    GPIO39  Ext Power Sense ADC
+# Used:
+#   GPIO4   uart_modbus (uart tx_pin)
+#   GPIO12  ethernet (ethernet power_pin)
+#   GPIO13  i2c (i2c sda)
+#   GPIO16  i2c (i2c scl)
+#   GPIO17  ethernet (ethernet)
+#   GPIO18  ethernet (ethernet mdio_pin)
+#   GPIO23  ethernet (ethernet mdc_pin)
+#   GPIO34  user_button (binary_sensor gpio) (inverted)
+#   GPIO36  uart_modbus (uart rx_pin)
 substitutions:
   device: gateway
   name: Gateway
@@ -32,22 +59,6 @@ external_components:
 packages:
   # common: !include common/common.yaml
   common_eth: !include common/common_eth.yaml
-
-## UEXT
-#    3V3    1 2   GND
-#  GPIO4    3 4   GPIO36  U1TXD/U1RXD
-# GPIO16    5 6   GPIO13  I2C-SCL/I2C-SDA
-# GPIO15    7 8   GPIO2   HS2_CMD/HS2_DATA0
-# GPIO14    9 10  GPIO5   HS2_CLK/SPI_CS
-#
-# SD/MMC; shared with UEXT, no CS!!!
-# GPIO15  HS2_CMD
-# GPIO14  HS2_CLK
-# GPIO2   HS2_DATA0
-
-# GPIO34  BUT1
-# GPIO35  Battery Measurment ADC
-# GPIO39  Ext Power Sense ADC
 
 i2c:
   sda: 13

@@ -1,4 +1,19 @@
 ---
+# Hardware: M5Stack ATOM Lite + ATOM Hub Switch
+# Pinout:
+#   GPIO1   UART0 TX
+#   GPIO3   UART0 RX
+#   GPIO12  IR
+#   GPIO19  RELAY-2                    -> relay_2 (output gpio)
+#   GPIO21  I2C1 SCL
+#   GPIO22  RELAY-1                    -> relay_1 (output gpio)
+#   GPIO23  RS485 TX
+#   GPIO25  I2C1 SDA red
+#   GPIO26  I2C0 SDA white
+#   GPIO27  NEO
+#   GPIO32  I2C0 SCL                   -> gate_ogi_state (binary_sensor gpio) (inverted); gate_ogi_blink (binary_sensor gpio) (inverted)
+#   GPIO33  RS485 RX
+#   GPIO39  BUTTON
 substitutions:
   device: gate
   name: Gate
@@ -20,21 +35,6 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-
-# PINOUTS: M5ATOM
-# IR        G12
-# NEO       G27
-# BUTTON    G39
-# I2C0 SDA  G26 white
-# I2C0 SCL  G32
-# I2C1 SDA  G25 red
-# I2C1 SCL  G21
-# UART0 RX  G3
-# UART0 TX  G1
-# RS485 RX  G33
-# RS485 TX  G23
-# RELAY-1   G22
-# RELAY-2   G19
 
 button:
   - platform: output

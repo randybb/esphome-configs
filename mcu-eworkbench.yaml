@@ -1,4 +1,22 @@
 ---
+# Hardware: M5Stack M5Stamp C3
+# Pinout:
+#   GPIO0   I2C SCL                    -> i2c_grove (i2c scl)
+#   GPIO1   I2C SDA, BUTTON            -> i2c_grove (i2c sda)
+#   GPIO2   RGB
+#   GPIO4   GPIO
+#   GPIO5   GPIO
+#   GPIO6   GPIO
+#   GPIO7   GPIO
+#   GPIO8   GPIO
+#   GPIO9   GPIO
+#   GPIO10  GPIO
+#   GPIO18  UART RX                    -> uart_hdmi_switch (uart rx_pin)
+#   GPIO19  UART TX                    -> uart_hdmi_switch (uart tx_pin)
+#   GPIO20  UART RX, LOGGER            -> uart_log (uart rx_pin)
+#   GPIO21  UART TX, LOGGER            -> uart_log (uart tx_pin)
+# I2C:
+#   0x20  pcf8574_hub (pcf8574)
 substitutions:
   device: eworkbench
   name: Electronics Workbench
@@ -21,23 +39,6 @@ esp32:
 
 packages:
   common: !include common/common.yaml
-
-# GPIO20  UART RX, LOGGER
-# GPIO21  UART TX, LOGGER
-# GPIO9   GPIO
-#
-# GPIO0   I2C SCL
-# GPIO1   I2C SDA
-# GPIO2   RGB
-# GPIO1   BUTTON
-# GPIO4   GPIO
-# GPIO5   GPIO
-# GPIO6   GPIO
-# GPIO7   GPIO
-# GPIO8   GPIO
-# GPIO10   GPIO
-# GPIO18   UART RX
-# GPIO19   UART TX
 
 i2c:
   - id: i2c_grove

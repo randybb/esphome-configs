@@ -1,4 +1,22 @@
 ---
+# Hardware: Huacanxing H801
+# Pinout:
+#   # H801 LED module
+#    Function       Pin       Channel
+#    R            GPIO15    PWM1
+#    G            GPIO13    PWM2
+#    B            GPIO12    PWM3
+#    W1           GPIO14    PWM4
+#    W2           GPIO04    PWM5
+#    LED D1 R       GPIO05
+#    LED D2 G       GPIO01
+# Used:
+#   GPIO4   pwm_warm_white (output esp8266_pwm)
+#   GPIO5   status_led_id (light status_led)
+#   GPIO12  pwm_blue (output esp8266_pwm)
+#   GPIO13  pwm_green (output esp8266_pwm)
+#   GPIO14  pwm_cold_white (output esp8266_pwm)
+#   GPIO15  pwm_red (output esp8266_pwm)
 substitutions:
   device: tv-light
   name: TV Light
@@ -16,16 +34,6 @@ esp8266:
 
 packages:
   common: !include common/common_esp8266.yaml
-
-## H801 LED module
-# Function 	Pin 	  Channel
-# R 	      GPIO15 	PWM1
-# G 	      GPIO13 	PWM2
-# B 	      GPIO12 	PWM3
-# W1 	      GPIO14 	PWM4
-# W2 	      GPIO04 	PWM5
-# LED D1 R 	GPIO05
-# LED D2 G 	GPIO01
 
 light:
   - platform: status_led

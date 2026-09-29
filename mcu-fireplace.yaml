@@ -1,4 +1,22 @@
 ---
+# Hardware: M5Stack ATOM Lite + ATOM Hub Switch
+# Pinout:
+#   GPIO1   UART0 TX
+#   GPIO3   UART0 RX
+#   GPIO12  IR
+#   GPIO19  Relay2
+#   GPIO21  I2C1 SCL                   -> i2c (i2c scl)
+#   GPIO22  Relay1
+#   GPIO23  RS485 Tx
+#   GPIO25  I2C1 SDA - red             -> i2c (i2c sda)
+#   GPIO26  I2C0 SDA - white
+#   GPIO27  NEO 1x
+#   GPIO32  I2C0 SCL
+#   GPIO33  RS485 Rx
+#   GPIO39  BUTTON                     -> Status Button (binary_sensor gpio)
+# I2C:
+#   0x18  one_wire_bus (one_wire ds2482)
+#   0x27  pca9554_module (pca9554)
 substitutions:
   device: fireplace
   name: Heating Fireplace
@@ -29,21 +47,6 @@ packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
 
-
-# PINOUTS: M5ATOM+Atom Hub Switch
-# IR        G12
-# NEO       G27 1x
-# BUTTON    G39
-# I2C0 SDA  G26 - white
-# I2C0 SCL  G32
-# I2C1 SDA  G25 - red
-# I2C1 SCL  G21
-# UART0 RX  G3
-# UART0 TX  G1
-# RS485 Rx  G33
-# RS485 Tx  G23
-# Relay1    G22
-# Relay2    G19
 
 i2c:
   # - id: i2c0
