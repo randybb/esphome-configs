@@ -174,7 +174,7 @@ binary_sensor:
 
   - platform: homeassistant
     id: patio_status
-    entity_id: binary_sensor.patio_status
+    entity_id: binary_sensor.mcu_patio_status
 
 switch:
   - platform: gpio
