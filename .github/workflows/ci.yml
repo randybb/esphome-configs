@@ -18,11 +18,14 @@ jobs:
         with:
           files: "**/*.yaml"
 
-      - uses: ibiqlik/action-yamllint@v3
+      # yamllint straight from pip: Gitea's runner image doesn't ship it like GitHub's does
+      - name: Lint changed YAML files
         if: steps.changed.outputs.any_changed == 'true'
-        with:
-          config_file: .yamllint.yml
-          file_or_dir: ${{ steps.changed.outputs.all_changed_files }}
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: "1"
+        run: |
+          pip install --ignore-installed yamllint
+          yamllint -c .yamllint.yml -f parsable ${{ steps.changed.outputs.all_changed_files }}
 
   validate:
     name: ESPHome config validation
@@ -39,9 +42,10 @@ jobs:
       - name: Install ESPHome (dev)
         if: steps.changed.outputs.any_changed == 'true'
         # Gitea's runner image marks the system Python as externally managed (PEP 668)
+        # and has Debian packages pip can't uninstall (pyparsing), so don't touch them
         env:
           PIP_BREAK_SYSTEM_PACKAGES: "1"
-        run: pip install git+https://github.com/esphome/esphome.git@dev
+        run: pip install --ignore-installed git+https://github.com/esphome/esphome.git@dev
 
       - name: Prepare secrets
         if: steps.changed.outputs.any_changed == 'true'
