@@ -3,7 +3,7 @@
 # Pinout:
 #   GPIO21  PM1006 UART                -> particle_uart (uart tx_pin)
 #   GPIO22  PM1006 UART                -> particle_uart (uart rx_pin)
-#   GPIO25  TZT 8-bit WS2812 5050 stick (8 LEDs, 7 visible outside; LEDs 1-7 broken), disabled
+#   GPIO25  TZT 8-bit WS2812 5050 stick (8 LEDs, 7 visible outside) -> NEO [neo] (light esp32_rmt_led_strip), also status
 #   GPIO27  Onboard RGB LED (1x WS2812, inside), unused
 #   GPIO32  Grove SDA                  -> i2c (i2c sda)
 #   GPIO33  Grove SCL                  -> i2c (i2c scl)
@@ -28,6 +28,10 @@ esp32:
 
 packages:
   common: !include common/common.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: neo
 
 i2c:
   # - id: i2c0
@@ -53,59 +57,58 @@ uart:
 #       number: 39
 #       inverted: true
 
-# LEDs disabled until the stick is fixed (LEDs after the first one light up randomly)
-# light:
-#   # only the first LED of the stick: the rest get garbage (broken DOUT after LED 0)
-#   - platform: esp32_rmt_led_strip
-#     name: NEO
-#     id: neo
-#     channel_colors: GRB
-#     pin: 25
-#     num_leds: 1
-#     chipset: ws2812
-#     restore_mode: ALWAYS_OFF
-#     effects:
-#       - random:
-#       - random:
-#           name: "My Slow Random Effect"
-#           transition_length: 30s
-#           update_interval: 30s
-#       - random:
-#           name: "My Fast Random Effect"
-#           transition_length: 4s
-#           update_interval: 5s
-#       - strobe:
-#       - strobe:
-#           name: Strobe Effect With Custom Values
-#           colors:
-#             - state: True
-#               brightness: 100%
-#               red: 100%
-#               green: 90%
-#               blue: 0%
-#               duration: 500ms
-#             - state: False
-#               duration: 250ms
-#             - state: True
-#               brightness: 100%
-#               red: 0%
-#               green: 100%
-#               blue: 0%
-#               duration: 500ms
-#       - flicker:
-#       - flicker:
-#           name: Flicker Effect With Custom Values
-#           alpha: 95%
-#           intensity: 1.5%
-#       - addressable_rainbow:
-#       - addressable_rainbow:
-#           name: Rainbow Effect With Custom Values
-#           speed: 10
-#           width: 50
-#       - addressable_scan:
-#       - addressable_scan:
-#           name: Scan Effect With Custom Values
-#           move_interval: 100ms
+light:
+  # also the status light (common/status_led.yaml): back to its previous state when all is fine
+  - platform: esp32_rmt_led_strip
+    name: NEO
+    id: neo
+    channel_colors: GRB
+    pin: 25
+    num_leds: 7  # 8 on the stick, the 8th one is hidden
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    effects:
+      - random:
+      - random:
+          name: "My Slow Random Effect"
+          transition_length: 30s
+          update_interval: 30s
+      - random:
+          name: "My Fast Random Effect"
+          transition_length: 4s
+          update_interval: 5s
+      - strobe:
+      - strobe:
+          name: Strobe Effect With Custom Values
+          colors:
+            - state: True
+              brightness: 100%
+              red: 100%
+              green: 90%
+              blue: 0%
+              duration: 500ms
+            - state: False
+              duration: 250ms
+            - state: True
+              brightness: 100%
+              red: 0%
+              green: 100%
+              blue: 0%
+              duration: 500ms
+      - flicker:
+      - flicker:
+          name: Flicker Effect With Custom Values
+          alpha: 95%
+          intensity: 1.5%
+      - addressable_rainbow:
+      - addressable_rainbow:
+          name: Rainbow Effect With Custom Values
+          speed: 10
+          width: 50
+      - addressable_scan:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 100ms
 
 sensor:
   # https://blissair.com/what-is-pm-2-5.htm
