@@ -9,7 +9,8 @@
 #   P0.16   LED 4 (active low)         -> LED 4 (light binary)
 #   P0.24   Button 3 (active low)      -> Button 3 (binary_sensor gpio)
 #   P0.25   Button 4 (active low)      -> Button 4 (binary_sensor gpio)
-#   P1.01   UART1 RX                   <- mcu-nrf-ant UART1 TX (P1.01), packet_transport; plus GND
+#   P1.01   UART1 RX                   <- mcu-nrf-ant UART1 TX (P1.02), packet_transport; plus GND
+#   P1.02   UART1 TX                   -> mcu-nrf-ant UART1 RX (P1.01), packet_transport
 # ANT+ values (Garmin HRM-Pro, Concept2 PM5, Garmin Tempe, Garmin Varia RTL515) come from mcu-nrf-ant
 esphome:
   name: mcu-nrf-dk
@@ -41,7 +42,9 @@ api:
 uart:
   id: ant_link
   port: UART1
+  # the DK's default UART1 pins, same on both boards, wires crossed
   rx_pin: P1.01
+  tx_pin: P1.02
   baud_rate: 115200
 
 packet_transport:

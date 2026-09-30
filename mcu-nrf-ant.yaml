@@ -4,8 +4,8 @@
 #   P0.06   UART0 TX                   -> logger (J-Link VCOM)
 #   P0.13   LED 1 (active low)         -> ANT+ Connected (a configured device is received)
 #   P0.14   LED 2 (active low)         -> ANT+ Unknown Device (an unconfigured one is in range)
-#   P1.01   UART1 TX                   -> mcu-nrf-dk UART1 RX (P1.01), packet_transport; plus GND
-#   P1.02   UART1 RX                   (unused)
+#   P1.01   UART1 RX                   <- mcu-nrf-dk UART1 TX (P1.02), packet_transport
+#   P1.02   UART1 TX                   -> mcu-nrf-dk UART1 RX (P1.01), packet_transport; plus GND
 # Radio: ANT+ receiver (RadiANT), no network of its own; values go to mcu-nrf-dk
 # ANT+ devices:
 #   655730   Garmin HRM-Pro          heart rate
@@ -147,10 +147,9 @@ ant_plus:
 uart:
   id: link
   port: UART1
-  tx_pin: P1.01
-  # unused, but must be set: the fork otherwise keeps the board's default RX, which on
-  # the DK is P1.01 too, and the UART hears its own transmissions
-  rx_pin: P1.02
+  # the DK's default UART1 pins, same on both boards, wires crossed
+  tx_pin: P1.02
+  rx_pin: P1.01
   baud_rate: 115200
 
 packet_transport:
