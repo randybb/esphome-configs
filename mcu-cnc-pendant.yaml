@@ -33,6 +33,10 @@ esphome:
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
+  includes:
+    - include/moonraker.h
+  on_boot:
+    - lambda: 'moonraker::client.start("${moonraker}");'
 
 esp32:
   variant: esp32s3
@@ -59,8 +63,8 @@ light:
     rgb_order: GRB
     restore_mode: ALWAYS_OFF
 
+# only links esp_http_client for include/moonraker.h, which runs requests on its own task
 http_request:
-  timeout: 1s
 
 globals:
   - id: axis
@@ -68,37 +72,14 @@ globals:
     initial_value: "0"  # 0 X, 1 Y, 2 Z
   - id: step
     type: int
-    initial_value: "1"  # index into steps[] in jog_interval
+    initial_value: "1"  # index into steps[] in the jog interval
   - id: wheel_sent
     type: float
     initial_value: "0"
-  - id: pos
-    type: std::array<float, 3>
-  - id: homed
-    type: std::string
-  - id: state
-    type: std::string
-    initial_value: '"offline"'
-
-script:
-  - id: gcode
-    mode: queued
-    max_runs: 5
-    parameters:
-      cmd: string
-    then:
-      - http_request.post:
-          url: ${moonraker}/printer/gcode/script
-          json: 'root["script"] = cmd;'
-          on_error:
-            - logger.log:
-                format: "gcode failed: %s"
-                args: [cmd.c_str()]
 
 interval:
   # handwheel: send the counts since the last jog as one relative move
-  - id: jog_interval
-    interval: 100ms
+  - interval: 100ms
     then:
       - lambda: |-
           static const float steps[] = {0.01f, 0.1f, 1.0f};
@@ -109,25 +90,7 @@ interval:
           // feed so the move takes ~100 ms, i.e. about one interval
           // ponytail: capped feed lets fast spins queue moves that keep running after the wheel stops; drop excess counts if that bites
           float feed = std::min(std::max(std::fabs(dist) * 600.0f, 60.0f), ${max_feed}.0f);
-          id(gcode)->execute(str_sprintf("G91\nG1 %c%.3f F%.0f\nG90", "XYZ"[id(axis)], dist, feed));
-  # DRO
-  - interval: 250ms
-    then:
-      - http_request.get:
-          url: ${moonraker}/printer/objects/query?gcode_move=gcode_position&toolhead=homed_axes&print_stats=state
-          capture_response: true
-          on_response:
-            - lambda: |-
-                json::parse_json(body, [](JsonObject root) -> bool {
-                  JsonObject s = root["result"]["status"];
-                  JsonArray p = s["gcode_move"]["gcode_position"];
-                  for (int i = 0; i < 3; i++) id(pos)[i] = p[i];
-                  id(homed) = s["toolhead"]["homed_axes"].as<std::string>();
-                  id(state) = s["print_stats"]["state"].as<std::string>();
-                  return true;
-                });
-          on_error:
-            - lambda: 'id(state) = "offline";'
+          moonraker::client.gcode(str_sprintf("G91\nG1 %c%.3f F%.0f\nG90", "XYZ"[id(axis)], dist, feed));
 
 sensor:
   - platform: rotary_encoder
@@ -182,7 +145,7 @@ binary_sensor:
     filters:
       - delayed_on_off: 20ms
     on_press:
-      - lambda: 'id(gcode)->execute(str_sprintf("G92 %c0", "XYZ"[id(axis)]));'
+      - lambda: 'moonraker::client.gcode(str_sprintf("G92 %c0", "XYZ"[id(axis)]));'
   - platform: gpio
     id: step_button
     name: Step Button
@@ -203,9 +166,7 @@ binary_sensor:
     filters:
       - delayed_on_off: 20ms
     on_press:
-      - script.execute:
-          id: gcode
-          cmd: G28
+      - lambda: 'moonraker::client.gcode("G28");'
   # BT2: pause / resume
   - platform: gpio
     id: bt2
@@ -217,8 +178,7 @@ binary_sensor:
     filters:
       - delayed_on_off: 20ms
     on_press:
-      - http_request.post:
-          url: !lambda 'return std::string("${moonraker}/printer/print/") + (id(state) == "paused" ? "resume" : "pause");'
+      - lambda: 'moonraker::client.post(moonraker::client.status().state == "paused" ? "/printer/print/resume" : "/printer/print/pause");'
   # BT3: hold 1 s for emergency stop (Klipper needs FIRMWARE_RESTART afterwards)
   - platform: gpio
     id: bt3
@@ -233,15 +193,14 @@ binary_sensor:
       - timing:
           - ON for at least 1s
         then:
-          - http_request.post: ${moonraker}/printer/emergency_stop
+          - lambda: 'moonraker::client.post("/printer/emergency_stop", "", true);'
 
 font:
-  - file: "gfonts://Roboto Mono@700"
+  # X11 misc-fixed bitmap fonts (as in u8g2 / Marlin), 6 px wide: axis letter + "-123.456" fits 64 px
+  - file: assets/fonts/6x13.bdf
     id: font_big
-    size: 14
-  - file: "gfonts://Roboto Mono"
+  - file: assets/fonts/6x10.bdf
     id: font_small
-    size: 10
 
 spi:
   clk_pin: 13
@@ -250,22 +209,27 @@ spi:
 display:
   - platform: st7920
     id: lcd
-    cs_pin: 15
+    cs_pin:
+      number: 15
+      inverted: true  # ST7920 RS/CS is active high
+    data_rate: 1MHz  # default 200kHz takes ~220 ms per frame; drop back if the picture garbles
     width: 128
     height: 64
+    rotation: 90  # mounted portrait, 270 if upside down
     update_interval: 200ms
     lambda: |-
       static const char *steps[] = {"0.01", "0.1", "1"};
-      it.printf(0, 0, id(font_small), "%s", id(state).c_str());
-      it.printf(127, 0, id(font_small), TextAlign::TOP_RIGHT, "H:%s", id(homed).empty() ? "-" : id(homed).c_str());
+      auto s = moonraker::client.status();
+      it.printf(0, 0, id(font_small), "%s", s.state.c_str());
+      it.printf(0, 10, id(font_small), "H:%s", s.homed.empty() ? "-" : s.homed.c_str());
       for (int i = 0; i < 3; i++) {
-        int y = 12 + i * 15;
+        int y = 22 + i * 14;
         Color c = COLOR_ON;
         if (i == id(axis)) {
-          it.filled_rectangle(0, y, 128, 15);
+          it.filled_rectangle(0, y, 64, 13);
           c = COLOR_OFF;
         }
-        it.printf(2, y, id(font_big), c, "%c", "XYZ"[i]);
-        it.printf(125, y, id(font_big), c, TextAlign::TOP_RIGHT, "%9.3f", id(pos)[i]);
+        it.printf(1, y + 1, id(font_big), c, "%c", "XYZ"[i]);
+        it.printf(63, y + 1, id(font_big), c, TextAlign::TOP_RIGHT, "%.3f", s.pos[i]);
       }
-      it.printf(0, 54, id(font_small), "step %s mm", steps[id(step)]);
+      it.printf(0, 118, id(font_small), "%s mm", steps[id(step)]);
