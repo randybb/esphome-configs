@@ -52,12 +52,14 @@ pcf8574:
     address: 0x21
     pcf8575: true
 
-animation:
-  - file: "assets/images/blinky.gif"
+image:
+  - platform: animation
+    file: "assets/images/blinky.gif"
     id: blinky
     resize: 128x128
     type: RGB565
-  - file: "assets/images/vault_boy_walking.gif"
+  - platform: animation
+    file: "assets/images/vault_boy_walking.gif"
     id: vaultboy
     resize: 168x121
     type: RGB565
@@ -127,6 +129,11 @@ external_components:
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: status_frame
   # common: !include common/common_wo_debug.yaml
   # common: !include common/common_dev.yaml
 
@@ -230,12 +237,32 @@ output:
   - platform: ledc
     pin: 16
     id: gpio_tft_backlight
+  # virtual RGB light for common/status_led.yaml, shown full screen on the display
+  - platform: template
+    id: status_frame_r
+    type: float
+    write_action: []
+  - platform: template
+    id: status_frame_g
+    type: float
+    write_action: []
+  - platform: template
+    id: status_frame_b
+    type: float
+    write_action: []
 
 light:
   - platform: monochromatic
     id: display_tft_backlight
     output: gpio_tft_backlight
     restore_mode: ALWAYS_ON
+  - platform: rgb
+    id: status_frame
+    internal: true
+    red: status_frame_r
+    green: status_frame_g
+    blue: status_frame_b
+    restore_mode: ALWAYS_OFF
 
 switch:
   - platform: template
@@ -391,6 +418,7 @@ display:
   - platform: mipi_spi
     model: ST7789V
     id: display_tft
+    byte_order: little_endian  # colours were byte-swapped (purple showed as green)
     dimensions:
       height: 128
       width: 128
@@ -403,10 +431,17 @@ display:
     # eightbitcolor: true
     update_interval: 1s
     lambda: |-
+      // status screen (common/status_led.yaml): the whole display in the status colour
+      auto &sv = id(status_frame)->current_values;
+      if (sv.is_on()) {
+        it.fill(Color(sv.get_red() * 255, sv.get_green() * 255, sv.get_blue() * 255));
+        return;
+      }
       //Ingress shown animation Frame.
       id(blinky).next_frame();
       // Draw the animation my_animation at position [x=0,y=0]
       it.image(0, 0, id(blinky), COLOR_ON, COLOR_OFF);
+
 
       // // it.print(0, 0, id(font_default), "Hello World!");
       // // it.strftime(0, 0, id(font_default), TextAlign::TOP_LEFT, "%H:%M", id(ha_time).now());
