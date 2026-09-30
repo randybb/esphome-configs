@@ -9,7 +9,7 @@
 #   P0.16   LED 4 (active low)         -> LED 4 (light binary)
 #   P0.24   Button 3 (active low)      -> Button 3 (binary_sensor gpio)
 #   P0.25   Button 4 (active low)      -> Button 4 (binary_sensor gpio)
-#   P1.01   UART1 RX                   <- Ebyte E73-TBM-01 (E73-2G4M04S1B, nRF52832) ant_bridge TX (P0.24)
+#   P1.01   UART1 RX                   <- mcu-nrf-ant UART1 TX (P1.01), packet_transport; plus GND
 esphome:
   name: mcu-nrf-dk
   friendly_name: nRF DK
@@ -34,20 +34,25 @@ api:
   encryption:
     key: !secret api_key
 
-external_components:
-  - source: github://randybb/esphome-components
-    components: [ant_plus]
-
-# ANT+ from the E73 test board running ant_bridge (the ANT stack doesn't work on NCS 3.4)
+# ANT+ values from mcu-nrf-ant (second nRF52840 DK) over UART
 uart:
+  id: ant_link
   port: UART1
   rx_pin: P1.01
   baud_rate: 115200
 
-ant_plus:
-  device_number: 655730
-  heart_rate:
+packet_transport:
+  - platform: uart
+    uart_id: ant_link
+    providers:
+      - name: mcu-nrf-ant
+
+sensor:
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: heart_rate
     name: Heart Rate
+    internal: false
     filters:
       - throttle: 1s
 

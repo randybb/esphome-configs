@@ -1,0 +1,43 @@
+---
+# Hardware: Nordic nRF52840 DK
+# Pinout:
+#   P0.06   UART0 TX                   -> logger (J-Link VCOM)
+#   P1.01   UART1 TX                   -> mcu-nrf-dk UART1 RX (P1.01), packet_transport; plus GND
+# Radio: ANT+ receiver (RadiANT), no network of its own; values go to mcu-nrf-dk
+esphome:
+  name: mcu-nrf-ant
+  friendly_name: nRF ANT+
+
+# needs the esphomeplatformzephyr fork (esphome-zephyr); RadiANT needs NCS
+zephyr:
+  variant: NRF52
+  board: nrf52840dk/nrf52840
+  framework:
+    type: ncs
+
+logger:
+  hardware_uart: UART0
+
+external_components:
+  - source: github://randybb/esphome-components
+    components: [ant_plus]
+
+ant_plus:
+  network_key: !secret ant_plus_network_key
+  device_number: 655730
+  heart_rate:
+    id: heart_rate
+    name: Heart Rate
+
+uart:
+  id: link
+  port: UART1
+  tx_pin: P1.01
+  baud_rate: 115200
+
+packet_transport:
+  - platform: uart
+    uart_id: link
+    update_interval: 1s
+    sensors:
+      - heart_rate
