@@ -10,11 +10,11 @@ jobs:
     name: YAML lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get changed YAML files
         id: changed
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           files: "**/*.yaml"
 
@@ -28,16 +28,19 @@ jobs:
     name: ESPHome config validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get changed device configs
         id: changed
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           files: "mcu-*.yaml"
 
       - name: Install ESPHome (dev)
         if: steps.changed.outputs.any_changed == 'true'
+        # Gitea's runner image marks the system Python as externally managed (PEP 668)
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: "1"
         run: pip install git+https://github.com/esphome/esphome.git@dev
 
       - name: Prepare secrets
