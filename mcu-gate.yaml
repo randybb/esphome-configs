@@ -10,7 +10,7 @@
 #   GPIO23  RS485 TX
 #   GPIO25  I2C1 SDA red
 #   GPIO26  I2C0 SDA white
-#   GPIO27  NEO
+#   GPIO27  NEO                        -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  I2C0 SCL                   -> gate_ogi_state (binary_sensor gpio) (inverted); gate_ogi_blink (binary_sensor gpio) (inverted)
 #   GPIO33  RS485 RX
 #   GPIO39  BUTTON
@@ -35,6 +35,7 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 button:
   - platform: output

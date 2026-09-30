@@ -10,7 +10,7 @@
 #   GPIO23  UART1 RX                   -> uart_modbus (uart rx_pin)
 #   GPIO25  I2C1 SDA                   -> i2c (i2c sda)
 #   GPIO26  I2C0 SDA
-#   GPIO27  NEO
+#   GPIO27  NEO                        -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  I2C0 SCL
 #   GPIO33  UART1 TX                   -> uart_modbus (uart tx_pin)
 #   GPIO39  BUTTON
@@ -56,6 +56,7 @@ external_components:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 #logger:
 #  level: VERBOSE

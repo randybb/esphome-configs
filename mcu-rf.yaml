@@ -7,6 +7,7 @@
 #   GPIO23                             -> spi (spi clk_pin)
 #   GPIO25                             -> rf_rx (remote_receiver)
 #   GPIO26  Grove SDA
+#   GPIO27  NEO (ATOM RGB LED)         -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  Grove SCL
 #   GPIO33                             -> cc1101 (cc1101 cs_pin)
 substitutions:
@@ -30,6 +31,7 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 spi:
   clk_pin: 23

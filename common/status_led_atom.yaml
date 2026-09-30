@@ -1,0 +1,18 @@
+---
+# Status LED on the M5Stack ATOM Lite's own RGB LED (G27), see common/status_led.yaml
+packages:
+  status_led: !include
+    file: status_led.yaml
+    vars:
+      light_id: atom_led
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: atom_led
+    internal: true
+    pin: 27
+    num_leds: 1
+    rmt_symbols: 64  # 1 LED is 24 bits; leave RMT memory for remote_transmitter/receiver
+    chipset: ws2812
+    channel_colors: GRB
+    restore_mode: ALWAYS_OFF

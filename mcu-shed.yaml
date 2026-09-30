@@ -6,6 +6,7 @@
 #   GPIO22                             -> Garden Light (switch gpio)
 #   GPIO25                             -> i2c (i2c sda)
 #   GPIO26  Grove SDA
+#   GPIO27  NEO (ATOM RGB LED)         -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  Grove SCL
 # I2C:
 #   0x27  pca9554_module (pca9554)
@@ -32,6 +33,7 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 i2c:
   sda: 25

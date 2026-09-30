@@ -10,7 +10,7 @@
 #   GPIO23  RS485 Tx
 #   GPIO25  I2C1 SDA - red             -> i2c (i2c sda)
 #   GPIO26  I2C0 SDA - white
-#   GPIO27  NEO 1x
+#   GPIO27  NEO 1x                     -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  I2C0 SCL
 #   GPIO33  RS485 Rx
 #   GPIO39  BUTTON                     -> Status Button (binary_sensor gpio)
@@ -46,6 +46,7 @@ external_components:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 
 i2c:

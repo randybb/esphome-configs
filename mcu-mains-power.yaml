@@ -10,7 +10,7 @@
 #   GPIO23  UART1 RX
 #   GPIO25  I2C1 SDA
 #   GPIO26  I2C0 SDA                   -> uart_modbus (uart rx_pin)
-#   GPIO27  NEO
+#   GPIO27  NEO                        -> atom_led (status LED, common/status_led_atom.yaml)
 #   GPIO32  I2C0 SCL                   -> uart_modbus (uart tx_pin)
 #   GPIO33  UART1 TX
 #   GPIO39  BUTTON
@@ -42,6 +42,7 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include common/status_led_atom.yaml
 
 modbus:
   uart_id: uart_modbus

@@ -5,7 +5,7 @@
 #   GPIO22                             -> speaker_id (speaker i2s_audio i2s_dout_pin)
 #   GPIO23                             -> echo_microphone (microphone i2s_audio i2s_din_pin)
 #   GPIO26  Grove SDA
-#   GPIO27                             -> LED (light esp32_rmt_led_strip)
+#   GPIO27  ATOM RGB LED               -> LED [neo_buildin] (light esp32_rmt_led_strip), also status
 #   GPIO32  Grove SCL
 #   GPIO33                             -> speaker_bus (i2s_audio i2s_lrclk_pin)
 #   GPIO39                             -> Button (binary_sensor gpio) (inverted)
@@ -30,6 +30,10 @@ esp32:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: neo_buildin
 
 external_components:
   # speaker media player: skip a failed playlist item (esphome#19862), drop once merged
