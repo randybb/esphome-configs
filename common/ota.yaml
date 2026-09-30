@@ -2,3 +2,7 @@
 ota:
   - platform: esphome
     password: !secret ota_password
+    # migration to encrypted OTA (api key): once every device encrypts,
+    # remove allow_plaintext_upload together with the password
+    encryption:
+      allow_plaintext_upload: true
