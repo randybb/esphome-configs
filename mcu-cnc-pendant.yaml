@@ -1,0 +1,271 @@
+---
+# Hardware: M5Stack M5Stamp S3 in the ESPendant case (github.com/positron96/ESP32_CNC_Pendant),
+#           talks to Klipper over Moonraker HTTP API
+# Pinout:
+#   GPIO0   Stamp button (boot)        -> stamp_button (binary_sensor gpio) (inverted)
+#   GPIO1   Handwheel A                -> handwheel (sensor rotary_encoder pin_a)
+#   GPIO2   Handwheel B                -> handwheel (sensor rotary_encoder pin_b)
+#   GPIO4   Axis encoder A             -> axis_encoder (sensor rotary_encoder pin_a)
+#   GPIO5   Axis encoder B             -> axis_encoder (sensor rotary_encoder pin_b)
+#   GPIO6   Axis encoder push          -> axis_button (binary_sensor gpio) (inverted)
+#   GPIO7   Step encoder A             -> step_encoder (sensor rotary_encoder pin_a)
+#   GPIO8   Step encoder B             -> step_encoder (sensor rotary_encoder pin_b)
+#   GPIO9   Step encoder push          -> step_button (binary_sensor gpio) (inverted)
+#   GPIO10  BT1                        -> bt1 (binary_sensor gpio) (inverted)
+#   GPIO11  BT2                        -> bt2 (binary_sensor gpio) (inverted)
+#   GPIO12  BT3                        -> bt3 (binary_sensor gpio) (inverted)
+#   GPIO13  LCD E (SCK)                -> spi (spi clk_pin)
+#   GPIO14  LCD R/W (MOSI)             -> spi (spi mosi_pin)
+#   GPIO15  LCD RS (CS)                -> lcd (display st7920 cs_pin)
+#   GPIO21  RGB LED                    -> status_rgb (light esp32_rmt_led_strip)
+#   GPIO39-44                          free (BT4-BT6 later)
+#   LCD RST: RC to 3.3 V, PSB to GND (serial mode)
+substitutions:
+  device: cnc-pendant
+  name: CNC Pendant
+  area: Workshop
+  comment: Klipper CNC pendant
+  moonraker: http://klipper.local:7125
+  max_feed: "3000"  # mm/min, handwheel jog feed cap
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  toolchain: esp-idf
+  framework:
+    type: esp-idf
+
+packages:
+  common: !include common/common.yaml
+  # ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: status_rgb
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: status_rgb
+    name: LED
+    pin: 21
+    num_leds: 1
+    chipset: ws2812
+    rgb_order: GRB
+    restore_mode: ALWAYS_OFF
+
+http_request:
+  timeout: 1s
+
+globals:
+  - id: axis
+    type: int
+    initial_value: "0"  # 0 X, 1 Y, 2 Z
+  - id: step
+    type: int
+    initial_value: "1"  # index into steps[] in jog_interval
+  - id: wheel_sent
+    type: float
+    initial_value: "0"
+  - id: pos
+    type: std::array<float, 3>
+  - id: homed
+    type: std::string
+  - id: state
+    type: std::string
+    initial_value: '"offline"'
+
+script:
+  - id: gcode
+    mode: queued
+    max_runs: 5
+    parameters:
+      cmd: string
+    then:
+      - http_request.post:
+          url: ${moonraker}/printer/gcode/script
+          json: 'root["script"] = cmd;'
+          on_error:
+            - logger.log:
+                format: "gcode failed: %s"
+                args: [cmd.c_str()]
+
+interval:
+  # handwheel: send the counts since the last jog as one relative move
+  - id: jog_interval
+    interval: 100ms
+    then:
+      - lambda: |-
+          static const float steps[] = {0.01f, 0.1f, 1.0f};
+          float delta = id(handwheel).state - id(wheel_sent);
+          if (delta == 0 || std::isnan(delta)) return;
+          id(wheel_sent) = id(handwheel).state;
+          float dist = delta * steps[id(step)];
+          // feed so the move takes ~100 ms, i.e. about one interval
+          // ponytail: capped feed lets fast spins queue moves that keep running after the wheel stops; drop excess counts if that bites
+          float feed = std::min(std::max(std::fabs(dist) * 600.0f, 60.0f), ${max_feed}.0f);
+          id(gcode)->execute(str_sprintf("G91\nG1 %c%.3f F%.0f\nG90", "XYZ"[id(axis)], dist, feed));
+  # DRO
+  - interval: 250ms
+    then:
+      - http_request.get:
+          url: ${moonraker}/printer/objects/query?gcode_move=gcode_position&toolhead=homed_axes&print_stats=state
+          capture_response: true
+          on_response:
+            - lambda: |-
+                json::parse_json(body, [](JsonObject root) -> bool {
+                  JsonObject s = root["result"]["status"];
+                  JsonArray p = s["gcode_move"]["gcode_position"];
+                  for (int i = 0; i < 3; i++) id(pos)[i] = p[i];
+                  id(homed) = s["toolhead"]["homed_axes"].as<std::string>();
+                  id(state) = s["print_stats"]["state"].as<std::string>();
+                  return true;
+                });
+          on_error:
+            - lambda: 'id(state) = "offline";'
+
+sensor:
+  - platform: rotary_encoder
+    id: handwheel
+    pin_a:
+      number: 1
+      mode: INPUT_PULLUP
+    pin_b:
+      number: 2
+      mode: INPUT_PULLUP
+    resolution: 1  # calibration: counts per detent, flip pin_a/pin_b if direction is wrong
+  - platform: rotary_encoder
+    id: axis_encoder
+    pin_a:
+      number: 4
+      mode: INPUT_PULLUP
+    pin_b:
+      number: 5
+      mode: INPUT_PULLUP
+    on_clockwise:
+      - lambda: 'id(axis) = std::min(id(axis) + 1, 2);'
+    on_anticlockwise:
+      - lambda: 'id(axis) = std::max(id(axis) - 1, 0);'
+  - platform: rotary_encoder
+    id: step_encoder
+    pin_a:
+      number: 7
+      mode: INPUT_PULLUP
+    pin_b:
+      number: 8
+      mode: INPUT_PULLUP
+    on_clockwise:
+      - lambda: 'id(step) = std::min(id(step) + 1, 2);'
+    on_anticlockwise:
+      - lambda: 'id(step) = std::max(id(step) - 1, 0);'
+
+binary_sensor:
+  - platform: gpio
+    id: stamp_button
+    name: Stamp Button
+    pin:
+      number: 0
+      inverted: true
+  # axis push: zero the selected axis in work coordinates
+  - platform: gpio
+    id: axis_button
+    name: Axis Button
+    pin:
+      number: 6
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_press:
+      - lambda: 'id(gcode)->execute(str_sprintf("G92 %c0", "XYZ"[id(axis)]));'
+  - platform: gpio
+    id: step_button
+    name: Step Button
+    pin:
+      number: 9
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+  # BT1: home all
+  - platform: gpio
+    id: bt1
+    name: BT1
+    pin:
+      number: 10
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_press:
+      - script.execute:
+          id: gcode
+          cmd: G28
+  # BT2: pause / resume
+  - platform: gpio
+    id: bt2
+    name: BT2
+    pin:
+      number: 11
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_press:
+      - http_request.post:
+          url: !lambda 'return std::string("${moonraker}/printer/print/") + (id(state) == "paused" ? "resume" : "pause");'
+  # BT3: hold 1 s for emergency stop (Klipper needs FIRMWARE_RESTART afterwards)
+  - platform: gpio
+    id: bt3
+    name: BT3
+    pin:
+      number: 12
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on_off: 20ms
+    on_multi_click:
+      - timing:
+          - ON for at least 1s
+        then:
+          - http_request.post: ${moonraker}/printer/emergency_stop
+
+font:
+  - file: "gfonts://Roboto Mono@700"
+    id: font_big
+    size: 14
+  - file: "gfonts://Roboto Mono"
+    id: font_small
+    size: 10
+
+spi:
+  clk_pin: 13
+  mosi_pin: 14
+
+display:
+  - platform: st7920
+    id: lcd
+    cs_pin: 15
+    width: 128
+    height: 64
+    update_interval: 200ms
+    lambda: |-
+      static const char *steps[] = {"0.01", "0.1", "1"};
+      it.printf(0, 0, id(font_small), "%s", id(state).c_str());
+      it.printf(127, 0, id(font_small), TextAlign::TOP_RIGHT, "H:%s", id(homed).empty() ? "-" : id(homed).c_str());
+      for (int i = 0; i < 3; i++) {
+        int y = 12 + i * 15;
+        Color c = COLOR_ON;
+        if (i == id(axis)) {
+          it.filled_rectangle(0, y, 128, 15);
+          c = COLOR_OFF;
+        }
+        it.printf(2, y, id(font_big), c, "%c", "XYZ"[i]);
+        it.printf(125, y, id(font_big), c, TextAlign::TOP_RIGHT, "%9.3f", id(pos)[i]);
+      }
+      it.printf(0, 54, id(font_small), "step %s mm", steps[id(step)]);
