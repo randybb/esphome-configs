@@ -26,6 +26,8 @@ esp32:
   flash_size: 8MB
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: generic
     type: esp-idf
 
 packages:

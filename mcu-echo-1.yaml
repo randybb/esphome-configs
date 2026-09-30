@@ -25,6 +25,8 @@ esphome:
 esp32:
   variant: esp32
   framework:
+    advanced:
+      flash_chip: gd
     type: esp-idf
 
 packages:

@@ -41,6 +41,7 @@ esp32:
   framework:
     type: esp-idf
     advanced:
+      flash_chip: gd
       sram1_as_iram: true
 
 packages:

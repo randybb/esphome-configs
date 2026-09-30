@@ -29,6 +29,8 @@ esp32:
   flash_size: 16MB
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: generic  # same board as lvgl-trainer (not read from the device)
     type: esp-idf
 
 packages:

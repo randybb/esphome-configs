@@ -39,6 +39,7 @@ esp32:
     sdkconfig_options:
       CONFIG_FREERTOS_UNICORE: y
     advanced:
+      flash_chip: generic
       ignore_efuse_custom_mac: true
       ignore_efuse_mac_crc: true
 

@@ -104,6 +104,8 @@ esp32:
   flash_size: 16MB
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: gd
     type: esp-idf
     # PSRAM bandwidth for the RGB panel (not set by ESPHome); without it the
     # image shifts during flash/WiFi activity

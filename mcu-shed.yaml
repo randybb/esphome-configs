@@ -26,6 +26,8 @@ esp32:
   variant: esp32
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: gd
     type: esp-idf
     # version: 5.4.2
     # platform_version: 54.03.21

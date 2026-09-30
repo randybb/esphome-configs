@@ -65,6 +65,8 @@ esp32:
   flash_size: 16MB
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: generic
     type: esp-idf
 
 psram:

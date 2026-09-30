@@ -66,6 +66,8 @@ esp32:
   variant: esp32s3
   flash_size: 16MB
   framework:
+    advanced:
+      flash_chip: boya
     type: esp-idf
     # PSRAM bandwidth for the RGB panel (not set by ESPHome); without it the
     # image shifts during flash/WiFi activity

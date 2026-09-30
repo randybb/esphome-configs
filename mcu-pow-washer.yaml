@@ -30,6 +30,7 @@ esp32:
   framework:
     type: esp-idf
     advanced:
+      flash_chip: gd  # same device as pow-dishwasher (not read from the device)
       minimum_chip_revision: 3.1
       sram1_as_iram: true
 

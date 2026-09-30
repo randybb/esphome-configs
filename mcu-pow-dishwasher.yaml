@@ -30,6 +30,7 @@ esp32:
   framework:
     type: esp-idf
     advanced:
+      flash_chip: gd
       minimum_chip_revision: 3.1
       sram1_as_iram: true
 

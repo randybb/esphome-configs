@@ -50,6 +50,8 @@ esp32:
   variant: esp32
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: gd
     type: esp-idf
 
 packages:

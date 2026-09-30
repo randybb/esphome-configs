@@ -42,6 +42,8 @@ esp32:
   flash_size: 8MB
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: gd
     type: esp-idf
 
 ota:

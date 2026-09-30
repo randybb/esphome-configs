@@ -29,6 +29,8 @@ esp32:
   variant: esp32c3
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: generic
     type: esp-idf
 
 packages:

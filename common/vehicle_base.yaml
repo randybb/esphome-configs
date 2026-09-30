@@ -2,6 +2,8 @@ esp32:
   variant: esp32
   toolchain: esp-idf
   framework:
+    advanced:
+      flash_chip: gd  # ESP32-PICO-D4, like every other ATOM Lite
     type: esp-idf
 
 external_components:
