@@ -128,6 +128,77 @@ sensor:
     device_class: voltage
     accuracy_decimals: 2
     entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: hrm_dual_heart_rate
+    name: Garmin HRM-Dual Heart Rate
+    internal: false
+    unit_of_measurement: bpm
+    icon: mdi:heart-pulse
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: hrm_dual_battery
+    name: Garmin HRM-Dual Battery
+    internal: false
+    unit_of_measurement: "%"
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: hrm_tri_heart_rate
+    name: Garmin HRM-Tri Heart Rate
+    internal: false
+    unit_of_measurement: bpm
+    icon: mdi:heart-pulse
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: hrm_tri_battery
+    name: Garmin HRM-Tri Battery
+    internal: false
+    unit_of_measurement: "%"
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: rally_power
+    name: Garmin Rally RS200 Power
+    internal: false
+    unit_of_measurement: W
+    device_class: power
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: rally_cadence
+    name: Garmin Rally RS200 Cadence
+    internal: false
+    unit_of_measurement: rpm
+    icon: mdi:rotate-right
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: speed2_speed
+    name: Garmin Speed Sensor 2 Speed
+    internal: false
+    unit_of_measurement: m/s
+    device_class: speed
+    accuracy_decimals: 2
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: speed2_battery
+    name: Garmin Speed Sensor 2 Battery
+    internal: false
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 2
+    entity_category: diagnostic
 
 output:
   - platform: gpio
@@ -180,6 +251,27 @@ binary_sensor:
     provider: mcu-nrf-ant
     remote_id: varia_battery_low
     name: Garmin Varia RTL515 Battery Low
+    internal: false
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: rally_battery_low
+    name: Garmin Rally RS200 Battery Low
+    internal: false
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: speed2_battery_low
+    name: Garmin Speed Sensor 2 Battery Low
+    internal: false
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: sram_battery_low
+    name: SRAM Force AXS Battery Low
     internal: false
     device_class: battery
     entity_category: diagnostic

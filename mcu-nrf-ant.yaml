@@ -5,12 +5,18 @@
 #   P0.13   LED 1 (active low)         -> ANT+ Connected (a configured device is received)
 #   P0.14   LED 2 (active low)         -> ANT+ Unknown Device (an unconfigured one is in range)
 #   P1.01   UART1 TX                   -> mcu-nrf-dk UART1 RX (P1.01), packet_transport; plus GND
+#   P1.02   UART1 RX                   (unused)
 # Radio: ANT+ receiver (RadiANT), no network of its own; values go to mcu-nrf-dk
 # ANT+ devices:
 #   655730   Garmin HRM-Pro          heart rate
 #   498521   Concept2 PM5 (rower)    fitness equipment (FE-C)
 #   1044953  Garmin Tempe            environment (temperature)
 #   604693   Garmin Varia RTL515     bike radar, battery only
+#   136052   Garmin HRM-Dual         heart rate (pain cave)
+#   334424   Garmin HRM-Tri          heart rate (bike)
+#   886796   Garmin Rally RS200      power + cadence
+#   343922   Garmin Speed Sensor 2   speed
+#   42898    SRAM Force AXS          shifting (Cube Litening C:68X), battery only
 esphome:
   name: mcu-nrf-ant
   friendly_name: nRF ANT+
@@ -94,11 +100,57 @@ ant_plus:
       battery_low:
         id: varia_battery_low
         name: Garmin Varia RTL515 Battery Low
+    - type: heart_rate  # Garmin HRM-Dual
+      device_number: 136052
+      heart_rate:
+        id: hrm_dual_heart_rate
+        name: Garmin HRM-Dual Heart Rate
+      battery_level:
+        id: hrm_dual_battery
+        name: Garmin HRM-Dual Battery
+    - type: heart_rate  # Garmin HRM-Tri
+      device_number: 334424
+      heart_rate:
+        id: hrm_tri_heart_rate
+        name: Garmin HRM-Tri Heart Rate
+      battery_level:
+        id: hrm_tri_battery
+        name: Garmin HRM-Tri Battery
+    - type: power  # Garmin Rally RS200 (a battery in each pedal)
+      device_number: 886796
+      power:
+        id: rally_power
+        name: Garmin Rally RS200 Power
+      cadence:
+        id: rally_cadence
+        name: Garmin Rally RS200 Cadence
+      battery_low:
+        id: rally_battery_low
+        name: Garmin Rally RS200 Battery Low
+    - type: speed  # Garmin Speed Sensor 2
+      device_number: 343922
+      speed:
+        id: speed2_speed
+        name: Garmin Speed Sensor 2 Speed
+      battery_voltage:
+        id: speed2_battery
+        name: Garmin Speed Sensor 2 Battery
+      battery_low:
+        id: speed2_battery_low
+        name: Garmin Speed Sensor 2 Battery Low
+    - type: shifting  # SRAM Force AXS (Cube Litening C:68X)
+      device_number: 42898
+      battery_low:
+        id: sram_battery_low
+        name: SRAM Force AXS Battery Low
 
 uart:
   id: link
   port: UART1
   tx_pin: P1.01
+  # unused, but must be set: the fork otherwise keeps the board's default RX, which on
+  # the DK is P1.01 too, and the UART hears its own transmissions
+  rx_pin: P1.02
   baud_rate: 115200
 
 packet_transport:
@@ -115,9 +167,20 @@ packet_transport:
       - tempe_temperature_max
       - tempe_battery
       - varia_battery
+      - hrm_dual_heart_rate
+      - hrm_dual_battery
+      - hrm_tri_heart_rate
+      - hrm_tri_battery
+      - rally_power
+      - rally_cadence
+      - speed2_speed
+      - speed2_battery
     binary_sensors:
       - ant_connected
       - ant_unknown_device
       - pm5_in_use
       - tempe_battery_low
       - varia_battery_low
+      - rally_battery_low
+      - speed2_battery_low
+      - sram_battery_low
