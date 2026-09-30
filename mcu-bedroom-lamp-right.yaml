@@ -45,12 +45,14 @@ esp32:
 external_components:
   - source:
       type: git
-      url: https://github.com/mmakaay/esphome-xiaomi_bslamp2
-      ref: dev
+      # fork: fix for ESPHome 2026.10 (restore_mode -> restore_state), back to mmakaay once merged
+      url: https://github.com/randybb/esphome-xiaomi_bslamp2
+      ref: fix-light-restore-state
     refresh: 60s
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 # ------------------------------------------------------------------------
 # Behavior: default
