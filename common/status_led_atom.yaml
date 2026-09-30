@@ -5,6 +5,7 @@ packages:
     file: status_led.yaml
     vars:
       light_id: atom_led
+      show_errors: "true"  # dedicated status LED
 
 light:
   - platform: esp32_rmt_led_strip
