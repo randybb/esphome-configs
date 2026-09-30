@@ -2,7 +2,6 @@
 # Status on a visible RGB light, which stays a normal light otherwise:
 #   network down         red, slow blink
 #   no API client (HA)   orange, slow blink
-#   component error      purple, steady
 #   OTA                  blue, fast blink; green when done, 3 red blinks on error
 #   back to normal       green for 1 s, then the light goes back to how it was
 #   packages:
@@ -72,15 +71,12 @@ interval:
           static uint8_t tick = 0;
           tick++;
           bool slow = (tick / 2) % 2 == 0;  // 1 s on, 1 s off
-          bool problem = !network::is_connected() || !api::global_api_server->is_connected() ||
-                         (App.get_app_state() & STATUS_LED_ERROR);
+          bool problem = !network::is_connected() || !api::global_api_server->is_connected();
           if (problem) id(status_led_restore)->stop();
           if (!network::is_connected()) {
             id(status_led_show)->execute(1.0f, 0.0f, 0.0f, slow);
           } else if (!api::global_api_server->is_connected()) {
             id(status_led_show)->execute(1.0f, 0.4f, 0.0f, slow);
-          } else if (App.get_app_state() & STATUS_LED_ERROR) {
-            id(status_led_show)->execute(0.6f, 0.0f, 1.0f, true);
           } else if (id(status_led_active) && !id(status_led_restore)->is_running()) {
             id(status_led_restore)->execute(true);
           }
