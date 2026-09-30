@@ -29,6 +29,8 @@ network:
 # Active dataset of the Thread network (HA: Settings > Thread > ... > dataset TLV)
 openthread:
   tlv: !secret thread_tlv
+  # end device, doesn't route for others; saves flash (FTD fills the MCUboot slot)
+  device_type: MTD
 
 api:
   encryption:
