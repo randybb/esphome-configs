@@ -25,3 +25,7 @@ rules:
 
   comments:
     require-starting-space: false
+
+  # Aligned values (e.g. the bedroom lamp presets) are intentional
+  colons:
+    max-spaces-after: -1

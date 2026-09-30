@@ -7,4 +7,3 @@ accuracy_decimals: 2
 update_interval: 60s
 filters:
   - lambda: return x / 86400;
-

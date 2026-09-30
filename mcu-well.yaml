@@ -370,4 +370,3 @@ valve:
       - switch.turn_on: irrigation_relay_8
     close_action:
       - switch.turn_off: irrigation_relay_8
-

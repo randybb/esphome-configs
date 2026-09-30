@@ -121,4 +121,3 @@ switch:
     pin:
       number: 19
       mode: OUTPUT
-

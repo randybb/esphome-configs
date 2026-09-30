@@ -40,7 +40,7 @@ api:
       then:
         - rtttl.play:
             rtttl: !lambda 'return song;'
-  
+
 switch:
   - platform: gpio
     id: accessory_power

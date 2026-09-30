@@ -922,7 +922,7 @@ light:
     name: LCD Backlight
     output: lcd_backlight_output
     restore_mode: ALWAYS_ON
-    
+
 remote_transmitter:
   id: ir_tx
   pin: 5
