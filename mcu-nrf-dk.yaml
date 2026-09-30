@@ -10,6 +10,7 @@
 #   P0.24   Button 3 (active low)      -> Button 3 (binary_sensor gpio)
 #   P0.25   Button 4 (active low)      -> Button 4 (binary_sensor gpio)
 #   P1.01   UART1 RX                   <- mcu-nrf-ant UART1 TX (P1.01), packet_transport; plus GND
+# ANT+ values (Garmin HRM-Pro, Concept2 PM5, Garmin Tempe, Garmin Varia RTL515) come from mcu-nrf-ant
 esphome:
   name: mcu-nrf-dk
   friendly_name: nRF DK
@@ -52,11 +53,81 @@ packet_transport:
 sensor:
   - platform: packet_transport
     provider: mcu-nrf-ant
-    remote_id: heart_rate
-    name: Heart Rate
+    remote_id: hrm_pro_heart_rate
+    name: Garmin HRM-Pro Heart Rate
     internal: false
+    unit_of_measurement: bpm
+    icon: mdi:heart-pulse
     filters:
       - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: hrm_pro_battery
+    name: Garmin HRM-Pro Battery
+    internal: false
+    unit_of_measurement: "%"
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: pm5_power
+    name: Concept2 PM5 Power
+    internal: false
+    unit_of_measurement: W
+    device_class: power
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: pm5_stroke_rate
+    name: Concept2 PM5 Stroke Rate
+    internal: false
+    unit_of_measurement: spm
+    icon: mdi:rowing
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: tempe_temperature
+    name: Garmin Tempe Temperature
+    internal: false
+    unit_of_measurement: °C
+    device_class: temperature
+    accuracy_decimals: 1
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: tempe_temperature_min
+    name: Garmin Tempe Temperature 24h Min
+    internal: false
+    unit_of_measurement: °C
+    device_class: temperature
+    accuracy_decimals: 1
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: tempe_temperature_max
+    name: Garmin Tempe Temperature 24h Max
+    internal: false
+    unit_of_measurement: °C
+    device_class: temperature
+    accuracy_decimals: 1
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: tempe_battery
+    name: Garmin Tempe Battery
+    internal: false
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 2
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: varia_battery
+    name: Garmin Varia RTL515 Battery
+    internal: false
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 2
+    entity_category: diagnostic
 
 output:
   - platform: gpio
@@ -80,6 +151,38 @@ light:
 
 # each button toggles its LED locally and is visible in HA
 binary_sensor:
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: ant_connected
+    name: ANT+ Connected
+    internal: false
+    device_class: connectivity
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: ant_unknown_device
+    name: ANT+ Unknown Device
+    internal: false
+    icon: mdi:access-point
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: pm5_in_use
+    name: Concept2 PM5 In Use
+    internal: false
+    device_class: running
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: tempe_battery_low
+    name: Garmin Tempe Battery Low
+    internal: false
+    device_class: battery
+    entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: varia_battery_low
+    name: Garmin Varia RTL515 Battery Low
+    internal: false
+    device_class: battery
+    entity_category: diagnostic
   - platform: gpio
     name: Button 1
     pin: {number: P0.11, inverted: true, mode: {input: true, pullup: true}}
