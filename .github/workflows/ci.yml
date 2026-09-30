@@ -55,6 +55,8 @@ jobs:
         if: steps.changed.outputs.any_changed == 'true'
         run: |
           for f in ${{ steps.changed.outputs.all_changed_files }}; do
+            # zephyr: needs the esphomeplatformzephyr fork, upstream doesn't know it yet
+            if grep -q '^zephyr:' "$f"; then echo "Skipping $f (zephyr fork)"; continue; fi
             echo "Validating $f..."
             esphome config "$f"
           done
