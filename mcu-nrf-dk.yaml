@@ -1,12 +1,91 @@
 ---
 # Hardware: Nordic nRF52840 DK
+# Pinout:
+#   P0.11   Button 1 (active low)      -> Button 1 (binary_sensor gpio)
+#   P0.12   Button 2 (active low)      -> Button 2 (binary_sensor gpio)
+#   P0.13   LED 1 (active low)         -> LED 1 (light binary)
+#   P0.14   LED 2 (active low)         -> LED 2 (light binary)
+#   P0.15   LED 3 (active low)         -> LED 3 (light binary)
+#   P0.16   LED 4 (active low)         -> LED 4 (light binary)
+#   P0.24   Button 3 (active low)      -> Button 3 (binary_sensor gpio)
+#   P0.25   Button 4 (active low)      -> Button 4 (binary_sensor gpio)
+#   P1.01   UART1 RX                   <- Ebyte E73-TBM-01 (E73-2G4M04S1B, nRF52832) ant_bridge TX (P0.24)
 esphome:
   name: mcu-nrf-dk
-  friendly_name: mcu-nrf-dk
+  friendly_name: nRF DK
 
-nrf52:
-  board: nrf52840_dk
-  bootloader: adafruit_nrf52_sd140_v7
+# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no zephyr: platform yet
+zephyr:
+  variant: NRF52
+  board: nrf52840dk/nrf52840
+  framework:
+    type: zephyr
 
-# Enable logging
 logger:
+
+network:
+  enable_ipv6: true
+
+# Active dataset of the Thread network (HA: Settings > Thread > ... > dataset TLV)
+openthread:
+  tlv: !secret thread_tlv
+
+api:
+  encryption:
+    key: !secret api_key
+
+external_components:
+  - source: github://randybb/esphome-components
+    components: [ant_plus]
+
+# ANT+ from the E73 test board running ant_bridge (the ANT stack doesn't work on NCS 3.4)
+uart:
+  port: UART1
+  rx_pin: P1.01
+  baud_rate: 115200
+
+ant_plus:
+  device_number: 655730
+  heart_rate:
+    name: Heart Rate
+    filters:
+      - throttle: 1s
+
+output:
+  - platform: gpio
+    id: led_1_out
+    pin: {number: P0.13, inverted: true}
+  - platform: gpio
+    id: led_2_out
+    pin: {number: P0.14, inverted: true}
+  - platform: gpio
+    id: led_3_out
+    pin: {number: P0.15, inverted: true}
+  - platform: gpio
+    id: led_4_out
+    pin: {number: P0.16, inverted: true}
+
+light:
+  - {platform: binary, name: LED 1, id: led_1, output: led_1_out}
+  - {platform: binary, name: LED 2, id: led_2, output: led_2_out}
+  - {platform: binary, name: LED 3, id: led_3, output: led_3_out}
+  - {platform: binary, name: LED 4, id: led_4, output: led_4_out}
+
+# each button toggles its LED locally and is visible in HA
+binary_sensor:
+  - platform: gpio
+    name: Button 1
+    pin: {number: P0.11, inverted: true, mode: {input: true, pullup: true}}
+    on_press: {light.toggle: led_1}
+  - platform: gpio
+    name: Button 2
+    pin: {number: P0.12, inverted: true, mode: {input: true, pullup: true}}
+    on_press: {light.toggle: led_2}
+  - platform: gpio
+    name: Button 3
+    pin: {number: P0.24, inverted: true, mode: {input: true, pullup: true}}
+    on_press: {light.toggle: led_3}
+  - platform: gpio
+    name: Button 4
+    pin: {number: P0.25, inverted: true, mode: {input: true, pullup: true}}
+    on_press: {light.toggle: led_4}
