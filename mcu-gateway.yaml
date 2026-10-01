@@ -60,6 +60,7 @@ external_components:
 packages:
   # common: !include common/common.yaml
   common_eth: !include common/common_eth.yaml
+  ipv6_only: !include common/ipv6_only_eth.yaml
 
 i2c:
   sda: 13

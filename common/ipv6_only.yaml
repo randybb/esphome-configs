@@ -3,32 +3,12 @@
 #   packages:
 #     common: !include common/common.yaml
 #     ipv6_only: !include common/ipv6_only.yaml
-external_components:
-  # network enable_ipv4 + audio HTTP reader over IPv6 (esphome/esphome#19750), drop once merged
-  - source: github://pr#19750
-    components: [const, network, wifi, audio]
+# Ethernet devices use common/ipv6_only_eth.yaml (this without the WiFi part)
+packages:
+  base: !include ipv6_only_eth.yaml
 
 wifi:
   networks:
     - id: !extend wifi_iot
       ssid: !secret wifi_ssid_ipv6
       password: !secret wifi_password_ipv6
-
-esp32:
-  framework:
-    components:
-      # mdns 1.12.0 + fix for "A 0.0.0.0" without IPv4 (espressif/esp-protocols PR pending), drop once released
-      - name: espressif/mdns
-        source: https://github.com/randybb/esp-protocols.git
-        ref: mdns-v1.12.0-zero-ipv4-test
-        path: components/mdns
-      # IDF v5.5.5 lwip + .local resolution over IPv6 (espressif/esp-lwip#94), drop once in IDF
-      - name: lwip
-        source: https://github.com/randybb/esp-lwip.git
-        ref: idf-v5.5.5-lwip-component
-        path: lwip
-
-network:
-  enable_ipv6: true
-  enable_ipv4: false
-  min_ipv6_addr_count: 1
