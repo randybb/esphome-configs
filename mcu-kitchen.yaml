@@ -58,8 +58,8 @@ packages:
   ipv6_only: !include common/ipv6_only.yaml
   status_led: !include common/status_led_atom.yaml
 
-api:
-  reboot_timeout: 300s
+# api:
+#   reboot_timeout: 300s
 
 i2c:
   # - id: i2c0
