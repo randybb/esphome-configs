@@ -13,7 +13,7 @@ esp32:
   framework:
     components:
       # mdns 1.12.0 + fix for "A 0.0.0.0" without IPv4 (espressif/esp-protocols#1156, merged)
-      # + IPv6 on ETH-only builds (espressif/esp-protocols#1161), drop once both are released
+      # + IPv6 on ETH-only builds (espressif/esp-protocols#1161, merged), drop once both are released
       - name: espressif/mdns
         source: https://github.com/randybb/esp-protocols.git
         ref: mdns-v1.12.0-zero-ipv4-test
