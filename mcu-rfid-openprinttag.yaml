@@ -1,0 +1,203 @@
+---
+# Hardware: M5Stack M5Stamp S3 + PN5180 module (5 V and 3.3 V both needed)
+# Pinout:
+#   GPIO0   Button
+#   GPIO3   (external RFID LED, not fitted yet; notify_led uses the onboard RGB for now)
+#   GPIO4   Buzzer                     -> buzzer (output ledc)
+#   GPIO5                              -> spi (spi miso_pin)          PN5180 MISO
+#   GPIO6                              -> spi (spi mosi_pin)          PN5180 MOSI
+#   GPIO7                              -> spi (spi clk_pin)           PN5180 SCK
+#   GPIO8                              -> pn5180 (cs_pin)             PN5180 NSS
+#   GPIO9                              -> pn5180 (busy_pin)           PN5180 BUSY
+#   GPIO10                             -> pn5180 (reset_pin)          PN5180 RST
+#   GPIO11                             -> pn5180 (irq_pin)            PN5180 IRQ
+#   GPIO19  U-
+#   GPIO20  U+
+#   GPIO21  RGB                        -> notify_led (light esp32_rmt_led_strip), also status_led
+# PN5180 REQ, AUX, GPIO left open (REQ high at reset = firmware download mode)
+substitutions:
+  device: rfid-openprinttag
+  name: OpenPrintTag
+  area: DEV
+  comment: OpenPrintTag filament spool reader
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  variant: esp32s3
+  toolchain: esp-idf
+  framework:
+    advanced:
+      flash_chip: gd
+    type: esp-idf
+
+packages:
+  common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: notify_led
+      show_errors: "true"
+
+external_components:
+  - source: github://randybb/esphome-components
+    components: [pn5180]
+    refresh: 1h
+
+spi:
+  clk_pin: GPIO7
+  mosi_pin: GPIO6
+  miso_pin: GPIO5
+
+pn5180:
+  id: pn5180_reader
+  cs_pin: GPIO8
+  busy_pin: GPIO9
+  reset_pin: GPIO10
+  irq_pin: GPIO11
+  on_tag:
+    - if:
+        condition:
+          switch.is_on: led_enabled
+        then:
+          - light.turn_on:
+              id: notify_led
+              brightness: 100%
+              red: 0%
+              green: 100%
+              blue: 0%
+              flash_length: 500ms
+    - if:
+        condition:
+          switch.is_on: buzzer_enabled
+        then:
+          - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+    - homeassistant.tag_scanned: !lambda return x;
+  on_tag_removed:
+    - if:
+        condition:
+          switch.is_on: buzzer_enabled
+        then:
+          - rtttl.play: "removed:d=16,o=5,b=100:b"
+
+sensor:
+  - platform: pn5180
+    type: remaining_weight
+    name: Remaining weight
+  - platform: pn5180
+    type: consumed_weight
+    name: Consumed weight
+  - platform: pn5180
+    type: actual_weight
+    name: Full weight
+  - platform: pn5180
+    type: min_print_temperature
+    name: Min print temperature
+  - platform: pn5180
+    type: max_print_temperature
+    name: Max print temperature
+  - platform: pn5180
+    type: max_bed_temperature
+    name: Max bed temperature
+  - platform: pn5180
+    type: drying_temperature
+    name: Drying temperature
+  - platform: pn5180
+    type: drying_time
+    name: Drying time
+
+text_sensor:
+  - platform: pn5180
+    type: uid
+    name: Tag UID
+  - platform: pn5180
+    type: material_type
+    name: Material
+  - platform: pn5180
+    type: material_name
+    name: Material name
+  - platform: pn5180
+    type: brand_name
+    name: Brand
+  - platform: pn5180
+    type: primary_color
+    name: Color
+    # Mirrored to the filament_color light, empty = no tag
+    on_value:
+      - lambda: |-
+          if (x.size() < 7) {
+            id(filament_color).turn_off().set_transition_length(0).perform();
+            return;
+          }
+          uint32_t c = strtoul(x.c_str() + 1, nullptr, 16);
+          if (x.size() > 7)
+            c >>= 8;  // #rrggbbaa
+          // ESPHome scales the strongest channel to 100 %, the darkness goes to the brightness
+          const float r = ((c >> 16) & 0xFF) / 255.0f, g = ((c >> 8) & 0xFF) / 255.0f, b = (c & 0xFF) / 255.0f;
+          const float m = std::max({r, g, b});
+          if (m == 0.0f) {
+            id(filament_color).turn_off().set_transition_length(0).perform();  // black
+            return;
+          }
+          id(filament_color).turn_on()
+              .set_rgb(r, g, b)
+              .set_brightness(m)
+              .set_transition_length(0)
+              .perform();
+
+light:
+  # Onboard RGB for now: tag feedback and status. With the external LED fitted, move
+  # notify_led to pin 3 and give the onboard one back to status_led (as on mcu-rfid-reader)
+  - platform: esp32_rmt_led_strip
+    id: notify_led
+    name: Notify LED
+    channel_colors: GRB
+    pin: 21
+    num_leds: 1
+    chipset: ws2812
+    restore_mode: ALWAYS_OFF
+    rmt_symbols: 96
+
+  # Shows the filament color in Home Assistant; drives nothing, the next tag read overwrites it
+  - platform: rgb
+    id: filament_color
+    name: Filament color
+    icon: mdi:printer-3d-nozzle
+    red: color_none
+    green: color_none
+    blue: color_none
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 0s
+
+output:
+  - platform: ledc
+    pin: 4
+    id: buzzer
+  - platform: template
+    id: color_none
+    type: float
+    write_action: []
+
+rtttl:
+  output: buzzer
+
+switch:
+  - platform: template
+    name: Buzzer Enabled
+    id: buzzer_enabled
+    icon: mdi:volume-high
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+  - platform: template
+    name: LED enabled
+    id: led_enabled
+    icon: mdi:alarm-light-outline
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
