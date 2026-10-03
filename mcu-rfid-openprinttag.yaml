@@ -46,7 +46,7 @@ packages:
 
 external_components:
   - source: github://randybb/esphome-components
-    components: [pn5180]
+    components: [pn5180, openprinttag]
     refresh: 1h
 
 # Called by the OpenPrintTag integration (openprinttag.update) to update the aux region
@@ -57,7 +57,18 @@ api:
         uid: string
         aux: string
       then:
-        - lambda: id(pn5180_reader).write_aux(uid, aux);
+        - if:
+            condition:
+              switch.is_on: led_enabled
+            then:
+              - light.turn_on:
+                  id: notify_led
+                  brightness: 100%
+                  red: 100%
+                  green: 0%
+                  blue: 0%
+                  flash_length: 500ms
+        - lambda: id(spool).write_aux(uid, aux);
 
 spi:
   clk_pin: GPIO7
@@ -88,65 +99,62 @@ pn5180:
         then:
           - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
     - homeassistant.tag_scanned: !lambda return x;
-  # Raw tag record for the OpenPrintTag integration (randybb/ha-openprinttag)
-  on_openprinttag:
-    - homeassistant.event:
-        event: esphome.openprinttag
-        data:
-          uid: !lambda return uid;
-          payload: !lambda return payload;
   on_tag_removed:
-    - homeassistant.event:
-        event: esphome.openprinttag
-        data:
-          uid: !lambda return x;
-          payload: ""
     - if:
         condition:
           switch.is_on: buzzer_enabled
         then:
           - rtttl.play: "removed:d=16,o=5,b=100:b"
 
+openprinttag:
+  id: spool
+  # Raw tag record for the OpenPrintTag integration (randybb/ha-openprinttag), empty when removed
+  on_openprinttag:
+    - homeassistant.event:
+        event: esphome.openprinttag
+        data:
+          uid: !lambda return uid;
+          payload: !lambda return payload;
+
 sensor:
-  - platform: pn5180
+  - platform: openprinttag
     type: remaining_weight
     name: Remaining weight
-  - platform: pn5180
+  - platform: openprinttag
     type: consumed_weight
     name: Consumed weight
-  - platform: pn5180
+  - platform: openprinttag
     type: actual_weight
     name: Full weight
-  - platform: pn5180
+  - platform: openprinttag
     type: min_print_temperature
     name: Min print temperature
-  - platform: pn5180
+  - platform: openprinttag
     type: max_print_temperature
     name: Max print temperature
-  - platform: pn5180
+  - platform: openprinttag
     type: max_bed_temperature
     name: Max bed temperature
-  - platform: pn5180
+  - platform: openprinttag
     type: drying_temperature
     name: Drying temperature
-  - platform: pn5180
+  - platform: openprinttag
     type: drying_time
     name: Drying time
 
 text_sensor:
   - platform: pn5180
-    type: uid
     name: Tag UID
-  - platform: pn5180
+  - platform: openprinttag
     type: material_type
     name: Material
-  - platform: pn5180
+  - platform: openprinttag
     type: material_name
     name: Material name
-  - platform: pn5180
+  - platform: openprinttag
     type: brand_name
     name: Brand
-  - platform: pn5180
+  - platform: openprinttag
     type: primary_color
     name: Color
     # Mirrored to the filament_color light, empty = no tag
