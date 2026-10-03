@@ -28,7 +28,7 @@ esphome:
   #   - wait_until:
   #       api.connected:
   #   - logger.log: API is connected!
-  #   - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+  #   - rtttl.play: "success:d=32,o=5,b=100:c,g,b"
   #   - light.turn_on:
   #       id: notify_led
   #       brightness: 100%
@@ -91,13 +91,13 @@ api:
         uri += tag_id;
         message->add_uri_record(uri);
         id(pn532_module).write_mode(message);
-    - rtttl.play: "write:d=24,o=5,b=100:b"
+    - rtttl.play: "write:d=32,o=5,b=100:b"
     - wait_until:
         not:
           pn532.is_writing:
     - light.turn_off:
         id: notify_led
-    - rtttl.play: "write:d=24,o=5,b=100:b,b"
+    - rtttl.play: "write:d=32,o=5,b=100:b,b"
 
   - action: write_music_tag
     variables:
@@ -123,13 +123,13 @@ api:
           message->add_text_record(text);
         }
         id(pn532_module).write_mode(message);
-    - rtttl.play: "write:d=24,o=5,b=100:b"
+    - rtttl.play: "write:d=32,o=5,b=100:b"
     - wait_until:
         not:
           pn532.is_writing:
     - light.turn_off:
         id: notify_led
-    - rtttl.play: "write:d=24,o=5,b=100:b,b"
+    - rtttl.play: "write:d=32,o=5,b=100:b,b"
 
 globals:
   - id: source
@@ -271,7 +271,7 @@ pn532_i2c:
         condition:
           switch.is_on: buzzer_enabled
         then:
-        - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+        - rtttl.play: "success:d=32,o=5,b=100:c,g,b"
   on_tag_removed:
     then:
     - homeassistant.event:
@@ -313,13 +313,13 @@ button:
           message->add_uri_record(uri);
           ESP_LOGD("tagreader", "Writing payload: %s", uri.c_str());
           id(pn532_module).write_mode(message);
-      - rtttl.play: "write:d=24,o=5,b=100:b"
+      - rtttl.play: "write:d=32,o=5,b=100:b"
       - wait_until:
           not:
             pn532.is_writing:
       - light.turn_off:
           id: notify_led
-      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+      - rtttl.play: "write:d=32,o=5,b=100:b,b"
   - platform: template
     name: Clean Tag
     id: clean_tag
@@ -333,13 +333,13 @@ button:
           green: 64.7%
           blue: 0%
       - lambda: 'id(pn532_module).clean_mode();'
-      - rtttl.play: "write:d=24,o=5,b=100:b"
+      - rtttl.play: "write:d=32,o=5,b=100:b"
       - wait_until:
           not:
             pn532.is_writing:
       - light.turn_off:
           id: notify_led
-      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+      - rtttl.play: "write:d=32,o=5,b=100:b,b"
   - platform: template
     name: Cancel writing
     id: cancel_writing
@@ -349,7 +349,7 @@ button:
       - lambda: 'id(pn532_module).read_mode();'
       - light.turn_off:
           id: notify_led
-      - rtttl.play: "write:d=24,o=5,b=100:b,b"
+      - rtttl.play: "write:d=32,o=5,b=100:b,b"
 
 light:
   - platform: esp32_rmt_led_strip
