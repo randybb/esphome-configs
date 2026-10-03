@@ -78,7 +78,19 @@ pn5180:
         then:
           - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
     - homeassistant.tag_scanned: !lambda return x;
+  # Raw tag record for the OpenPrintTag integration (randybb/ha-openprinttag)
+  on_openprinttag:
+    - homeassistant.event:
+        event: esphome.openprinttag
+        data:
+          uid: !lambda return uid;
+          payload: !lambda return payload;
   on_tag_removed:
+    - homeassistant.event:
+        event: esphome.openprinttag
+        data:
+          uid: !lambda return x;
+          payload: ""
     - if:
         condition:
           switch.is_on: buzzer_enabled
