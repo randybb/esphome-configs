@@ -49,6 +49,16 @@ external_components:
     components: [pn5180]
     refresh: 1h
 
+# Called by the OpenPrintTag integration (openprinttag.update) to update the aux region
+api:
+  actions:
+    - action: openprinttag_write_aux
+      variables:
+        uid: string
+        aux: string
+      then:
+        - lambda: id(pn5180_reader).write_aux(uid, aux);
+
 spi:
   clk_pin: GPIO7
   mosi_pin: GPIO6
