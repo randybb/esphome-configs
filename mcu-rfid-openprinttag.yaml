@@ -19,7 +19,7 @@ substitutions:
   device: rfid-openprinttag
   name: OpenPrintTag
   area: DEV
-  comment: OpenPrintTag filament spool reader
+  comment: Filament spool reader (OpenPrintTag, Creality CFS)
 
 esphome:
   name: mcu-${device}
@@ -46,7 +46,7 @@ packages:
 
 external_components:
   - source: github://randybb/esphome-components
-    components: [pn5180, openprinttag]
+    components: [pn5180, openprinttag, creality_cfs]
     refresh: 1h
 
 # Called by the OpenPrintTag integration (openprinttag.update) to update the aux region
@@ -69,6 +69,25 @@ api:
                   blue: 0%
                   flash_length: 500ms
         - lambda: id(spool).write_aux(uid, aux);
+    # Writes a Creality CFS record (48 characters, optionally 48 more for sector 2) to the
+    # Creality tag on the reader
+    - action: creality_cfs_write
+      variables:
+        uid: string
+        data: string
+      then:
+        - if:
+            condition:
+              switch.is_on: led_enabled
+            then:
+              - light.turn_on:
+                  id: notify_led
+                  brightness: 100%
+                  red: 100%
+                  green: 0%
+                  blue: 0%
+                  flash_length: 500ms
+        - lambda: id(creality).write(uid, data);
 
 spi:
   clk_pin: GPIO7
@@ -97,7 +116,7 @@ pn5180:
         condition:
           switch.is_on: buzzer_enabled
         then:
-          - rtttl.play: "success:d=24,o=5,b=100:c,g,b"
+          - rtttl.play: "success:d=32,o=5,b=100:c,g,b"
     - homeassistant.tag_scanned: !lambda return x;
   on_tag_removed:
     - if:
@@ -116,7 +135,19 @@ openprinttag:
           uid: !lambda return uid;
           payload: !lambda return payload;
 
+creality_cfs:
+  id: creality
+  # The Creality record (ASCII) for Home Assistant, empty when removed
+  on_creality:
+    - homeassistant.event:
+        event: esphome.creality_cfs
+        data:
+          uid: !lambda return uid;
+          data: !lambda return data;
+
 sensor:
+  - platform: creality_cfs
+    name: Creality length
   - platform: openprinttag
     type: remaining_weight
     name: Remaining weight
@@ -145,6 +176,15 @@ sensor:
 text_sensor:
   - platform: pn5180
     name: Tag UID
+  - platform: creality_cfs
+    type: material_id
+    name: Creality material ID
+  - platform: creality_cfs
+    type: color
+    name: Creality color
+  - platform: creality_cfs
+    type: serial
+    name: Creality serial
   - platform: openprinttag
     type: material_type
     name: Material
