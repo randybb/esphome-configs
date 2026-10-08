@@ -9,3 +9,4 @@ wifi:
   enable_btm: true
   enable_rrm: true
   min_auth_mode: WPA3
+  power_save_mode: none
