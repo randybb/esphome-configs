@@ -37,56 +37,26 @@ esp32:
       flash_chip: gd
     type: esp-idf
 
-external_components:
-  # - source: github://pr#12717
-  #   components: [ds248x]
-  #   refresh: 1h
-  - source: github://pr#13534
-    components: [ds2482, ds2484, ds248x_base]
-    refresh: 1h
-
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
   status_led: !include common/status_led_atom.yaml
 
-
 i2c:
-  # - id: i2c0
-  #   sda: 26
-  #   scl: 32
-  #   scan: true #false
-  # - id: i2c1
   sda: 25
   scl: 21
   scan: true #false
 
-# ds248x:
-#   # i2c_id: i2c_main
-#   address: 0x18 # should be the default
-#   # sleep_pin: 32 # remove if not needed, if set the ds248x sleeps when no transaction is in progress
-#   active_pullup: true # adds a active pullup which should improve signal integrity
-#   strong_pullup: false # enables a strong pullup used to provide the needed current for temperature reading without vcc connected
-#   bus_sleep: true # power down the bus when no transaction is in progres
-
-# one_wire:
-#   id: one_wire_bus
-#   platform: ds2484
-#   active_pullup: true
-
-# ds248x:
-#   id: ds2484_module
-#   address: 0x18
-
-# one_wire:
-#   - platform: ds248x
-#     ds248x_id: ds2484_module
-#     id: one_wire_bus
+ds248x:
+  id: ds2484_module
+  type: ds2482-100
+  address: 0x18
+  active_pullup: true
 
 one_wire:
-  id: one_wire_bus
-  platform: ds2482
-  active_pullup: true
+  - platform: ds248x
+    ds248x_id: ds2484_module
+    id: one_wire_bus
 
 pca9554:
   - id: pca9554_module
@@ -133,16 +103,6 @@ sensor:
     # index: 0
     name: Temperature
     id: 'heating_fireplace_temperature'
-#   - platform: dht
-#     pin: 14
-#     temperature:
-#       name: "Kitchen Temperature"
-#       id: 'kitchen_temperature'
-#     humidity:
-#       name: "Kitchen Humidity"
-#       id: 'kitchen_humidity'
-#     update_interval: 60s
-#     model: si7021
 
 bluetooth_proxy:
   active: true

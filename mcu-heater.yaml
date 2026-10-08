@@ -47,25 +47,10 @@ esp32:
       flash_chip: gd
     type: esp-idf
 
-external_components:
-  # - source: github://pr#12717
-  #   components: [ds248x]
-  #   refresh: 1h
-  - source: github://pr#13534
-    components: [ds2482, ds2484, ds248x_base]
-    refresh: 1h
-
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
   status_led: !include common/status_led_atom.yaml
-
-#logger:
-#  level: VERBOSE
-#  logs:
-#    dallas.component: ERROR
-#    uart.component: ERROR
-#    i2c.component: VERBOSE
 
 # Heating / Hot water Controller
 # temp_1: Solar Collector
@@ -170,36 +155,22 @@ climate:
       default_target_temperature_high: 40 °C
 
 i2c:
-  # - id: i2c0
-  # sda: 26
-  # scl: 32
-  # scan: true #false
-  # - id: i2c1
+
   sda: 25
   scl: 21
   scan: true #false
 
-# one_wire:
-#   id: one_wire_bus
-#   # i2c_id: i2c_main
-#   platform: ds2484
-#   active_pullup: true
 
-# ds248x:
-#   id: ds2484_module
-#   address: 0x18
-#   active_pullup: true
-
-# one_wire:
-#   - platform: ds248x
-#     ds248x_id: ds2484_module
-#     id: one_wire_bus
+ds248x:
+  id: ds2482_module
+  type: ds2482-100
+  address: 0x18
+  active_pullup: true
 
 one_wire:
-  id: one_wire_bus
-  # i2c_id: i2c_main
-  platform: ds2482
-  active_pullup: true
+  - platform: ds248x
+    ds248x_id: ds2482_module
+    id: one_wire_bus
 
 modbus:
   uart_id: uart_modbus
