@@ -54,8 +54,18 @@ binary_sensor:
     entity_id: binary_sensor.zigbee_staircase_pir_occupancy
     on_state:
       if:
-        condition:
-          binary_sensor.is_off: motion
+        condition: &no_motion
+          and:
+            - binary_sensor.is_off: motion
+            - binary_sensor.is_off: motion_2
+        then:
+          - light.turn_off: light_relay
+  - platform: homeassistant
+    id: motion_2
+    entity_id: binary_sensor.zigbee_staircase_2_pir_occupancy
+    on_state:
+      if:
+        condition: *no_motion
         then:
           - light.turn_off: light_relay
 
