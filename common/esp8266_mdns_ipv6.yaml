@@ -1,0 +1,10 @@
+---
+# ESP8266 core with LEAmDNS announcing the IPv6 addresses (AAAA, ff02::fb) from
+# randybb/Arduino@mdns-ipv6-aaaa (esp8266/Arduino#9068); add next to common_esp8266.yaml.
+# The device must not set 'toolchain: arduino' (no custom framework source there).
+# Drop once it's upstream and in an ESPHome release.
+esp8266:
+  toolchain: platformio
+  framework:
+    version: 3.1.2
+    source: https://github.com/randybb/Arduino.git#mdns-ipv6-aaaa

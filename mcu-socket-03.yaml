@@ -33,10 +33,10 @@ esphome:
 
 esp8266:
   board: esp01_1m
-  toolchain: arduino
 
 packages:
   common: !include common/common_esp8266.yaml
+  mdns_ipv6: !include common/esp8266_mdns_ipv6.yaml
 
 binary_sensor:
   - platform: gpio
