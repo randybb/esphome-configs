@@ -63,6 +63,7 @@ esphome:
 esp32:
   variant: esp32s3
   flash_size: 16MB
+  flash_frequency: 40MHz  # the IDF 5.5.5 bootloader reads garbage from this flash (mfr 0x46) at 80MHz
   toolchain: esp-idf
   framework:
     advanced:
