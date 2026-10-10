@@ -182,6 +182,9 @@ text_sensor:
   - platform: creality_cfs
     type: color
     name: Creality color
+    id: creality_color
+    on_value:
+      - script.execute: show_filament_color
   - platform: creality_cfs
     type: serial
     name: Creality serial
@@ -197,9 +200,18 @@ text_sensor:
   - platform: openprinttag
     type: primary_color
     name: Color
-    # Mirrored to the filament_color light, empty = no tag
+    id: openprinttag_color
     on_value:
+      - script.execute: show_filament_color
+
+script:
+  # The filament color on the filament_color light: the OpenPrintTag's, else the Creality tag's
+  - id: show_filament_color
+    then:
       - lambda: |-
+          std::string x = id(openprinttag_color).state;
+          if (x.size() < 7)
+            x = id(creality_color).state;
           if (x.size() < 7) {
             id(filament_color).turn_off().set_transition_length(0).perform();
             return;
