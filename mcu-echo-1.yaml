@@ -148,10 +148,10 @@ media_player:
     buffer_size: 14000
     media_pipeline:
       speaker: media_spk_resampling_input
-      format: NONE
+      format: WAV  # no PSRAM: HA transcodes to WAV, decoding MP3/FLAC here runs the heap out
     announcement_pipeline:
       speaker: announcement_spk_resampling_input
-      format: NONE
+      format: WAV  # no PSRAM: HA transcodes to WAV, decoding MP3/FLAC here runs the heap out
 
 rtttl:
   id: my_rtttl
