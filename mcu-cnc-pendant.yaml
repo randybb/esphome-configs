@@ -60,7 +60,7 @@ light:
     pin: 21
     num_leds: 1
     chipset: ws2812
-    rgb_order: GRB
+    channel_colors: GRB
     restore_mode: ALWAYS_OFF
 
 # only links esp_http_client for include/moonraker.h, which runs requests on its own task
