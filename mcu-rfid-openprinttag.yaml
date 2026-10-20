@@ -47,7 +47,7 @@ packages:
 external_components:
   - source: github://randybb/esphome-components
     components: [pn5180, openprinttag, creality_cfs]
-    refresh: 1h
+    refresh: 0h
 
 # Called by the OpenPrintTag integration (openprinttag.update) to update the aux region
 api:
