@@ -6,8 +6,9 @@
 # WiFi devices use common/ipv6_only.yaml (this + the IPv6 SSID)
 external_components:
   # network enable_ipv4 + audio HTTP reader over IPv6 (esphome/esphome#19750), drop once merged
-  - source: github://pr#19750
-    components: [const, network, wifi, ethernet, audio]
+  # fork: the PR merged with upstream dev, the PR head lags behind dev (DOMAIN constants)
+  - source: github://randybb/esphome@ipv6-pr19750-dev
+    components: [network, wifi, ethernet, audio]
     refresh: 1h
 
 esp32:
