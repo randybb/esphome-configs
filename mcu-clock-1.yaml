@@ -9,8 +9,8 @@
 #   GPIO6   GPIO
 #   GPIO7   GPIO
 #   GPIO8   GPIO
-#   GPIO9   GPIO (BUZZER?)             -> rtttl_out (output ledc)
-#   GPIO10  GPIO
+#   GPIO9   GPIO
+#   GPIO10  GPIO (BUZZER?)             -> rtttl_out (output ledc)
 #   GPIO20  UART RX
 #   GPIO21  UART TX
 substitutions:
@@ -141,7 +141,7 @@ display:
 
 output:
   - platform: ledc
-    pin: 9
+    pin: 10
     id: rtttl_out
 
 rtttl:
