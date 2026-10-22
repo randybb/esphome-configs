@@ -5,19 +5,14 @@
 #     ipv6_only: !include common/ipv6_only_eth.yaml
 # WiFi devices use common/ipv6_only.yaml (this + the IPv6 SSID)
 external_components:
-  # network enable_ipv4 + audio HTTP reader over IPv6 (esphome/esphome#19750), drop once merged
-  # fork: the PR merged with upstream dev, the PR head lags behind dev (DOMAIN constants)
-  - source: github://randybb/esphome@ipv6-pr19750-dev
-    components: [network, wifi, ethernet, audio]
+  # IPv6-only on wifi/ethernet with the IPv4 stack off (upstream esphome#14526 requires IPv4 for them)
+  - source: github://randybb/esphome@ipv6-only-dev
+    components: [network, wifi, ethernet, voice_assistant, esphome]
     refresh: 1h
 
 esp32:
   framework:
     components:
-      # mdns 1.14.0: no "A 0.0.0.0" without IPv4 + IPv6 on ETH-only builds (espressif/esp-protocols#1156, #1161),
-      # drop once on ESPHome 2026.10.0 (esphome/esphome#20383 bumps the pin from 1.12.0)
-      - name: espressif/mdns
-        ref: 1.14.0
       # IDF v5.5.5 lwip + .local resolution over IPv6 (espressif/esp-lwip#94), drop once in IDF
       - name: lwip
         source: https://github.com/randybb/esp-lwip.git
