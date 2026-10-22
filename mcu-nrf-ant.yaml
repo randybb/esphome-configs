@@ -1,5 +1,8 @@
 ---
 # Hardware: Nordic nRF52840 DK
+# Flash: J-Link 683101126, it has no VCOM port, so with mcu-nrf-dk plugged in too run west from the NCS
+# workspace (~/.cache/esphome/sdk-zephyr/frameworks/sdk-nrf-v3.4.1):
+#   west flash --no-rebuild -d ~/esphome/.esphome/build/mcu-nrf-ant/.west_build -i 000683101126
 # Pinout:
 #   P0.06   UART0 TX                   -> logger (J-Link VCOM)
 #   P0.13   LED 1 (active low)         -> ANT+ Connected (a configured device is received)

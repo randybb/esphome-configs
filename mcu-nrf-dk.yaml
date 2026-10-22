@@ -1,5 +1,7 @@
 ---
 # Hardware: Nordic nRF52840 DK
+# Flash: J-Link 683492497 (with mcu-nrf-ant plugged in too, name the probe):
+#   esphome-zephyr upload mcu-nrf-dk.yaml --device /dev/serial/by-id/usb-SEGGER_J-Link_000683492497-if00
 # Pinout:
 #   P0.11   Button 1 (active low)      -> Button 1 (binary_sensor gpio)
 #   P0.12   Button 2 (active low)      -> Button 2 (binary_sensor gpio)
