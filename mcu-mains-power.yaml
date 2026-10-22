@@ -32,6 +32,7 @@ esphome:
     - id: mains
       name: Mains
       area_id: local_area
+      relation: child
 
 esp32:
   variant: esp32

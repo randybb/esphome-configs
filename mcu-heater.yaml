@@ -35,9 +35,11 @@ esphome:
     - id: heating
       name: Heating
       area_id: local_area
+      relation: child
     - id: hot_water
       name: Hot Water
       area_id: local_area
+      relation: child
 
 esp32:
   variant: esp32
