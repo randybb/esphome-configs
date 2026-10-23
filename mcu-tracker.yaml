@@ -88,9 +88,6 @@ modem:
   init_at:
     - AT+AUTOCSQ=1,1 # URC +CSQ on every signal change
     - AT+CPSI=60     # URC +CPSI (system mode, operator) every 60 s
-    # The modem comes up in CFUN=0 (SIM off) and the component sets the APN before
-    # turning the radio on, so AT+CGDCONT fails until this
-    - AT+CFUN=1
     - AT+CGNSSMODE=15,1 # GNSS all navigation systems
     - AT+CGPS=1         # GPS on
 
