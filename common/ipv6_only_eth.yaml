@@ -5,9 +5,9 @@
 #     ipv6_only: !include common/ipv6_only_eth.yaml
 # WiFi devices use common/ipv6_only.yaml (this + the IPv6 SSID)
 external_components:
-  # IPv6-only on wifi/ethernet with the IPv4 stack off (upstream esphome#14526 requires IPv4 for them)
-  - source: github://randybb/esphome@ipv6-only-dev
-    components: [network, wifi, ethernet, voice_assistant, esphome]
+  # IPv6-only on wifi/ethernet with the IPv4 stack off (esphome/esphome#19750), drop once merged
+  - source: github://pr#19750
+    components: [network, wifi, ethernet]
     refresh: 1h
 
 esp32:
