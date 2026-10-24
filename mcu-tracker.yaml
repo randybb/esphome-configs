@@ -109,8 +109,9 @@ modem:
 mqtt:
   id: mqtt_client
   broker: !secret mqtt_ext
-  username: !secret mqtt_username
-  password: !secret mqtt_password
+  # Own user, so the broker ACL can limit it to its own topics
+  username: !secret mqtt_tracker_username
+  password: !secret mqtt_tracker_password
   discovery: true
   # Every message costs data: logs stay on USB, and one ping per 10 min keeps the session.
   # Lower keepalive if O2's CGNAT drops idle TCP sooner (reconnects resend all discovery)
