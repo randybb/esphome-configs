@@ -19,6 +19,21 @@ substitutions:
   name: Tracker
   area: DEV
   comment: LTE GPS tracker
+  # 2400 mAh cell, charged only to 4.1 V by the axp192 component, so ~90% of it is usable
+  battery_capacity_mah: "2160"
+  # O2 Telemetria bills per day, the cheapest tier is up to 0.1 MB: values go out on a real change,
+  # otherwise once per report_interval
+  report_interval: 1h
+  # Parked: GNSS goes off after gnss_parked_min minutes under parked_speed km/h, then wakes every
+  # gnss_probe_min minutes for gnss_probe_window_min to check whether the car moved
+  parked_speed: "5"
+  gnss_parked_min: "10"
+  gnss_probe_min: "30"
+  gnss_probe_window_min: "3"
+  # Without USB: Battery Low at battery_low_percent, power off below battery_off_voltage (V);
+  # the AXP itself cuts off at 2.9 V (VOFF)
+  battery_low_percent: "20"
+  battery_off_voltage: "3.3"
 
 esphome:
   name: mcu-${device}
@@ -60,7 +75,9 @@ external_components:
   - source: github://m5stack/esphome-yaml/components
     components: [axp192]
     refresh: 1h
-  - source: github://pr#6721
+  # Signal, network type and GNSS sensors from pr#9802 plus our fix for the AT+CGPS=1 resend loop
+  # (https://github.com/esphome/esphome/pull/9802#issuecomment-6381760281); the modem itself is in dev
+  - source: github://randybb/esphome@modem-gnss-fix
     components: [modem]
 
 logger:
@@ -86,10 +103,7 @@ modem:
   enable_on_boot: false # on_boot powers the modem up first
   # pin_code: ""
   init_at:
-    - AT+AUTOCSQ=1,1 # URC +CSQ on every signal change
-    - AT+CPSI=60     # URC +CPSI (system mode, operator) every 60 s
-    - AT+CGNSSMODE=15,1 # GNSS all navigation systems
-    - AT+CGPS=1         # GPS on
+    - AT+CPSI=60        # URC +CPSI every 60 s, for the operator
 
 # API is unreachable over LTE, the tracker has to talk MQTT
 mqtt:
@@ -98,6 +112,25 @@ mqtt:
   username: !secret mqtt_username
   password: !secret mqtt_password
   discovery: true
+  # Every message costs data: logs stay on USB, and one ping per 10 min keeps the session.
+  # Lower keepalive if O2's CGNAT drops idle TCP sooner (reconnects resend all discovery)
+  log_topic: null
+  keepalive: 600s
+  on_connect:
+    # ESPHome has no device_tracker, so the discovery for one is sent here; the identifiers put it on
+    # the same device as the other entities, and the position comes from the attributes.
+    # on_connect fires before the client counts as connected, and a publish before that is dropped
+    - wait_until: mqtt.connected
+    - mqtt.publish_json:
+        topic: homeassistant/device_tracker/mcu-${device}/location/config
+        retain: true
+        payload: |-
+          root["name"] = "Location";
+          root["unique_id"] = "mcu-${device}-location";
+          root["source_type"] = "gps";
+          root["json_attributes_topic"] = "mcu-${device}/location";
+          root["availability_topic"] = "mcu-${device}/status";
+          root["device"].to<JsonObject>()["identifiers"].to<JsonArray>().add(get_mac_address());
 
 output:
   # DLDO3 in the m5stack component = AXP192 LDO3
@@ -108,6 +141,29 @@ output:
 
 binary_sensor:
   - <<: !include common/binary_sensor/status.yaml
+  - platform: template
+    id: battery_low
+    name: Battery Low
+    device_class: battery
+    lambda: return !id(usb_power).state && id(battery).state <= ${battery_low_percent};
+    filters:
+      - delayed_on: 2min
+  # Below battery_off_voltage for 3 min without USB: power off before the cell is deep discharged.
+  # The AXP starts again on PWR, or on USB when the board powers on with external power
+  - platform: template
+    id: battery_empty
+    internal: true
+    lambda: return !id(usb_power).state && id(battery_voltage).state < ${battery_off_voltage};
+    filters:
+      - delayed_on: 3min
+    on_press:
+      - logger.log:
+          level: WARN
+          format: Battery empty, powering off
+      - modem.disable
+      - delay: 10s
+      # REG 32H bit 7: power off; the component's shutdown() writes the AXP2101 register
+      - lambda: id(pmu_axp).writeRegister(0x32, id(pmu_axp).readRegister(0x32) | 0x80);
   - platform: gpio
     id: modem_dtr
     pin: 32
@@ -123,24 +179,154 @@ button:
 
 sensor:
   - <<: !include common/sensor/uptime.yaml
+    update_interval: ${report_interval}
+  # State of charge from the AXP192 coulomb counter. The counter and the marker live in the AXP, so
+  # they survive ESP reboots and are lost together when the battery is pulled; until the next full
+  # charge this reports unknown.
   - platform: template
-    id: modem_rssi
-    name: Modem Signal
-    device_class: signal_strength
-    unit_of_measurement: dBm
-    entity_category: diagnostic
-    update_interval: never
-#   - platform: modem
-#     rssi:
-#       name: rssi
-#     ber:
-#       name: ber
-#     latitude:
-#       name: Latitude
-#     longitude:
-#       name: Longitude
-#     altitude:
-#       name: Altitude
+    id: battery_soc
+    name: Battery Charge
+    internal: true
+    device_class: battery
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      auto *pmu = id(pmu_axp);
+      if (pmu->is_failed() || !pmu->isBatteryConnect())
+        return NAN;
+      int ctl = pmu->readRegister(0xB8);
+      if (ctl < 0)
+        return NAN;
+      if (!(ctl & 0x80))
+        pmu->writeRegister(0xB8, 0x80);  // start counting
+      if (pmu->readRegister(0x06) != 0xCC)
+        return NAN;  // no full charge since the AXP lost power
+      int64_t cnt[2] = {0, 0};  // 0xB0 charge, 0xB4 discharge, 32 bit big endian
+      for (int c = 0; c < 2; c++) {
+        for (int i = 0; i < 4; i++) {
+          int b = pmu->readRegister(0xB0 + 4 * c + i);
+          if (b < 0)
+            return NAN;
+          cnt[c] = (cnt[c] << 8) | b;
+        }
+      }
+      // Datasheet: mAh = 65536 * 0.5 mA * (charge - discharge) / 3600 / ADC rate (25 Hz << reg 0x84[7:6])
+      float rate = 25 << ((pmu->readRegister(0x84) >> 6) & 3);
+      float mah = 32768.0f * (cnt[0] - cnt[1]) / 3600.0f / rate;
+      return clamp(100.0f + mah * 100.0f / ${battery_capacity_mah}, 0.0f, 100.0f);
+  # The only battery value HA gets: the coulomb counter once calibrated, the voltage estimate until
+  # then, in 10 % steps
+  - platform: template
+    id: battery
+    name: Battery
+    device_class: battery
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      return std::isnan(id(battery_soc).state) ? id(battery_level).state : id(battery_soc).state;
+    filters:
+      - lambda: return roundf(x / 10.0f) * 10.0f;
+      - or:
+          - heartbeat: ${report_interval}
+          - delta: 10
+  - platform: axp192
+    id: pmu_sensors
+    axp192_id: pmu_axp
+    update_interval: 60s
+    battery_voltage:
+      id: battery_voltage
+      name: Battery Voltage
+      internal: true
+    battery_level:
+      id: battery_level
+      name: Battery Level
+      internal: true
+    battery_charge_current:
+      name: Battery Charge Current
+      internal: true
+    battery_discharge_current:
+      name: Battery Discharge Current
+      internal: true
+    vbus_voltage:
+      name: VBUS Voltage
+      internal: true
+    internal_temperature:
+      name: PMU Temperature
+      internal: true
+    battery_charging:
+      name: Battery Charging
+      internal: true
+      on_release:
+        # Charging ended on USB at full voltage: that is 100%, so restart the coulomb counter here.
+        # ponytail: a USB unplug near full also passes the voltage check, a few % off at most
+        - lambda: |-
+            auto *pmu = id(pmu_axp);
+            if (pmu->isVbusIn() && id(battery_voltage).state > 4.05f) {
+              pmu->writeRegister(0xB8, 0xA0);  // counter on, clear
+              pmu->writeRegister(0x06, 0xCC);  // marker in the AXP data buffer: counter starts at full
+            }
+    battery_connected:
+      name: Battery Connected
+      internal: true
+    vbus_present:
+      id: usb_power
+      name: USB Power
+    usb_present:
+      name: USB Present
+      internal: true
+  - platform: modem
+    rssi:
+      id: modem_rssi
+      name: Modem Signal
+      entity_category: diagnostic
+      filters:
+        - or:
+            - heartbeat: ${report_interval}
+            - delta: 6
+    ber:
+      name: Modem BER
+      entity_category: diagnostic
+      filters:
+        - heartbeat: ${report_interval}
+    # lat/lon deltas are ~50 m at 48° N
+    latitude:
+      id: latitude
+      name: Latitude
+      internal: true
+      on_value:
+        - script.execute: publish_location
+      filters:
+        - or:
+            - heartbeat: ${report_interval}
+            - delta: 0.0005
+    longitude:
+      id: longitude
+      name: Longitude
+      internal: true
+      on_value:
+        - script.execute: publish_location
+      filters:
+        - or:
+            - heartbeat: ${report_interval}
+            - delta: 0.0007
+    altitude:
+      id: altitude
+      name: Altitude
+      internal: true
+    speed:
+      id: speed
+      name: Speed
+      internal: true
+    course:
+      id: course
+      name: Course
+      internal: true
+    accuracy:
+      id: gnss_accuracy
+      name: GNSS Accuracy
+      internal: true
 
 switch:
   - platform: gpio
@@ -156,49 +342,43 @@ switch:
   - platform: output
     id: gnss_enable
     output: gnss_power
-  # - platform: modem
-  #   gnss:
-  #     name: GNSS
-  #     restore_mode: ALWAYS_ON
+  - platform: modem
+    gnss:
+      id: gnss_switch
+      name: GNSS
+      restore_mode: ALWAYS_ON
 
 text_sensor:
   - <<: !include common/text_sensor/version.yaml
+  # Text sensors publish every value, so these copy theirs only when it changes
+  - platform: template
+    id: modem_operator
+    name: Modem Operator
+    entity_category: diagnostic
+    update_interval: never
   - platform: template
     id: modem_network
     name: Modem Network
     entity_category: diagnostic
     update_interval: never
-  # Signal and network mode come as URCs; the component has no sensors for them yet
+  # The operator comes from the +CPSI URC; the component has no sensor for it
   - platform: modem
+    network_type:
+      id: modem_network_raw
+      internal: true
+      on_value:
+        - lambda: |-
+            if (id(modem_network).state != x)
+              id(modem_network).publish_state(x);
     urc:
       id: modem_urc
       internal: true
       on_value:
         - lambda: |-
-            int a, b;
-            if (sscanf(x.c_str(), "+CSQ: %d,%d", &a, &b) == 2) {
-              id(modem_rssi).publish_state(a >= 0 && a <= 31 ? -113 + 2 * a : NAN);
-            } else if (x.rfind("+CPSI: ", 0) == 0) {
-              // +CPSI: <system mode>,<operation mode>[,<MCC>-<MNC>,...]
-              char mode[16], op[16];
-              int n = sscanf(x.c_str(), "+CPSI: %15[^,],%*[^,],%15[^,]", mode, op);
-              if (n >= 1)
-                id(modem_network).publish_state(n == 2 ? std::string(mode) + " " + op : std::string(mode));
-            }
-  - platform: template
-    id: modem_ip
-    name: Modem IP Address
-    entity_category: diagnostic
-    update_interval: 60s
-    lambda: |-
-      char buf[network::IP_ADDRESS_BUFFER_SIZE];
-      auto ip = id(atmodem).get_ip_addresses()[0];
-      return std::string(ip.is_set() ? ip.str_to(buf) : "");
-#   - platform: modem
-#     network_type:
-#       name: network type
-#     signal_strength:
-#       name: Signal strength
+            // +CPSI: <system mode>,<operation mode>[,<MCC>-<MNC>,...]
+            char op[16];
+            if (sscanf(x.c_str(), "+CPSI: %*[^,],%*[^,],%15[^,]", op) == 1 && id(modem_operator).state != op)
+              id(modem_operator).publish_state(op);
 
 font:
   - file: "gfonts://Roboto"
@@ -212,10 +392,89 @@ display:
     i2c_id: system_i2c
     update_interval: 2s
     lambda: |-
-      it.printf(0, 0, id(font_small), "%s", id(modem_network).has_state() ? id(modem_network).state.c_str() : "--");
+      it.printf(0, 0, id(font_small), "%s %s", id(modem_network).has_state() ? id(modem_network).state.c_str() : "--",
+                id(modem_operator).state.c_str());
       if (id(modem_rssi).has_state() && !std::isnan(id(modem_rssi).state))
         it.printf(127, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f dBm", id(modem_rssi).state);
       it.printf(0, 16, id(font_small), "PPP: %s", id(atmodem).is_connected() ? "OK" : "--");
       it.printf(127, 16, id(font_small), TextAlign::TOP_RIGHT, "MQTT: %s", id(mqtt_client)->is_connected() ? "OK" : "--");
-      it.printf(0, 32, id(font_small), "%s", id(modem_ip).state.c_str());
-      it.printf(0, 48, id(font_small), "Up %.2f d", id(uptime_sensor).state);
+      if (std::isnan(id(latitude).state))
+        it.printf(0, 32, id(font_small), "GNSS: no fix");
+      else
+        it.printf(0, 32, id(font_small), "%.5f %.5f", id(latitude).state, id(longitude).state);
+      auto now = id(sntp_time).now();
+      if (now.is_valid())
+        it.strftime(0, 48, id(font_small), "%H:%M", now);
+      else
+        it.printf(0, 48, id(font_small), "Up %.2f d", id(uptime_sensor).state);
+      // The unrounded value; HA only gets 10 % steps
+      float bat = std::isnan(id(battery_soc).state) ? id(battery_level).state : id(battery_soc).state;
+      if (!std::isnan(bat))
+        it.printf(127, 48, id(font_small), TextAlign::TOP_RIGHT, "Bat %.0f%%", bat);
+
+script:
+  # Latitude and longitude change in the same poll; one message for both
+  - id: publish_location
+    mode: restart
+    then:
+      - delay: 1s
+      - if:
+          condition:
+            lambda: return !std::isnan(id(latitude).state) && !std::isnan(id(longitude).state);
+          then:
+            - mqtt.publish_json:
+                topic: mcu-${device}/location
+                retain: true
+                payload: |-
+                  root["latitude"] = id(latitude).state;
+                  root["longitude"] = id(longitude).state;
+                  if (!std::isnan(id(gnss_accuracy).state))
+                    root["gps_accuracy"] = id(gnss_accuracy).state;
+                  if (!std::isnan(id(altitude).state))
+                    root["altitude"] = id(altitude).state;
+                  if (!std::isnan(id(speed).state))
+                    root["speed"] = id(speed).state;
+                  if (!std::isnan(id(course).state))
+                    root["course"] = id(course).state;
+
+time:
+  # Over PPP; one NTP exchange is ~150 B, so a few a day are enough for the ESP's clock
+  - platform: sntp
+    id: sntp_time
+    update_interval: 6h
+
+globals:
+  - id: still_minutes
+    type: int
+    initial_value: "0"
+  - id: parked
+    type: bool
+    initial_value: "false"
+  - id: parked_minutes
+    type: int
+    initial_value: "0"
+
+interval:
+  # Saves the GNSS current while parked; the speed comes from GNSS, the board has no accelerometer
+  - interval: 60s
+    then:
+      - lambda: |-
+          if (id(parked)) {
+            if (++id(parked_minutes) >= ${gnss_probe_min}) {
+              // A look around: the logic below keeps GNSS on if the car moves within the window
+              id(parked) = false;
+              id(still_minutes) = ${gnss_parked_min} - ${gnss_probe_window_min};
+              id(gnss_enable).turn_on();
+              id(gnss_switch).turn_on();
+            }
+            return;
+          }
+          float v = id(speed).state;  // NAN without a fix
+          if (!std::isnan(v) && v >= ${parked_speed}) {
+            id(still_minutes) = 0;
+          } else if (++id(still_minutes) >= ${gnss_parked_min}) {
+            id(parked) = true;
+            id(parked_minutes) = 0;
+            id(gnss_switch).turn_off();
+            id(gnss_enable).turn_off();
+          }
