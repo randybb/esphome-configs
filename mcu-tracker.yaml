@@ -34,6 +34,8 @@ substitutions:
   # the AXP itself cuts off at 2.9 V (VOFF)
   battery_low_percent: "20"
   battery_off_voltage: "3.3"
+  # The modem reports only DOP; accuracy in m = DOP * this typical range error. Tune against a known spot
+  gnss_uere_m: "5"
 
 esphome:
   name: mcu-${device}
@@ -75,10 +77,6 @@ external_components:
   - source: github://m5stack/esphome-yaml/components
     components: [axp192]
     refresh: 1h
-  # Signal, network type and GNSS sensors from pr#9802 plus our fix for the AT+CGPS=1 resend loop
-  # (https://github.com/esphome/esphome/pull/9802#issuecomment-6381760281); the modem itself is in dev
-  - source: github://randybb/esphome@modem-gnss-fix
-    components: [modem]
 
 logger:
   level: VERBOSE
@@ -104,6 +102,14 @@ modem:
   # pin_code: ""
   init_at:
     - AT+CPSI=60        # URC +CPSI every 60 s, for the operator
+    - AT+CGNSSINFO=30   # URC +CGNSSINFO every 30 s while GNSS runs; dev has no GNSS sensors
+  on_connect:
+    # Survives an ESP reboot without a modem power cycle; the modem answers ERROR if GNSS already runs
+    - if:
+        condition:
+          switch.is_on: gnss_switch
+        then:
+          - modem.send_at: AT+CGPS=1
 
 # API is unreachable over LTE, the tracker has to talk MQTT
 mqtt:
@@ -291,43 +297,54 @@ sensor:
       entity_category: diagnostic
       filters:
         - heartbeat: ${report_interval}
-    # lat/lon deltas are ~50 m at 48° N
-    latitude:
-      id: latitude
-      name: Latitude
-      internal: true
-      on_value:
-        - script.execute: publish_location
-      filters:
-        - or:
-            - heartbeat: ${report_interval}
-            - delta: 0.0005
-    longitude:
-      id: longitude
-      name: Longitude
-      internal: true
-      on_value:
-        - script.execute: publish_location
-      filters:
-        - or:
-            - heartbeat: ${report_interval}
-            - delta: 0.0007
-    altitude:
-      id: altitude
-      name: Altitude
-      internal: true
-    speed:
-      id: speed
-      name: Speed
-      internal: true
-    course:
-      id: course
-      name: Course
-      internal: true
-    accuracy:
-      id: gnss_accuracy
-      name: GNSS Accuracy
-      internal: true
+  # Filled from the +CGNSSINFO URC. lat/lon deltas are ~50 m at 48° N
+  - platform: template
+    id: latitude
+    name: Latitude
+    internal: true
+    update_interval: never
+    on_value:
+      - script.execute: publish_location
+    filters:
+      - or:
+          - heartbeat: ${report_interval}
+          - delta: 0.0005
+  - platform: template
+    id: longitude
+    name: Longitude
+    internal: true
+    update_interval: never
+    on_value:
+      - script.execute: publish_location
+    filters:
+      - or:
+          - heartbeat: ${report_interval}
+          - delta: 0.0007
+  - platform: template
+    id: altitude
+    name: Altitude
+    internal: true
+    update_interval: never
+  - platform: template
+    id: speed
+    name: Speed
+    internal: true
+    update_interval: never
+  - platform: template
+    id: course
+    name: Course
+    internal: true
+    update_interval: never
+  - platform: template
+    id: gnss_accuracy
+    name: GNSS Accuracy
+    internal: true
+    update_interval: never
+  - platform: template
+    id: gnss_vertical_accuracy
+    name: GNSS Vertical Accuracy
+    internal: true
+    update_interval: never
 
 switch:
   - platform: gpio
@@ -343,11 +360,15 @@ switch:
   - platform: output
     id: gnss_enable
     output: gnss_power
-  - platform: modem
-    gnss:
-      id: gnss_switch
-      name: GNSS
-      restore_mode: ALWAYS_ON
+  - platform: template
+    id: gnss_switch
+    name: GNSS
+    optimistic: true
+    restore_mode: ALWAYS_ON
+    turn_on_action:
+      - modem.send_at: AT+CGPS=1
+    turn_off_action:
+      - modem.send_at: AT+CGPS=0
 
 text_sensor:
   - <<: !include common/text_sensor/version.yaml
@@ -362,7 +383,7 @@ text_sensor:
     name: Modem Network
     entity_category: diagnostic
     update_interval: never
-  # The operator comes from the +CPSI URC; the component has no sensor for it
+  # The operator comes from the +CPSI URC, the position from +CGNSSINFO; the component has sensors for neither
   - platform: modem
     network_type:
       id: modem_network_raw
@@ -378,40 +399,43 @@ text_sensor:
         - lambda: |-
             // +CPSI: <system mode>,<operation mode>[,<MCC>-<MNC>,...]
             char op[16];
-            if (sscanf(x.c_str(), "+CPSI: %*[^,],%*[^,],%15[^,]", op) == 1 && id(modem_operator).state != op)
-              id(modem_operator).publish_state(op);
-
-font:
-  - file: "gfonts://Roboto"
-    id: font_small
-    size: 12
-
-display:
-  - platform: ssd1306_i2c
-    model: "SSD1306 128x64"
-    address: 0x3C
-    i2c_id: system_i2c
-    update_interval: 2s
-    lambda: |-
-      it.printf(0, 0, id(font_small), "%s %s", id(modem_network).has_state() ? id(modem_network).state.c_str() : "--",
-                id(modem_operator).state.c_str());
-      if (id(modem_rssi).has_state() && !std::isnan(id(modem_rssi).state))
-        it.printf(127, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f dBm", id(modem_rssi).state);
-      it.printf(0, 16, id(font_small), "PPP: %s", id(atmodem).is_connected() ? "OK" : "--");
-      it.printf(127, 16, id(font_small), TextAlign::TOP_RIGHT, "MQTT: %s", id(mqtt_client)->is_connected() ? "OK" : "--");
-      if (std::isnan(id(latitude).state))
-        it.printf(0, 32, id(font_small), "GNSS: no fix");
-      else
-        it.printf(0, 32, id(font_small), "%.5f %.5f", id(latitude).state, id(longitude).state);
-      auto now = id(sntp_time).now();
-      if (now.is_valid())
-        it.strftime(0, 48, id(font_small), "%H:%M", now);
-      else
-        it.printf(0, 48, id(font_small), "Up %.2f d", id(uptime_sensor).state);
-      // The unrounded value; HA only gets 10 % steps
-      float bat = std::isnan(id(battery_soc).state) ? id(battery_level).state : id(battery_soc).state;
-      if (!std::isnan(bat))
-        it.printf(127, 48, id(font_small), TextAlign::TOP_RIGHT, "Bat %.0f%%", bat);
+            if (sscanf(x.c_str(), "+CPSI: %*[^,],%*[^,],%15[^,]", op) == 1) {
+              if (id(modem_operator).state != op)
+                id(modem_operator).publish_state(op);
+              return;
+            }
+            // +CGNSSINFO: <mode>,<satellite counts>,<ddmm.mmmmmm>,<N/S>,<dddmm.mmmmmm>,<E/W>,<date>,<UTC time>,
+            //   <alt m>,<speed kn>,<course>,<PDOP>,<HDOP>,<VDOP>
+            // The number of satellite counts differs between firmwares, so the fields are found from N/S.
+            // Without a fix all fields are empty
+            if (x.rfind("+CGNSSINFO:", 0) != 0)
+              return;
+            std::vector<std::string> f;
+            for (size_t i = x.find(':') + 1, j; ; i = j + 1) {
+              j = x.find(',', i);
+              f.push_back(x.substr(i, j == std::string::npos ? j : j - i));
+              if (j == std::string::npos)
+                break;
+            }
+            size_t ns = 1;
+            while (ns < f.size() && f[ns] != "N" && f[ns] != "S")
+              ns++;
+            if (ns + 10 > f.size()) {
+              id(latitude).publish_state(NAN);
+              id(longitude).publish_state(NAN);
+              id(speed).publish_state(NAN);
+              return;
+            }
+            auto num = [&](size_t i) { return f[i].empty() ? NAN : strtof(f[i].c_str(), nullptr); };
+            auto deg = [](double v) { double d = floor(v / 100); return d + (v - d * 100) / 60; };
+            double lat = deg(strtod(f[ns - 1].c_str(), nullptr)), lon = deg(strtod(f[ns + 1].c_str(), nullptr));
+            id(altitude).publish_state(num(ns + 5));
+            id(speed).publish_state(num(ns + 6) * 1.852f);
+            id(course).publish_state(num(ns + 7));
+            id(gnss_accuracy).publish_state(num(ns + 9) * ${gnss_uere_m});
+            id(gnss_vertical_accuracy).publish_state(ns + 10 < f.size() ? num(ns + 10) * ${gnss_uere_m} : NAN);
+            id(latitude).publish_state(f[ns] == "S" ? -lat : lat);
+            id(longitude).publish_state(f[ns + 2] == "W" ? -lon : lon);
 
 script:
   # Latitude and longitude change in the same poll; one message for both
@@ -429,14 +453,18 @@ script:
                 payload: |-
                   root["latitude"] = id(latitude).state;
                   root["longitude"] = id(longitude).state;
-                  if (!std::isnan(id(gnss_accuracy).state))
-                    root["gps_accuracy"] = id(gnss_accuracy).state;
                   if (!std::isnan(id(altitude).state))
                     root["altitude"] = id(altitude).state;
                   if (!std::isnan(id(speed).state))
                     root["speed"] = id(speed).state;
                   if (!std::isnan(id(course).state))
                     root["course"] = id(course).state;
+                  if (!std::isnan(id(gnss_accuracy).state))
+                    root["gps_accuracy"] = roundf(id(gnss_accuracy).state);
+                  if (!std::isnan(id(gnss_vertical_accuracy).state))
+                    root["vertical_accuracy"] = roundf(id(gnss_vertical_accuracy).state);
+                  if (!std::isnan(id(battery).state))
+                    root["battery_level"] = id(battery).state;
 
 time:
   # Over PPP; one NTP exchange is ~150 B, so a few a day are enough for the ESP's clock
