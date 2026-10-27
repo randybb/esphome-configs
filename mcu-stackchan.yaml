@@ -85,6 +85,11 @@ external_components:
   - source: github://randybb/esphome-components
     components: [audio_spectrum]
     refresh: 1h
+  # stop the microphone before the response with streaming STT (HA Cloud), drop once upstream
+  - source:
+      type: local
+      path: /home/randy/Projects/repos/esphome-va-mic-stop/esphome/components
+    components: [voice_assistant]
 
 globals:
   - id: in_love
@@ -244,7 +249,7 @@ audio_adc:
     i2c_id: i2c_bsp
     bits_per_sample: 16bit
     sample_rate: 16000
-    mic_gain: 36
+    mic_gain: 24
 
 audio_dac:
   - platform: aw88298
@@ -330,7 +335,8 @@ voice_assistant:
   media_player: media_out
   micro_wake_word: mww
   noise_suppression_level: 2
-  auto_gain: 31dBFS
+  # no extra gain: a raised noise floor keeps the HA VAD from hearing the end of speech
+  auto_gain: 0dBFS
   on_client_connected:
     - micro_wake_word.start:
     - delay: 2s
