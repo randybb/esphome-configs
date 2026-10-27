@@ -86,9 +86,7 @@ external_components:
     components: [audio_spectrum]
     refresh: 1h
   # stop the microphone before the response with streaming STT (HA Cloud), drop once upstream
-  - source:
-      type: local
-      path: /home/randy/Projects/repos/esphome-va-mic-stop/esphome/components
+  - source: github://randybb/esphome@va-stop-mic-streaming-stt
     components: [voice_assistant]
 
 globals:
