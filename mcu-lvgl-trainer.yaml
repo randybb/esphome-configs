@@ -109,14 +109,7 @@ touchscreen:
     # no calibration/transform: the driver defaults to the native 320x480 panel and
     # LVGL applies its own rotation to touch points
     on_release:
-      - if:
-          condition: lvgl.is_paused
-          then:
-            - lvgl.resume:
-            - lvgl.widget.redraw:
-            - light.turn_on:
-                id: display_backlight
-                transition_length: 300ms
+      - script.execute: display_idle
 
 uart:
   - id: ext_uart
@@ -136,6 +129,7 @@ binary_sensor:
           id: basement_light_btn
           state:
             checked: !lambda return x;
+      - script.execute: display_idle
   - platform: homeassistant
     id: workbench_light
     entity_id: ${light_workbench}
@@ -145,6 +139,7 @@ binary_sensor:
           id: workbench_light_btn
           state:
             checked: !lambda return x;
+      - script.execute: display_idle
   - platform: homeassistant
     id: exercise_light
     entity_id: ${light_exercise}
@@ -154,6 +149,7 @@ binary_sensor:
           id: exercise_light_btn
           state:
             checked: !lambda return x;
+      - script.execute: display_idle
       # brightness and color temperature only make sense while the light is on
       - if:
           condition:
@@ -218,6 +214,29 @@ text_sensor:
       - script.execute: update_training_status
 
 script:
+  # wakes the display, then turns it off once all basement lights stay off for 5 min;
+  # restarted by every light change and touch
+  - id: display_idle
+    mode: restart
+    then:
+      - if:
+          condition: lvgl.is_paused
+          then:
+            - lvgl.resume:
+            - lvgl.widget.redraw:
+            - light.turn_on:
+                id: display_backlight
+                transition_length: 300ms
+      - delay: 5min
+      - if:
+          condition:
+            lambda: return !id(basement_light).state && !id(workbench_light).state && !id(exercise_light).state;
+          then:
+            - light.turn_off:
+                id: display_backlight
+                transition_length: 1s
+            - delay: 1s
+            - lvgl.pause:
   - id: update_fan_buttons
     then:
       - lambda: |-
