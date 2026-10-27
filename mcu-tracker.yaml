@@ -74,7 +74,7 @@ esp32:
   # ipv6_only: !include common/ipv6_only.yaml
 
 external_components:
-  - source: github://m5stack/esphome-yaml/components
+  - source: github://m5stack/esphome-yaml
     components: [axp192]
     refresh: 1h
 
