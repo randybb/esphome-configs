@@ -30,12 +30,13 @@ esp32:
   framework:
     type: esp-idf
     advanced:
-      flash_chip: gd  # same device as pow-dishwasher (not read from the device)
+      flash_chip: gd
       minimum_chip_revision: 3.1
       sram1_as_iram: true
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 uart:
   - id: cse7766_uart
