@@ -57,10 +57,8 @@ psram:
   ignore_not_found: false
 
 external_components:
-  # https://github.com/ptaru/nspanel-terminal, local branch esphome-dev
-  - source:
-      type: local
-      path: /home/randy/Projects/repos/nspanel-terminal/components
+  # fork with the fixes of ptaru/nspanel-terminal#1 (TFT upload, faster redraws); upstream once merged
+  - source: github://randybb/nspanel-terminal@upload-and-redraw-fixes
     components: [nspanel_terminal]
 
 packages:
