@@ -6,8 +6,8 @@ obj:
   align: ${align}
   x: ${x}
   y: -16
-  width: 72
-  height: 52
+  width: 88
+  height: 64
   bg_opa: TRANSP
   border_width: 0
   pad_all: 0

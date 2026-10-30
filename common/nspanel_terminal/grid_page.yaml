@@ -3,6 +3,8 @@
 id: ${id}
 skip: ${skip}
 styles: page_style
+# header 64 px high (arrow touch area), 2x112 tiles + gap below, 8 px left at the bottom
+pad_bottom: 8
 layout:
   type: FLEX
   flex_flow: ROW_WRAP
@@ -12,6 +14,8 @@ widgets:
       text_font: font_s
       text_color: 0xB4B4BA
       width: 100%
+      height: 48
+      pad_top: 14
       text_align: CENTER
   - <<: !include {file: page_arrow.yaml, vars: {icon: "\U000F0141", align: TOP_LEFT, x: -16, to: "${prev}", hidden: false}}
   - <<: !include {file: page_arrow.yaml, vars: {icon: "\U000F0142", align: TOP_RIGHT, x: 16, to: "${next}", hidden: "${skip}"}}

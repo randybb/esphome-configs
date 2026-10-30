@@ -48,8 +48,7 @@ psram:
   ignore_not_found: false
 
 external_components:
-  # fork with the fixes of ptaru/nspanel-terminal#1 (TFT upload, faster redraws); upstream once merged
-  - source: github://randybb/nspanel-terminal@upload-and-redraw-fixes
+  - source: github://ptaru/nspanel-terminal@v0.4.0
     components: [nspanel_terminal]
 
 wifi:
@@ -215,7 +214,7 @@ font:
     id: font_clock
     size: 112
     bpp: 4
-    glyphs: "0123456789:"
+    glyphs: "0123456789:-"
   - file: "gfonts://Inter@500"
     id: font_big
     size: 44
@@ -822,8 +821,8 @@ lvgl:
               - obj:
                   align: LEFT_MID
                   x: -16
-                  width: 72
-                  height: 52
+                  width: 88
+                  height: 64
                   bg_opa: TRANSP
                   border_width: 0
                   pad_all: 0

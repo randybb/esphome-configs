@@ -136,7 +136,7 @@ lvgl:
             id: ${id}_power
             align: TOP_RIGHT
             x: -90
-            y: 36
+            y: 56
             width: 82
             height: 44
             styles: tile_style
@@ -169,7 +169,7 @@ lvgl:
             id: ${id}_boiler_button
             align: TOP_RIGHT
             x: 0
-            y: 36
+            y: 56
             width: 82
             height: 44
             styles: tile_style
@@ -202,7 +202,7 @@ lvgl:
             disabled:
               text_color: 0x48484A
             align: TOP_RIGHT
-            y: 92
+            y: 112
             width: 172
             options: ["-"]
             styles: tile_style
