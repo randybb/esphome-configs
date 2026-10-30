@@ -1359,6 +1359,7 @@ sensor:
 
   - platform: ntc
     id: temperature
+    name: Temperature
     sensor: resistance_sensor
     calibration:
       b_constant: 3950
