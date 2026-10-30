@@ -1,76 +1,303 @@
-# Home Assistant state and target sending for the thermostat page (page_5).
-# Package vars: entity (climate entity with heat/off and the Better Thermostat presets), boiler (switch enabling heating)
+# Package: thermostat page (arc with target temperature, -/+, heat/off, boiler switch, presets) and its HA state.
+# vars: id (prefix of its ids, unique per thermostat page), page, title, prev, next (page ids for the arrows),
+#       entity (climate with heat/off and presets),
+#       boiler (switch that lets the boiler fire, the same in every room)
+defaults:
+  boiler: switch.heating_enabled
+
+globals:
+  # preset_modes of the thermostat, in dropdown order
+  - id: ${id}_preset_list
+    type: std::vector<std::string>
+
+lvgl:
+  pages:
+    - id: ${page}
+      styles: page_style
+      widgets:
+        - label:
+            text: "${title}"
+            text_font: font_s
+            text_color: 0xB4B4BA
+            width: 100%
+            text_align: CENTER
+        - <<: !include
+            file: page_arrow.yaml
+            vars: {icon: "\U000F0141", align: TOP_LEFT, x: -16, to: "${prev}", hidden: false}
+        - <<: !include
+            file: page_arrow.yaml
+            vars: {icon: "\U000F0142", align: TOP_RIGHT, x: 16, to: "${next}", hidden: false}
+        # target temperature in half degrees, 10..30 °C
+        - arc:
+            id: ${id}_arc
+            disabled:
+              arc_color: 0x161618
+            align: BOTTOM_LEFT
+            y: -20
+            width: 220
+            height: 220
+            min_value: 20
+            max_value: 60
+            arc_width: 16
+            arc_color: 0x2C2C2E
+            indicator:
+              arc_width: 16
+              arc_color: 0x8E8E93
+            knob:
+              bg_color: 0xFFFFFF
+              pad_all: 2
+            on_value:
+              - lambda: 'lv_label_set_text_fmt(id(${id}_target_label), "%.1f", x / 2.0f);'
+            on_release:
+              - script.execute: ${id}_send_target
+            widgets:
+              - obj:
+                  clickable: false
+                  align: CENTER
+                  y: -8
+                  width: SIZE_CONTENT
+                  height: SIZE_CONTENT
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  text_color: 0xFFFFFF
+                  layout:
+                    type: FLEX
+                    flex_flow: ROW
+                    flex_align_cross: START
+                    pad_column: 2
+                  widgets:
+                    - label:
+                        id: ${id}_target_label
+                        text: "-"
+                        text_font: font_big
+                        text_color: 0xFFFFFF
+                    - label:
+                        text: "°C"
+                        y: 6
+                        text_color: 0xB4B4BA
+              - label:
+                  id: ${id}_current_label
+                  text: ""
+                  text_font: font_s
+                  text_color: 0xB4B4BA
+                  align: CENTER
+                  y: 34
+              - label:
+                  id: ${id}_action_label
+                  text: ""
+                  text_font: font_s
+                  text_color: 0x8E8E93
+                  align: CENTER
+                  y: -50
+        - button:
+            id: ${id}_minus
+            align: BOTTOM_LEFT
+            x: 46
+            width: 56
+            height: 44
+            styles: tile_style
+            disabled:
+              bg_color: 0x161618
+              text_color: 0x48484A
+            pad_all: 0
+            on_click:
+              - lambda: |-
+                  lv_arc_set_value(id(${id}_arc), lv_arc_get_value(id(${id}_arc)) - 1);
+                  lv_label_set_text_fmt(id(${id}_target_label), "%.1f", lv_arc_get_value(id(${id}_arc)) / 2.0f);
+              - script.execute: ${id}_send_target
+            widgets:
+              - label:
+                  text: "\U000F0374"
+                  text_font: icon_s
+                  align: CENTER
+        - button:
+            id: ${id}_plus
+            align: BOTTOM_LEFT
+            x: 118
+            width: 56
+            height: 44
+            styles: tile_style
+            disabled:
+              bg_color: 0x161618
+              text_color: 0x48484A
+            pad_all: 0
+            on_click:
+              - lambda: |-
+                  lv_arc_set_value(id(${id}_arc), lv_arc_get_value(id(${id}_arc)) + 1);
+                  lv_label_set_text_fmt(id(${id}_target_label), "%.1f", lv_arc_get_value(id(${id}_arc)) / 2.0f);
+              - script.execute: ${id}_send_target
+            widgets:
+              - label:
+                  text: "\U000F0415"
+                  text_font: icon_s
+                  align: CENTER
+        - button:
+            id: ${id}_power
+            align: TOP_RIGHT
+            x: -90
+            y: 36
+            width: 82
+            height: 44
+            styles: tile_style
+            disabled:
+              bg_color: 0x161618
+              text_color: 0x48484A
+            pad_all: 0
+            checked:
+              bg_color: 0xF5B342
+              text_color: 0x000000
+            on_click:
+              - homeassistant.action:
+                  action: climate.set_hvac_mode
+                  data:
+                    entity_id: ${entity}
+                    hvac_mode: !lambda 'return id(${id}_mode).state == "heat" ? "off" : "heat";'
+            widgets:
+              - label:
+                  text: "\U000F0438"
+                  text_font: icon_s
+                  align: LEFT_MID
+                  x: 6
+              - label:
+                  text: "Izba"
+                  text_font: font_s
+                  align: RIGHT_MID
+                  x: -8
+        # the boiler only fires with this switch on
+        - button:
+            id: ${id}_boiler_button
+            align: TOP_RIGHT
+            x: 0
+            y: 36
+            width: 82
+            height: 44
+            styles: tile_style
+            disabled:
+              bg_color: 0x161618
+              text_color: 0x48484A
+            pad_all: 0
+            checked:
+              bg_color: 0xF5B342
+              text_color: 0x000000
+            on_click:
+              - homeassistant.action:
+                  action: switch.toggle
+                  data:
+                    entity_id: ${boiler}
+            widgets:
+              - label:
+                  text: "\U000F0238"
+                  text_font: icon_s
+                  align: LEFT_MID
+                  x: 6
+              - label:
+                  text: "Kotol"
+                  text_font: font_s
+                  align: RIGHT_MID
+                  x: -8
+        # options come from the preset_modes attribute (thermostat.yaml)
+        - dropdown:
+            id: ${id}_preset_dropdown
+            disabled:
+              text_color: 0x48484A
+            align: TOP_RIGHT
+            y: 92
+            width: 172
+            options: ["-"]
+            styles: tile_style
+            pad_all: 10
+            symbol: "\U000F0140"
+            indicator:
+              text_font: icon_s
+            dropdown_list:
+              bg_color: 0x2C2C2E
+              text_color: 0xFFFFFF
+              text_font: font_m
+              border_width: 0
+              radius: 14
+              selected:
+                checked:
+                  bg_color: 0xF5B342
+                  text_color: 0x000000
+            on_value:
+              - homeassistant.action:
+                  action: climate.set_preset_mode
+                  data:
+                    entity_id: ${entity}
+                    preset_mode: !lambda 'return x < id(${id}_preset_list).size() ? id(${id}_preset_list)[x] : std::string();'
+
 sensor:
   - platform: homeassistant
-    id: thermo_target
+    id: ${id}_target
     entity_id: ${entity}
     attribute: temperature
     internal: true
     on_value:
       - lambda: |-
           if (std::isnan(x)) return;
-          lv_arc_set_value(id(thermo_arc), std::lround(x * 2));
-          lv_label_set_text_fmt(id(thermo_target_label), "%.1f", x);
+          lv_arc_set_value(id(${id}_arc), std::lround(x * 2));
+          lv_label_set_text_fmt(id(${id}_target_label), "%.1f", x);
   - platform: homeassistant
-    id: thermo_current
+    id: ${id}_current
     entity_id: ${entity}
     attribute: current_temperature
     internal: true
     on_value:
-      - lambda: 'lv_label_set_text_fmt(id(thermo_current_label), "teraz %.1f°C", x);'
+      - lambda: 'lv_label_set_text_fmt(id(${id}_current_label), "teraz %.1f°C", x);'
 
 text_sensor:
   # text, not binary: a binary sensor drops "unavailable"
   - platform: homeassistant
-    id: heating_enabled
+    id: ${id}_boiler
     entity_id: ${boiler}
     internal: true
     on_value:
       - lambda: |-
-          lv_obj_set_state(id(heating_enabled_button), LV_STATE_CHECKED, x == "on");
-          lv_obj_set_state(id(heating_enabled_button), LV_STATE_DISABLED, ha_unavailable(x));
+          lv_obj_set_state(id(${id}_boiler_button), LV_STATE_CHECKED, x == "on");
+          lv_obj_set_state(id(${id}_boiler_button), LV_STATE_DISABLED, ha_unavailable(x));
   - platform: homeassistant
-    id: thermo_mode
+    id: ${id}_mode
     entity_id: ${entity}
     internal: true
     on_value:
       - lambda: |-
-          lv_obj_set_state(id(thermo_power), LV_STATE_CHECKED, x == "heat");
+          lv_obj_set_state(id(${id}_power), LV_STATE_CHECKED, x == "heat");
           // thermostat unavailable: grey out its controls
-          for (lv_obj_t *o : {(lv_obj_t *) id(thermo_power), (lv_obj_t *) id(thermo_arc), id(thermo_minus), id(thermo_plus),
-                              id(thermo_preset_dropdown)->obj})
+          for (lv_obj_t *o : {(lv_obj_t *) id(${id}_power), (lv_obj_t *) id(${id}_arc), id(${id}_minus), id(${id}_plus),
+                              id(${id}_preset_dropdown)->obj})
             lv_obj_set_state(o, LV_STATE_DISABLED, ha_unavailable(x));
-      - script.execute: thermo_update_action
+      - script.execute: ${id}_update_action
   - platform: homeassistant
-    id: thermo_action
+    id: ${id}_action
     entity_id: ${entity}
     attribute: hvac_action
     internal: true
     on_value:
-      - script.execute: thermo_update_action
+      - script.execute: ${id}_update_action
   - platform: homeassistant
-    id: thermo_presets
+    id: ${id}_presets
     entity_id: ${entity}
     attribute: preset_modes
     internal: true
     on_value:
       - lambda: |-
-          id(preset_list) = parse_list(x);
+          id(${id}_preset_list) = parse_list(x);
           std::string options;
-          for (auto &p : id(preset_list)) options += (options.empty() ? "" : "\n") + preset_name(p);
-          lv_dropdown_set_options(id(thermo_preset_dropdown)->obj, options.c_str());
-      - script.execute: thermo_select_preset
+          for (auto &p : id(${id}_preset_list)) options += (options.empty() ? "" : "\n") + preset_name(p);
+          lv_dropdown_set_options(id(${id}_preset_dropdown)->obj, options.c_str());
+      - script.execute: ${id}_select_preset
   - platform: homeassistant
-    id: thermo_preset
+    id: ${id}_preset
     entity_id: ${entity}
     attribute: preset_mode
     internal: true
     on_value:
-      - script.execute: thermo_select_preset
+      - script.execute: ${id}_select_preset
 
 script:
   # Arc and -/+ change the target locally; send once the user stops for a moment
-  - id: thermo_send_target
+  - id: ${id}_send_target
     mode: restart
     then:
       - delay: 800ms
@@ -78,17 +305,24 @@ script:
           action: climate.set_temperature
           data:
             entity_id: ${entity}
-            temperature: !lambda return lv_arc_get_value(id(thermo_arc)) / 2.0f;
-  - id: thermo_update_action
+            temperature: !lambda return lv_arc_get_value(id(${id}_arc)) / 2.0f;
+      # back to what HA has, in case it did not take the change (e.g. actions not allowed for this device)
+      - delay: 5s
+      - lambda: |-
+          float target = id(${id}_target).state;
+          if (std::isnan(target)) return;
+          lv_arc_set_value(id(${id}_arc), std::lround(target * 2));
+          lv_label_set_text_fmt(id(${id}_target_label), "%.1f", target);
+  - id: ${id}_update_action
     then:
       - lambda: |-
-          bool off = id(thermo_mode).state == "off";
-          bool heating = id(thermo_action).state == "heating";
-          lv_label_set_text(id(thermo_action_label), off ? "vypnuté" : heating ? "kúri" : "nekúri");
-          lv_obj_set_style_arc_color(id(thermo_arc), lv_color_hex(heating ? 0xF5B342 : 0x8E8E93), LV_PART_INDICATOR);
-  - id: thermo_select_preset
+          bool off = id(${id}_mode).state == "off";
+          bool heating = id(${id}_action).state == "heating";
+          lv_label_set_text(id(${id}_action_label), off ? "vypnuté" : heating ? "kúri" : "nekúri");
+          lv_obj_set_style_arc_color(id(${id}_arc), lv_color_hex(heating ? 0xF5B342 : 0x8E8E93), LV_PART_INDICATOR);
+  - id: ${id}_select_preset
     then:
       - lambda: |-
-          auto &list = id(preset_list);
-          auto it = std::find(list.begin(), list.end(), id(thermo_preset).state);
-          if (it != list.end()) lv_dropdown_set_selected(id(thermo_preset_dropdown)->obj, it - list.begin());
+          auto &list = id(${id}_preset_list);
+          auto it = std::find(list.begin(), list.end(), id(${id}_preset).state);
+          if (it != list.end()) lv_dropdown_set_selected(id(${id}_preset_dropdown)->obj, it - list.begin());

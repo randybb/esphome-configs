@@ -1,0 +1,1074 @@
+---
+# Sonoff NSPanel (EU) with the nspanel-terminal TFT: ESPHome draws the UI with LVGL.
+# Shared part: display, touch, fonts, home page (clock, weather, temperatures), light detail, status/boot page,
+# notifications, OTA progress, buzzer, screen power and the NTC sensor.
+# The device file adds its grid pages (grid_page.yaml), tiles (*_tile.yaml), buttons and relays:
+#   substitutions:
+#     brightness: "80"
+#     dim_brightness: "20"         # backlight after 15 s idle (sleep_dim.yaml lowers it at night)
+#   packages:
+#     panel: !include
+#       file: common/nspanel_terminal/panel.yaml
+#       vars:
+#         temperature_entity: sensor.zigbee_office_r_temperature   # "dnu" on the home page
+#         first_page: page_office  # tap on the home page
+#         last_page: page_gate     # left arrow of the status page
+defaults:
+  ntc_reference_temperature: 25°C
+  temperature_name: Temperature
+
+esphome:
+  includes:
+    - common/nspanel_terminal/weather.h
+    - common/nspanel_terminal/ha.h
+    - common/nspanel_terminal/light.h
+    - common/nspanel_terminal/thermostat.h
+  on_boot:
+    - priority: -100
+      then:
+        - lvgl.page.show: page_status
+
+esp32:
+  variant: esp32
+  toolchain: esp-idf
+  framework:
+    type: esp-idf
+    advanced:
+      flash_chip: generic
+      minimum_chip_revision: 3.0
+      sram1_as_iram: true
+    sdkconfig_options:
+      # NSPanel PSRAM on non-default pins
+      CONFIG_D0WD_PSRAM_CLK_IO: "5"
+      CONFIG_D0WD_PSRAM_CS_IO: "18"
+
+psram:
+  mode: quad
+  speed: 40MHz
+  ignore_not_found: false
+
+external_components:
+  # fork with the fixes of ptaru/nspanel-terminal#1 (TFT upload, faster redraws); upstream once merged
+  - source: github://randybb/nspanel-terminal@upload-and-redraw-fixes
+    components: [nspanel_terminal]
+
+wifi:
+  power_save_mode: none
+
+# Flashing shows on the status page. The OTA blocks the main loop, so each step renders the screen itself
+ota:
+  - id: !extend ota_esphome
+    on_begin:
+      - lvgl.page.show: page_status
+      - lambda: |-
+          lv_obj_set_hidden(id(status_ota), false);
+          lv_obj_set_style_text_color(id(status_ota), lv_color_hex(0xFFB300), LV_PART_MAIN);
+          lv_label_set_text(id(status_ota), "Flashovanie: začína...");
+          lv_refr_now(nullptr);
+    on_progress:
+      - lambda: |-
+          lv_label_set_text_fmt(id(status_ota), "Flashovanie: %.0f %%", x);
+          lv_refr_now(nullptr);
+    on_end:
+      - lambda: |-
+          lv_obj_set_style_text_color(id(status_ota), lv_color_hex(0x4DD966), LV_PART_MAIN);
+          lv_label_set_text(id(status_ota), "Flashovanie: hotovo, reštartujem");
+          lv_refr_now(nullptr);
+    on_error:
+      - lambda: |-
+          lv_obj_set_style_text_color(id(status_ota), lv_color_hex(0xFF453A), LV_PART_MAIN);
+          lv_label_set_text_fmt(id(status_ota), "Flashovanie: chyba %u", x);
+          lv_refr_now(nullptr);
+
+api:
+  # status page until Home Assistant connects (log viewers don't subscribe to states)
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          api.connected:
+            state_subscription_only: true
+        then:
+          - lvgl.page.show: page_home
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+              state_subscription_only: true
+        then:
+          - lvgl.page.show: page_status
+  actions:
+    # same signatures as on the lovelace panels, so the HA automations keep working
+    - action: notify
+      variables:
+        heading: string
+        message: string
+        song: string
+      then:
+        - script.execute:
+            id: notify_show
+            heading: !lambda return heading;
+            message: !lambda return message;
+            timeout_ms: 10000
+        - if:
+            condition:
+              lambda: return !song.empty();
+            then:
+              - rtttl.play:
+                  rtttl: !lambda 'return song;'
+    # buttons and icon were never implemented on the lovelace panels either
+    - action: notify_fullscreen
+      variables:
+        title: string
+        description: string
+        button1: string
+        button2: string
+        timeout: int
+        icon: string
+      then:
+        - script.execute:
+            id: notify_show
+            heading: !lambda return title;
+            message: !lambda return description;
+            timeout_ms: !lambda return timeout;
+        - rtttl.play: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"
+    - action: show_info
+      then:
+        - script.execute: info_popup
+    # https://github.com/granadaxronos/120-SONG_NOKIA_RTTTL_RINGTONE_PLAYER_FOR_ARDUINO_UNO/blob/master/RTTTL_PLAYER/songs.h
+    - action: play_rtttl
+      variables:
+        song: string
+      then:
+        - rtttl.play:
+            rtttl: !lambda 'return song;'
+
+    - action: set_brightness
+      variables:
+        percent: int
+      then:
+        - lambda: 'id(panel).request_brightness(percent);'
+    # url empty = tft_url from secrets (terminal), rollback: http://ha.local/local/tft/lui.tft
+    - action: upload_tft
+      variables:
+        url: string
+      then:
+        - lambda: |-
+            if (!url.empty()) id(panel).set_tft_url(url);
+            id(panel).request_tft_upload();
+
+uart:
+  id: display_uart
+  tx_pin: 16
+  rx_pin: 17
+  baud_rate: 115200
+  rx_buffer_size: 4096
+
+display:
+  - platform: nspanel_terminal
+    id: panel
+    uart_id: display_uart
+    width: 454
+    height: 320
+    update_interval: never
+    auto_clear_enabled: false
+    tft_url: !secret tft_url_terminal
+    brightness: ${brightness}
+
+touchscreen:
+  - platform: nspanel_terminal
+    id: panel_touch
+    display: panel
+    panel_id: panel
+    calibration:
+      x_min: 0
+      x_max: 453
+      y_min: 0
+      y_max: 319
+    on_touch:
+      - if:
+          condition:
+            lambda: return id(dimmed);
+          then:
+            - globals.set:
+                id: dimmed
+                value: "false"
+            - lambda: 'id(panel).request_brightness(${brightness});'
+
+globals:
+  - id: dimmed
+    type: bool
+    initial_value: "false"
+  # light shown on page_light and the index of the page to return to
+  - id: cur_light
+    type: std::string
+  - id: back_page
+    type: size_t
+  # brightness the on_idle dim goes to (sleep_dim.yaml lowers it at night)
+  - id: idle_brightness
+    type: int
+    initial_value: ${dim_brightness}
+
+font:
+  - file: "gfonts://Inter@500"
+    id: font_clock
+    size: 112
+    bpp: 4
+    glyphs: "0123456789:"
+  - file: "gfonts://Inter@500"
+    id: font_big
+    size: 44
+    bpp: 4
+    glyphs: "0123456789.,-"
+  - file: "gfonts://Inter"
+    id: font_m
+    size: 22
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+  - file: "gfonts://Inter"
+    id: font_s
+    size: 17
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+
+  - file:
+      type: web
+      url: https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf
+    id: icon_s
+    size: 30
+    bpp: 4
+    glyphs:
+      - "\U000F0594"
+      - "\U000F0599"
+      - "\U000F0595"
+      - "\U000F0590"
+      - "\U000F0591"
+      - "\U000F0597"
+      - "\U000F0596"
+      - "\U000F0598"
+      - "\U000F067F"
+      - "\U000F0592"
+      - "\U000F0593"
+      - "\U000F067E"
+      - "\U000F059D"
+      - "\U000F059E"
+      - "\U000F05D6"
+      - "\U000F0141"
+      - "\U000F0142"
+      - "\U000F0374"
+      - "\U000F0415"
+      - "\U000F0438"
+      - "\U000F0238"
+      - "\U000F0140"
+      - "\U000F1066"
+      - "\U000F059C"
+      - "\U000F024A"
+      - "\U000F1510"
+      - "\U000F1253"
+      - "\U000F1108"
+      - "\U000F1987"
+      - "\U000F091D"
+      - "\U000F0299"
+      - "\U000F116A"
+      - "\U000F1169"
+      - "\U000F17F7"
+      - "\U000F17F8"
+      - "\U000F06A9"
+      - "\U000F00DF"
+      - "\U000F05A8"
+      - "\U000F03D8"
+      - "\U000F0425"
+      - "\U000F0379"
+      - "\U000F04B9"
+      - "\U000F0502"
+      - "\U000F0769"
+      - "\U000F1051"
+      - "\U000F1793"
+      - "\U000F18DE"
+      - "\U000F181C"
+      - "\U000F04DE"
+      - "\U000F06B5"
+      - "\U000F07F4"
+      - "\U000F0C6E"
+      - "\U000F0DDC"
+  - file:
+      type: web
+      url: https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf
+    id: icon_l
+    size: 52
+    bpp: 4
+    glyphs:
+      - "\U000F0594"
+      - "\U000F0599"
+      - "\U000F0595"
+      - "\U000F0590"
+      - "\U000F0591"
+      - "\U000F0597"
+      - "\U000F0596"
+      - "\U000F0598"
+      - "\U000F067F"
+      - "\U000F0592"
+      - "\U000F0593"
+      - "\U000F067E"
+      - "\U000F059D"
+      - "\U000F059E"
+      - "\U000F05D6"
+      - "\U000F0299"
+      - "\U000F116A"
+      - "\U000F1169"
+      - "\U000F17F7"
+      - "\U000F17F8"
+      - "\U000F06A9"
+
+script:
+  # counts as activity: wakes the dimmed screen and restarts the idle timeout back to the home page
+  - id: wake_screen
+    then:
+      - lambda: |-
+          lv_display_trigger_activity(nullptr);
+          if (id(dimmed)) {
+            id(dimmed) = false;
+            id(panel).request_brightness(${brightness});
+          }
+  # like the info popup of the other panels: device info is on the status page
+  # notification over every page (top layer); closes on tap or after the timeout
+  - id: notify_show
+    mode: restart
+    parameters:
+      heading: string
+      message: string
+      timeout_ms: int
+    then:
+      - lambda: |-
+          lv_label_set_text(id(notify_heading), heading.c_str());
+          lv_label_set_text(id(notify_message), message.c_str());
+          lv_obj_set_hidden(id(notify_popup), false);
+      - script.execute: wake_screen
+      - delay: !lambda 'return timeout_ms > 0 ? timeout_ms : 10000;'
+      - lvgl.widget.hide: notify_popup
+  - id: info_popup
+    then:
+      - lvgl.page.show: page_status
+      - script.execute: wake_screen
+  # same as the status screens of the other LVGL devices (mcu-lvgl.yaml)
+  - id: update_status
+    then:
+      - lambda: |-
+          // ok green, waiting orange, details gray
+          static const uint32_t OK = 0x4DD966, WAIT = 0xFFB300;
+          auto set = [](lv_obj_t *label, const std::string &text, uint32_t color) {
+            lv_label_set_text(label, text.c_str());
+            lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
+          };
+
+          auto *wifi = wifi::global_wifi_component;
+          const bool wifi_ok = wifi->is_connected();
+          // diagnostics for slow connects after a cold start: seconds to connect, AP association
+          static uint32_t connected_s = 0;
+          if (wifi_ok && !connected_s)
+            connected_s = std::max<uint32_t>(1, millis() / 1000);
+          if (wifi_ok) {
+            set(id(status_wifi), str_sprintf("WiFi: pripojené za %u s  (%d dBm)", connected_s, wifi->wifi_rssi()), OK);
+          } else {
+            auto bssid = wifi->wifi_bssid();
+            bool associated = std::any_of(bssid.begin(), bssid.end(), [](uint8_t b) { return b != 0; });
+            set(id(status_wifi),
+                str_sprintf("WiFi: pripájam...  %s, %us", associated ? "AP ok, čakám na IP" : "bez AP", millis() / 1000),
+                WAIT);
+          }
+
+          // IPv6 first (skip link-local), then IPv4
+          std::string ips;
+          char buf[network::IP_ADDRESS_BUFFER_SIZE];
+          for (bool v6 : {true, false}) {
+            for (auto &ip : wifi->get_ip_addresses()) {
+              if (!ip.is_set() || ip.is_ip6() != v6)
+                continue;
+              ip.str_to(buf);
+              if (v6 && strncmp(buf, "fe80", 4) == 0)
+                continue;
+              if (!ips.empty())
+                ips += "\n";
+              ips += buf;
+            }
+          }
+          lv_label_set_text(id(status_ips), ips.c_str());
+          lv_obj_set_hidden(id(status_ips), ips.empty());
+
+          const bool api_ok = api::global_api_server->is_connected(true);
+          set(id(status_ha), api_ok ? "Home Assistant: pripojený" : "Home Assistant: čakám...", api_ok ? OK : WAIT);
+
+          const uint32_t up = millis() / 1000;
+          static char build[Application::BUILD_TIME_STR_SIZE] = "";
+          if (!build[0])
+            App.get_build_time_string(build);
+          lv_label_set_text(id(status_footer),
+                            str_sprintf("ESPHome %s  ·  beží %ud %02u:%02u:%02u\n%s", ESPHOME_VERSION, up / 86400,
+                                        (up / 3600) % 24, (up / 60) % 60, up % 60, build).c_str());
+  - id: open_light
+    parameters:
+      entity: string
+      name: string
+      dim: bool
+      kmin: int
+      hs: bool
+      is_on: bool
+      bri: float
+      ct: float
+      hue: string
+    then:
+      - lambda: |-
+          id(cur_light) = entity;
+          id(back_page) = id(lvgl_main)->get_current_page();
+          lv_label_set_text(id(detail_title), name.c_str());
+          lv_obj_set_state(id(detail_power), LV_STATE_CHECKED, is_on);
+          lv_obj_set_hidden(id(detail_bri_row), !dim);
+          // colour lights get hue only: brightness plus either colour temperature or hue
+          lv_obj_set_hidden(id(detail_ct_row), !kmin || hs);
+          lv_obj_set_hidden(id(detail_hue_row), !hs);
+          lv_slider_set_value(id(detail_bri), brightness_pct(bri), LV_ANIM_OFF);
+          if (kmin) {
+            lv_slider_set_range(id(detail_ct), kmin, 6500);
+            lv_slider_set_value(id(detail_ct), std::isnan(ct) ? kmin : ct, LV_ANIM_OFF);
+          }
+          lv_slider_set_value(id(detail_hue), std::max(0, parse_hue(hue)), LV_ANIM_OFF);
+      - lvgl.page.show: page_light
+  - id: update_forecast
+    then:
+      - lambda: |-
+          static const char *const DAYS[] = {"ne", "po", "ut", "st", "št", "pi", "so"};
+          lv_obj_t *const DAY[] = {id(forecast_day_0), id(forecast_day_1), id(forecast_day_2)};
+          lv_obj_t *const ICON[] = {id(forecast_icon_0), id(forecast_icon_1), id(forecast_icon_2)};
+          lv_obj_t *const HIGH[] = {id(today_high), id(forecast_high_0), id(forecast_high_1), id(forecast_high_2)};
+          lv_obj_t *const LOW[] = {id(today_low), id(forecast_low_0), id(forecast_low_1), id(forecast_low_2)};
+          auto now = id(ha_time).now();
+          ForecastDay days[4];
+          // index 0 is today
+          int n = now.is_valid() ? parse_forecast(id(forecast).state, 0, days, 4) : 0;
+          for (int i = 0; i < 4; i++) {
+            if (i < n) {
+              lv_label_set_text_fmt(HIGH[i], "%.1f°C", days[i].high);
+              lv_label_set_text_fmt(LOW[i], "%.1f°C", days[i].low);
+            } else {
+              lv_label_set_text(HIGH[i], "");
+              lv_label_set_text(LOW[i], "");
+            }
+            if (i == 0) continue;
+            lv_label_set_text(DAY[i - 1], i < n ? DAYS[(now.day_of_week + i - 1) % 7] : "");
+            lv_label_set_text(ICON[i - 1], i < n ? weather_icon(days[i].condition) : "");
+          }
+  - id: update_clock
+    then:
+      - lambda: |-
+          static const char *const DAYS[] = {"nedeľa", "pondelok", "utorok", "streda", "štvrtok", "piatok", "sobota"};
+          static const char *const MONTHS[] = {"januára", "februára", "marca", "apríla", "mája", "júna",
+                                               "júla", "augusta", "septembra", "októbra", "novembra", "decembra"};
+          auto now = id(ha_time).now();
+          if (!now.is_valid()) return;
+          lv_label_set_text(id(clock_label), now.strftime("%H:%M").c_str());
+          lv_label_set_text_fmt(id(date_label), "%s, %u. %s", DAYS[now.day_of_week - 1], now.day_of_month,
+                                MONTHS[now.month - 1]);
+
+time:
+  - id: !extend ha_time
+    on_time_sync:
+      - script.execute: update_clock
+      - script.execute: update_forecast
+    on_time:
+      - seconds: 0
+        then:
+          - script.execute: update_clock
+
+image:
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 300x88
+    type: RGB565
+    transparency: alpha_channel
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lvgl.page.is_showing: page_status
+          then:
+            - script.execute: update_status
+
+lvgl:
+  id: lvgl_main
+  displays: panel
+  # 1/8 screen draw buffer in internal RAM; a full-screen PSRAM buffer renders much slower
+  buffer_size: 12.5%
+  touchscreens:
+    - touchscreen_id: panel_touch
+  color_depth: 16
+  bg_color: 0x000000
+  text_color: 0xFFFFFF
+  text_font: font_m
+  gradients:
+    - id: ct_grad
+      direction: HOR
+      stops:
+        - {color: 0xFF9A3C, position: 0%}
+        - {color: 0xFFE4C4, position: 50%}
+        - {color: 0xCFDCFF, position: 100%}
+    - id: hue_grad
+      direction: HOR
+      stops:
+        - {color: 0xFF0000, position: 0%}
+        - {color: 0xFFFF00, position: 17%}
+        - {color: 0x00FF00, position: 33%}
+        - {color: 0x00FFFF, position: 50%}
+        - {color: 0x0000FF, position: 67%}
+        - {color: 0xFF00FF, position: 83%}
+        - {color: 0xFF0000, position: 100%}
+  style_definitions:
+    - id: tile_style
+      bg_color: 0x1C1C1E
+      bg_opa: COVER
+      radius: 14
+      border_width: 0
+      shadow_width: 0
+      pad_all: 14
+      text_color: 0xFFFFFF
+      text_font: font_m
+    - id: page_style
+      bg_color: 0x000000
+      bg_opa: COVER
+      text_font: font_m
+      text_color: 0xFFFFFF
+      border_width: 0
+      pad_all: 16
+      pad_row: 12
+      pad_column: 12
+  on_idle:
+    timeout: 15s
+    then:
+      # without Home Assistant the status page stays
+      - if:
+          condition:
+            api.connected:
+              state_subscription_only: true
+          then:
+            - lvgl.page.show: page_home
+      - globals.set:
+          id: dimmed
+          value: "true"
+      - lambda: 'id(panel).request_brightness(id(idle_brightness));'
+  top_layer:
+    widgets:
+      - obj:
+          id: notify_popup
+          hidden: true
+          width: 100%
+          height: 100%
+          bg_color: 0x000000
+          bg_opa: 70%
+          border_width: 0
+          radius: 0
+          pad_all: 24
+          on_click:
+            - script.stop: notify_show
+            - lvgl.widget.hide: notify_popup
+          widgets:
+            - obj:
+                clickable: false
+                width: 100%
+                height: 100%
+                styles: tile_style
+                pad_all: 20
+                layout:
+                  type: FLEX
+                  flex_flow: COLUMN
+                  pad_row: 12
+                widgets:
+                  - label:
+                      id: notify_heading
+                      text: ""
+                      text_color: 0xF5B342
+                      width: 100%
+                      long_mode: WRAP
+                  - label:
+                      id: notify_message
+                      text: ""
+                      width: 100%
+                      long_mode: WRAP
+  # Pages, not a tileview: a tile switch made LVGL render the whole screen three times. No animation,
+  # every frame of one would be a full-screen redraw over UART (~290 kB).
+  pages:
+    - id: page_home
+      styles: page_style
+      on_click:
+        - lvgl.page.show: ${first_page}
+      widgets:
+        - label:
+            id: clock_label
+            text: "--:--"
+            text_font: font_clock
+            align: TOP_LEFT
+            x: 4
+            y: -10
+        - label:
+            id: date_label
+            text: ""
+            text_color: 0xB4B4BA
+            align: TOP_LEFT
+            x: 10
+            y: 118
+        - label:
+            id: nameday_label
+            text: ""
+            text_font: font_s
+            text_color: 0x8E8E93
+            align: TOP_LEFT
+            x: 10
+            y: 148
+        - obj:
+            clickable: false
+            align: TOP_RIGHT
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              pad_row: 10
+            widgets:
+              - <<: !include {file: forecast_day.yaml, vars: {i: 0}}
+              - <<: !include {file: forecast_day.yaml, vars: {i: 1}}
+              - <<: !include {file: forecast_day.yaml, vars: {i: 2}}
+        - obj:
+            clickable: false
+            align: BOTTOM_LEFT
+            x: 8
+            y: -22
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            text_color: 0xFFFFFF
+            layout:
+              type: FLEX
+              pad_column: 2
+              flex_flow: ROW
+              flex_align_cross: START
+            widgets:
+              - label:
+                  id: in_temp_label
+                  text: "-"
+                  text_font: font_big
+                  text_color: 0xFFFFFF
+              - label:
+                  text: "°C"
+                  y: 6
+                  text_color: 0xB4B4BA
+        - label:
+            text: "dnu"
+            text_font: font_s
+            text_color: 0x8E8E93
+            align: BOTTOM_LEFT
+            x: 10
+        - obj:
+            clickable: false
+            align: BOTTOM_LEFT
+            x: 158
+            y: -22
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            text_color: 0xFFFFFF
+            layout:
+              type: FLEX
+              pad_column: 2
+              flex_flow: ROW
+              flex_align_cross: START
+            widgets:
+              - label:
+                  id: out_temp_label
+                  text: "-"
+                  text_font: font_big
+                  text_color: 0xFFFFFF
+              - label:
+                  text: "°C"
+                  y: 6
+                  text_color: 0xB4B4BA
+        - label:
+            text: "von"
+            text_font: font_s
+            text_color: 0x8E8E93
+            align: BOTTOM_LEFT
+            x: 160
+        - obj:
+            clickable: false
+            align: BOTTOM_RIGHT
+            # same bottom offset as the temperatures; the boxes are equally tall, so the centres line up
+            y: -22
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: ROW
+              flex_align_cross: CENTER
+              pad_column: 10
+            widgets:
+              - label:
+                  id: weather_icon_label
+                  text: ""
+                  text_font: icon_l
+                  text_color: 0xFFFFFF
+              - obj:
+                  clickable: false
+                  width: SIZE_CONTENT
+                  height: SIZE_CONTENT
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: FLEX
+                    flex_flow: COLUMN
+                    pad_row: 0
+                  widgets:
+                    - label:
+                        id: today_high
+                        text: ""
+                        text_color: 0xFFFFFF
+                    - label:
+                        id: today_low
+                        text: ""
+                        text_color: 0x8E8E93
+    # Status: boot screen until Home Assistant connects, then the last (diagnostic) page
+    - id: page_status
+      styles: page_style
+      on_load:
+        - script.execute: update_status
+      widgets:
+        - <<: !include
+            file: page_arrow.yaml
+            vars: {icon: "\U000F0141", align: TOP_LEFT, x: -16, to: "${last_page}", hidden: false}
+        - image:
+            src: esphome_logo
+            align: TOP_MID
+        - label:
+            align: TOP_MID
+            y: 96
+            text: !lambda return App.get_name();
+        - obj:
+            clickable: false
+            align: TOP_LEFT
+            x: 8
+            y: 136
+            width: 100%
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: COLUMN
+              pad_row: 6
+            widgets:
+              - label:
+                  id: status_wifi
+                  text_font: font_s
+                  text: ""
+              - label:
+                  id: status_ips
+                  text_font: font_s
+                  text_color: 0x8E8E93
+                  pad_left: 20
+                  text: ""
+              - label:
+                  id: status_ha
+                  text_font: font_s
+                  text: ""
+              # shown only while flashing (ota: above)
+              - label:
+                  id: status_ota
+                  text_font: font_s
+                  text: ""
+                  hidden: true
+              - label:
+                  id: status_footer
+                  text_font: font_s
+                  text_color: 0x8E8E93
+                  text: ""
+    # Light detail, opened by a long press on a light button (script open_light)
+    - id: page_light
+      styles: page_style
+      layout:
+        type: FLEX
+        flex_flow: COLUMN
+        pad_row: 26
+      widgets:
+        - obj:
+            clickable: false
+            width: 100%
+            height: 44
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            widgets:
+              - obj:
+                  align: LEFT_MID
+                  x: -16
+                  width: 72
+                  height: 52
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  on_click:
+                    - lambda: 'id(lvgl_main)->show_page(id(back_page), LV_SCREEN_LOAD_ANIM_NONE, 0);'
+                  widgets:
+                    - label:
+                        text: "\U000F0141"
+                        text_font: icon_s
+                        text_color: 0xB4B4BA
+                        align: CENTER
+              - label:
+                  id: detail_title
+                  text: ""
+                  align: CENTER
+              - button:
+                  id: detail_power
+                  align: RIGHT_MID
+                  width: 64
+                  height: 44
+                  styles: tile_style
+                  pad_all: 0
+                  checked:
+                    bg_color: 0xF5B342
+                    text_color: 0x000000
+                  on_click:
+                    - homeassistant.action:
+                        action: light.toggle
+                        data:
+                          entity_id: !lambda return id(cur_light);
+                  widgets:
+                    - label:
+                        text: "\U000F0425"
+                        text_font: icon_s
+                        align: CENTER
+        - obj:
+            id: detail_bri_row
+            clickable: false
+            width: 100%
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: ROW
+              flex_align_cross: CENTER
+              pad_column: 14
+            widgets:
+              - label:
+                  text: "\U000F00DF"
+                  text_font: icon_s
+                  text_color: 0xB4B4BA
+              - slider:
+                  id: detail_bri
+                  flex_grow: 1
+                  height: 44
+                  min_value: 1
+                  max_value: 100
+                  radius: 22
+                  bg_color: 0x2C2C2E
+                  indicator:
+                    bg_color: 0xF5B342
+                    radius: 22
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_all: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: !lambda return id(cur_light);
+                          brightness_pct: !lambda return (int) x;
+        - obj:
+            id: detail_ct_row
+            clickable: false
+            width: 100%
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: ROW
+              flex_align_cross: CENTER
+              pad_column: 14
+            widgets:
+              - label:
+                  text: "\U000F05A8"
+                  text_font: icon_s
+                  text_color: 0xB4B4BA
+              - slider:
+                  id: detail_ct
+                  flex_grow: 1
+                  height: 44
+                  min_value: 1700
+                  max_value: 6500
+                  radius: 22
+                  bg_grad: ct_grad
+                  bg_opa: COVER
+                  indicator:
+                    bg_opa: TRANSP
+                    radius: 22
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_all: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: !lambda return id(cur_light);
+                          color_temp_kelvin: !lambda return (int) x;
+        - obj:
+            id: detail_hue_row
+            clickable: false
+            width: 100%
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: ROW
+              flex_align_cross: CENTER
+              pad_column: 14
+            widgets:
+              - label:
+                  text: "\U000F03D8"
+                  text_font: icon_s
+                  text_color: 0xB4B4BA
+              - slider:
+                  id: detail_hue
+                  flex_grow: 1
+                  height: 44
+                  min_value: 0
+                  max_value: 360
+                  radius: 22
+                  bg_grad: hue_grad
+                  bg_opa: COVER
+                  indicator:
+                    bg_opa: TRANSP
+                    radius: 22
+                  knob:
+                    bg_color: 0xFFFFFF
+                    pad_all: 2
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data:
+                          entity_id: !lambda return id(cur_light);
+                        data_template:
+                          hs_color: "{{ [hue | int, 100] }}"
+                        variables:
+                          hue: !lambda return (int) x;
+
+text_sensor:
+  - platform: homeassistant
+    id: forecast
+    entity_id: sensor.weather_forecast_daily
+    attribute: forecast
+    internal: true
+    on_value:
+      - script.execute: update_forecast
+  - platform: homeassistant
+    id: nameday
+    entity_id: sensor.nameday_sk
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: nameday_label
+          text: !lambda return x;
+  - platform: homeassistant
+    id: weather
+    entity_id: weather.outside
+    internal: true
+    on_value:
+      - lambda: |-
+          lv_label_set_text(id(weather_icon_label), weather_icon(x));
+
+button:
+  # as on the other panels: put button.<device>_info on a dashboard, HA presses it
+  - platform: template
+    name: Info
+    id: info_button
+    entity_category: diagnostic
+    on_press:
+      - script.execute: info_popup
+
+output:
+  - platform: ledc
+    id: buzzer_out
+    pin:
+      number: 21
+
+switch:
+  # better not toggled from HA: the display must be set up again afterwards
+  - platform: gpio
+    name: Screen Power
+    id: screen_power
+    entity_category: config
+    pin:
+      number: 4
+      inverted: true
+    restore_mode: ALWAYS_ON
+
+rtttl:
+  id: buzzer
+  output: buzzer_out
+
+sensor:
+  - platform: adc
+    id: ntc_source
+    pin: 38
+    update_interval: 5min
+    attenuation: 12db
+
+  - platform: resistance
+    id: resistance_sensor
+    sensor: ntc_source
+    configuration: DOWNSTREAM
+    resistor: 11.2kOhm
+
+  - platform: ntc
+    id: temperature
+    name: ${temperature_name}
+    sensor: resistance_sensor
+    calibration:
+      b_constant: 3950
+      reference_temperature: ${ntc_reference_temperature}
+      reference_resistance: 10kOhm
+
+  - platform: homeassistant
+    id: inside_temperature
+    entity_id: ${temperature_entity}
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: in_temp_label
+          text: !lambda 'return std::isnan(x) ? std::string("--") : str_sprintf("%.1f", x);'
+
+  - platform: homeassistant
+    id: outside_temperature
+    entity_id: sensor.zigbee_outside_temperature
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: out_temp_label
+          text: !lambda 'return std::isnan(x) ? std::string("--") : str_sprintf("%.1f", x);'

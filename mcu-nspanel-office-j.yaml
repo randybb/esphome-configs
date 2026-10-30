@@ -17,7 +17,10 @@ substitutions:
   device: nspanel-office-j
   name: Office J NSPanel
   area: Office J
-  comment: NSPanel
+  comment: NSPanel (nspanel-terminal)
+  brightness: "80"
+  # backlight after 15 s idle
+  dim_brightness: "20"
 
 esphome:
   name: mcu-${device}
@@ -28,62 +31,41 @@ esphome:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-  nspanel: !include
-    file: common/nspanel.yaml
+  panel: !include
+    file: common/nspanel_terminal/panel.yaml
     vars:
       temperature_entity: sensor.zigbee_office_j_temperature
       ntc_reference_temperature: 22°C
+      first_page: page_office
+      last_page: page_thermostat
   sleep_dim: !include
-    file: common/nspanel_sleep_dim.yaml
+    file: common/nspanel_terminal/sleep_dim.yaml
     vars:
       sleep_override_entity: light.office_j_lights
+  # Grid page tiles: each package adds its tile to the page and fills it in this order
+  # Janko
+  l_office: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_office, name: "Svetlo", entity: light.mcu_nspanel_office_j_light, icon: "\U000F091D", dim: false, kmin: 0, hs: false}}
+  l_bedside: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_bedside, name: "Nočná lampa", entity: light.bedside_left, icon: "\U000F06B5", dim: true, kmin: 1700, hs: true}}
+  # Brána, robot -> page_gate_auto
+  gate_open: !include {file: common/nspanel_terminal/action_tile.yaml, vars: {page: page_gate, id: gate_open, name: "Otvoriť", icon: "\U000F116A", action: button.press, entity: button.mcu_gate_open}}
+  gate_close: !include {file: common/nspanel_terminal/action_tile.yaml, vars: {page: page_gate, id: gate_close, name: "Zatvoriť", icon: "\U000F0299", action: button.press, entity: button.mcu_gate_close}}
+  gate_spacer: !include {file: common/nspanel_terminal/spacer_tile.yaml, vars: {page: page_gate}}
+  gate: !include {file: common/nspanel_terminal/gate.yaml, vars: {page: page_gate, state: select.mcu_gate_state}}
+  gate_auto: !include {file: common/nspanel_terminal/nav_tile.yaml, vars: {page: page_gate, to: page_gate_auto, icon: "\U000F06A9"}}
+  gate_auto_open: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_gate_auto, id: gate_auto_open, name: "Auto-otváranie", entity: switch.mcu_gate_auto_open, icon: "\U000F1169", domain: switch}}
+  gate_auto_close: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_gate_auto, id: gate_auto_close, name: "Auto-zatváranie", entity: switch.mcu_gate_auto_close, icon: "\U000F17F7", domain: switch}}
+  # Kúrenie
+  thermo: !include {file: common/nspanel_terminal/thermostat.yaml, vars: {id: thermo, page: page_thermostat, title: "Kúrenie - Janko", prev: page_gate, next: page_status, entity: climate.bt_trv_office_j}}
 
-nspanel_lovelace:
-  cards:
-    - type: cardGrid
-      title: Janko
-      entities:
-        - name: Svetlo
-          entity_id: light.mcu_nspanel_office_j_light
-          icon: wall-sconce-flat
-        - name: Nočná lampa
-          entity_id: light.bedside_left
-          icon: lamp
-
-    - type: cardGrid
-      title: Brána
-      entities:
-        - name: Otvoriť
-          entity_id: button.mcu_gate_open
-          icon: gate-open
-        - name: Zatvoriť
-          entity_id: button.mcu_gate_close
-          icon: gate
-        - name: Automatizácia
-          entity_id: navigate.card_gate_automation
-
-    - type: cardThermo
-      title: Kúrenie
-      thermo_entity_id: climate.bt_trv_office_j
-
-    - type: cardEntities
-      title: Automatizácia
-      id: card_gate_automation
-      hidden: true
-      entities:
-        - name: Auto-otváranie
-          entity_id: switch.gate_auto_open
-        - name: Auto-zatváranie
-          entity_id: switch.gate_auto_close
-
-    - type: cardEntities
-      title: Info
-      entities:
-        - name: Zariadenie
-          entity_id: button.office_j_nspanel_info
-          icon: information-outline
+# the grid pages; home, status and light detail come from panel.yaml, thermostat pages from thermostat.yaml
+lvgl:
+  pages:
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_office, title: "Janko", prev: page_home, next: page_gate, skip: false}}
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_gate, title: "Brána", prev: page_office, next: page_thermostat, skip: false}}
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_gate_auto, title: "Automatizácia brány", prev: page_gate, next: page_gate, skip: true}}
 
 binary_sensor:
+  # both buttons show the Janko page, where the change is visible
   - platform: gpio
     name: Left Button
     pin:
@@ -91,7 +73,8 @@ binary_sensor:
       inverted: true
     on_click:
       - light.toggle: light_1
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_office
+      - script.execute: wake_screen
 
   - platform: gpio
     name: Right Button
@@ -103,7 +86,8 @@ binary_sensor:
           action: light.toggle
           data:
             entity_id: light.bedside_left
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_office
+      - script.execute: wake_screen
 
 output:
   - id: relay_1
@@ -121,6 +105,3 @@ light:
     id: light_1
     output: relay_1
     restore_mode: RESTORE_DEFAULT_OFF
-#   # - platform: binary
-#   #   name: Relay 2
-#   #   output: relay_2

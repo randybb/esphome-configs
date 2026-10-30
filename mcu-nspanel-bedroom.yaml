@@ -18,7 +18,10 @@ substitutions:
   name: Bedroom NSPanel
   name_short: Bedroom
   area: Bedroom
-  comment: NSPanel
+  comment: NSPanel (nspanel-terminal)
+  brightness: "80"
+  # backlight after 15 s idle
+  dim_brightness: "20"
 
 esphome:
   name: mcu-${device}
@@ -29,51 +32,34 @@ esphome:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-  nspanel: !include
-    file: common/nspanel.yaml
+  panel: !include
+    file: common/nspanel_terminal/panel.yaml
     vars:
       temperature_entity: sensor.zigbee_bedroom_temperature
+      first_page: page_bedroom
+      last_page: page_thermostat
   sleep_dim: !include
-    file: common/nspanel_sleep_dim.yaml
+    file: common/nspanel_terminal/sleep_dim.yaml
     vars:
       sleep_override_entity: light.bedroom_lights
+  # Grid page tiles: each package adds its tile to the page and fills it in this order
+  # Spálňa
+  s_tv: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_bedroom, id: s_tv, name: "TV", entity: switch.mcu_socket_01_relay, icon: "\U000F07F4", domain: switch}}
+  s_raid: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_bedroom, id: s_raid, name: "Raid", entity: switch.mcu_socket_02_relay, icon: "\U000F0C6E", domain: switch}}
+  s_socket_3: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_bedroom, id: s_socket_3, name: "", entity: switch.mcu_socket_03_relay, icon: "\U000F1108", domain: switch}}
+  l_bedroom: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_bedroom, id: l_bedroom, name: "Svetlo", entity: light.mcu_nspanel_bedroom_light, icon: "\U000F091D", dim: false, kmin: 0, hs: false}}
+  l_lamp_right: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_bedroom, id: l_lamp_right, name: "Nočná lampa J", entity: light.mcu_bedroom_lamp_right_light, icon: "\U000F06B5", dim: true, kmin: 1701, hs: true}}
+  l_lamp_left: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_bedroom, id: l_lamp_left, name: "Nočná lampa R", entity: light.mcu_bedroom_lamp_left_light, icon: "\U000F06B5", dim: true, kmin: 1701, hs: true}}
+  # Kúrenie
+  thermo: !include {file: common/nspanel_terminal/thermostat.yaml, vars: {id: thermo, page: page_thermostat, title: "Kúrenie - Spálňa", prev: page_bedroom, next: page_status, entity: climate.bt_trv_bedroom}}
 
-nspanel_lovelace:
-  cards:
-    - type: cardGrid
-      title: Spálňa
-      entities:
-        - name: TV
-          entity_id: switch.mcu_socket_01_relay
-          icon: television-classic
-        - name: Raid
-          entity_id: switch.mcu_socket_02_relay
-          icon: emoticon-dead
-        - name: ""
-          entity_id: switch.mcu_socket_03_relay
-          icon: power-socket-fr
-        - name: Svetlo
-          entity_id: light.mcu_nspanel_bedroom_light
-          icon: wall-sconce-flat
-        - name: Nočná lampa J
-          entity_id: light.mcu_bedroom_lamp_right_light
-          icon: lamp
-        - name: Nočná lampa R
-          entity_id: light.mcu_bedroom_lamp_left_light
-          icon: lamp
-
-    - type: cardThermo
-      title: Kúrenie
-      thermo_entity_id: climate.bt_trv_bedroom
-
-    - type: cardEntities
-      title: Info
-      entities:
-        - name: Zariadenie
-          entity_id: button.bedroom_nspanel_info
-          icon: information-outline
+# the grid pages; home, status and light detail come from panel.yaml, thermostat pages from thermostat.yaml
+lvgl:
+  pages:
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_bedroom, title: "Spálňa", prev: page_home, next: page_thermostat, skip: false}}
 
 binary_sensor:
+  # both buttons show the Spálňa page, where the change is visible
   - platform: gpio
     name: Left Button
     pin:
@@ -81,7 +67,8 @@ binary_sensor:
       inverted: true
     on_click:
       - light.toggle: light_1
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_bedroom
+      - script.execute: wake_screen
 
   - platform: gpio
     name: Right Button
@@ -95,7 +82,8 @@ binary_sensor:
           action: light.toggle
           data:
             entity_id: light.bedroom_lamps
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_bedroom
+      - script.execute: wake_screen
 
 light:
   - platform: binary

@@ -1,17 +1,11 @@
 ---
 # nspanel-terminal version of common/nspanel_sleep_dim.yaml: the idle (dimmed) brightness drops to 0 at night
-# (sun below -6°), unless the room light is on. Uses the dimmed global, the panel display and ${dim_brightness}.
+# (sun below -6°), unless the room light is on. Sets the idle_brightness global of panel.yaml (${dim_brightness} or 0).
 #   packages:
 #     sleep_dim: !include
 #       file: common/nspanel_terminal/sleep_dim.yaml
 #       vars:
 #         sleep_override_entity: light.bedroom_lights
-globals:
-  # brightness the on_idle dim goes to
-  - id: idle_brightness
-    type: int
-    initial_value: ${dim_brightness}
-
 script:
   - id: apply_sleep_dim
     then:

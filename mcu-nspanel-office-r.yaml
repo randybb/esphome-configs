@@ -17,7 +17,10 @@ substitutions:
   device: nspanel-office-r
   name: Office R NSPanel
   area: Office R
-  comment: NSPanel
+  comment: NSPanel (nspanel-terminal)
+  brightness: "80"
+  # backlight after 15 s idle
+  dim_brightness: "20"
 
 esphome:
   name: mcu-${device}
@@ -28,11 +31,37 @@ esphome:
 packages:
   common: !include common/common.yaml
   ipv6_only: !include common/ipv6_only.yaml
-  nspanel: !include
-    file: common/nspanel.yaml
+  panel: !include
+    file: common/nspanel_terminal/panel.yaml
     vars:
       temperature_entity: sensor.zigbee_office_r_temperature
       ntc_reference_temperature: 22°C
+      first_page: page_office
+      last_page: page_thermostat
+  # Grid page tiles: each package adds its tile to the page and fills it in this order
+  # Romanko
+  l_office: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_office, name: "Svetlo", entity: light.mcu_nspanel_office_r_light, icon: "\U000F0769", dim: false, kmin: 0, hs: false}}
+  l_strip: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_strip, name: "LED pásik", entity: light.office_r_desk_strip, icon: "\U000F1051", dim: true, kmin: 1700, hs: true}}
+  office_spacer: !include {file: common/nspanel_terminal/spacer_tile.yaml, vars: {page: page_office}}
+  l_monitor: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_monitor, name: "Monitor", entity: light.office_r_display_lamp, icon: "\U000F0379", dim: true, kmin: 2700, hs: false}}
+  l_monitor_amb: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_office, id: l_monitor_amb, name: "(Monitor)", entity: light.office_r_display_lamp_ambilight, icon: "\U000F1051", dim: true, kmin: 1700, hs: true}}
+  # Brána, robot -> page_gate_auto
+  gate_open: !include {file: common/nspanel_terminal/action_tile.yaml, vars: {page: page_gate, id: gate_open, name: "Otvoriť", icon: "\U000F116A", action: button.press, entity: button.mcu_gate_open}}
+  gate_close: !include {file: common/nspanel_terminal/action_tile.yaml, vars: {page: page_gate, id: gate_close, name: "Zatvoriť", icon: "\U000F0299", action: button.press, entity: button.mcu_gate_close}}
+  gate_spacer: !include {file: common/nspanel_terminal/spacer_tile.yaml, vars: {page: page_gate}}
+  gate: !include {file: common/nspanel_terminal/gate.yaml, vars: {page: page_gate, state: select.mcu_gate_state}}
+  gate_auto: !include {file: common/nspanel_terminal/nav_tile.yaml, vars: {page: page_gate, to: page_gate_auto, icon: "\U000F06A9"}}
+  gate_auto_open: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_gate_auto, id: gate_auto_open, name: "Auto-otváranie", entity: switch.mcu_gate_auto_open, icon: "\U000F1169", domain: switch}}
+  gate_auto_close: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_gate_auto, id: gate_auto_close, name: "Auto-zatváranie", entity: switch.mcu_gate_auto_close, icon: "\U000F17F7", domain: switch}}
+  # Kúrenie
+  thermostat: !include {file: common/nspanel_terminal/thermostat.yaml, vars: {id: thermo, page: page_thermostat, title: "Kúrenie - Romanko", prev: page_gate, next: page_status, entity: climate.bt_trv_office_r}}
+
+# the grid pages; home, status and light detail come from panel.yaml, the thermostat page from thermostat.yaml
+lvgl:
+  pages:
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_office, title: "Romanko", prev: page_home, next: page_gate, skip: false}}
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_gate, title: "Brána", prev: page_office, next: page_thermostat, skip: false}}
+    - <<: !include {file: common/nspanel_terminal/grid_page.yaml, vars: {id: page_gate_auto, title: "Automatizácia brány", prev: page_gate, next: page_gate, skip: true}}
 
 script:
   - id: geiger_click
@@ -51,59 +80,8 @@ script:
           return esphome::random_uint32() % 450 + 50;
       - script.execute: geiger_click
 
-nspanel_lovelace:
-  cards:
-    - type: cardGrid
-      title: Romanko
-      entities:
-        - name: Svetlo
-          entity_id: light.mcu_nspanel_office_r_light
-          icon: wall-sconce-flat
-        - name: LED pásik
-          entity_id: light.office_r_desk_strip
-          icon: led-strip-variant
-        - entity_id: delete
-        - name: Monitor
-          entity_id: light.office_r_display_lamp
-          icon: monitor-star
-        - name: (Monitor)
-          entity_id: light.office_r_display_lamp_ambilight
-          icon: monitor-star
-
-    - type: cardGrid
-      title: Brána
-      entities:
-        - name: Otvoriť
-          entity_id: button.mcu_gate_open
-          icon: gate-open
-        - name: Zatvoriť
-          entity_id: button.mcu_gate_close
-          icon: gate
-        - name: Automatizácia
-          entity_id: navigate.card_gate_automation
-
-    - type: cardThermo
-      title: Kúrenie
-      thermo_entity_id: climate.bt_trv_office_r
-
-    - type: cardEntities
-      title: Automatizácia
-      id: card_gate_automation
-      hidden: true
-      entities:
-        - name: Auto-otváranie
-          entity_id: switch.gate_auto_open
-        - name: Auto-zatváranie
-          entity_id: switch.gate_auto_close
-
-    - type: cardEntities
-      title: Info
-      entities:
-        - name: Zariadenie
-          entity_id: button.office_r_nspanel_info
-          icon: information-outline
-
 binary_sensor:
+  # both buttons show the Romanko page, where the change is visible
   - platform: gpio
     name: Left Button
     pin:
@@ -114,7 +92,8 @@ binary_sensor:
           action: light.toggle
           data:
             entity_id: light.office_r_desk_strip
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_office
+      - script.execute: wake_screen
 
   - platform: gpio
     name: Right Button
@@ -123,17 +102,14 @@ binary_sensor:
       inverted: true
     on_click:
       - light.toggle: light_1
-      - lambda: 'id(nspanel_id).render_default_page();'
+      - lvgl.page.show: page_office
+      - script.execute: wake_screen
 
 output:
   - id: relay_1
     platform: gpio
     pin:
       number: 22
-  # - id: relay_2
-  #   platform: gpio
-  #   pin:
-  #     number: 19
 
 light:
   - platform: esp32_rmt_led_strip
