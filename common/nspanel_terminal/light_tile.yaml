@@ -1,0 +1,63 @@
+# Package: Home Assistant light as a tile on a grid page, with its state. Tap toggles, long press opens page_light.
+# Tiles fill the page in package order.
+# vars: page, id, name, entity, icon (MDI glyph, must be in icon_s),
+#       dim (brightness), kmin (lowest colour temperature in K, 0 = none), hs (hue)
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        - button:
+            <<: !include {file: tile.yaml, vars: {id: "${id}", name: "${name}", icon: "${icon}"}}
+            # not checkable: the checked state comes only from Home Assistant
+            on_short_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: ${entity}
+            on_long_press:
+              - script.execute:
+                  id: open_light
+                  entity: ${entity}
+                  name: "${name}"
+                  dim: ${dim}
+                  kmin: ${kmin}
+                  hs: ${hs}
+                  is_on: !lambda return id(${id}_state).state == "on";
+                  bri: !lambda return id(${id}_bri).state;
+                  ct: !lambda return id(${id}_ct).state;
+                  hue: !lambda return id(${id}_hs).state;
+
+sensor:
+  - platform: homeassistant
+    id: ${id}_bri
+    entity_id: ${entity}
+    attribute: brightness
+    internal: true
+    on_value:
+      - lambda: 'if (id(cur_light) == "${entity}") lv_slider_set_value(id(detail_bri), brightness_pct(x), LV_ANIM_OFF);'
+  - platform: homeassistant
+    id: ${id}_ct
+    entity_id: ${entity}
+    attribute: color_temp_kelvin
+    internal: true
+    on_value:
+      - lambda: 'if (id(cur_light) == "${entity}") lv_slider_set_value(id(detail_ct), x, LV_ANIM_OFF);'
+
+text_sensor:
+  # text, not binary: a binary sensor drops "unavailable"
+  - platform: homeassistant
+    id: ${id}_state
+    entity_id: ${entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          lv_obj_set_state(id(${id}), LV_STATE_CHECKED, x == "on");
+          lv_obj_set_state(id(${id}), LV_STATE_DISABLED, ha_unavailable(x));
+          if (id(cur_light) == "${entity}") lv_obj_set_state(id(detail_power), LV_STATE_CHECKED, x == "on");
+  - platform: homeassistant
+    id: ${id}_hs
+    entity_id: ${entity}
+    attribute: hs_color
+    internal: true
+    on_value:
+      - lambda: 'if (id(cur_light) == "${entity}") lv_slider_set_value(id(detail_hue), parse_hue(x), LV_ANIM_OFF);'

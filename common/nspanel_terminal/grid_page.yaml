@@ -1,0 +1,17 @@
+# Grid page (list item of lvgl pages): title and arrows; the 2x3 tiles come from the *_tile.yaml packages
+# vars: id, title, prev, next (page ids for the arrows), skip (hidden page: out of the page cycle, no next arrow)
+id: ${id}
+skip: ${skip}
+styles: page_style
+layout:
+  type: FLEX
+  flex_flow: ROW_WRAP
+widgets:
+  - label:
+      text: "${title}"
+      text_font: font_s
+      text_color: 0xB4B4BA
+      width: 100%
+      text_align: CENTER
+  - <<: !include {file: page_arrow.yaml, vars: {icon: "\U000F0141", align: TOP_LEFT, x: -16, to: "${prev}", hidden: false}}
+  - <<: !include {file: page_arrow.yaml, vars: {icon: "\U000F0142", align: TOP_RIGHT, x: 16, to: "${next}", hidden: "${skip}"}}

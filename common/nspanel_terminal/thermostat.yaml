@@ -1,0 +1,94 @@
+# Home Assistant state and target sending for the thermostat page (page_5).
+# Package vars: entity (climate entity with heat/off and the Better Thermostat presets), boiler (switch enabling heating)
+sensor:
+  - platform: homeassistant
+    id: thermo_target
+    entity_id: ${entity}
+    attribute: temperature
+    internal: true
+    on_value:
+      - lambda: |-
+          if (std::isnan(x)) return;
+          lv_arc_set_value(id(thermo_arc), std::lround(x * 2));
+          lv_label_set_text_fmt(id(thermo_target_label), "%.1f", x);
+  - platform: homeassistant
+    id: thermo_current
+    entity_id: ${entity}
+    attribute: current_temperature
+    internal: true
+    on_value:
+      - lambda: 'lv_label_set_text_fmt(id(thermo_current_label), "teraz %.1f°C", x);'
+
+text_sensor:
+  # text, not binary: a binary sensor drops "unavailable"
+  - platform: homeassistant
+    id: heating_enabled
+    entity_id: ${boiler}
+    internal: true
+    on_value:
+      - lambda: |-
+          lv_obj_set_state(id(heating_enabled_button), LV_STATE_CHECKED, x == "on");
+          lv_obj_set_state(id(heating_enabled_button), LV_STATE_DISABLED, ha_unavailable(x));
+  - platform: homeassistant
+    id: thermo_mode
+    entity_id: ${entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          lv_obj_set_state(id(thermo_power), LV_STATE_CHECKED, x == "heat");
+          // thermostat unavailable: grey out its controls
+          for (lv_obj_t *o : {(lv_obj_t *) id(thermo_power), (lv_obj_t *) id(thermo_arc), id(thermo_minus), id(thermo_plus),
+                              id(thermo_preset_dropdown)->obj})
+            lv_obj_set_state(o, LV_STATE_DISABLED, ha_unavailable(x));
+      - script.execute: thermo_update_action
+  - platform: homeassistant
+    id: thermo_action
+    entity_id: ${entity}
+    attribute: hvac_action
+    internal: true
+    on_value:
+      - script.execute: thermo_update_action
+  - platform: homeassistant
+    id: thermo_presets
+    entity_id: ${entity}
+    attribute: preset_modes
+    internal: true
+    on_value:
+      - lambda: |-
+          id(preset_list) = parse_list(x);
+          std::string options;
+          for (auto &p : id(preset_list)) options += (options.empty() ? "" : "\n") + preset_name(p);
+          lv_dropdown_set_options(id(thermo_preset_dropdown)->obj, options.c_str());
+      - script.execute: thermo_select_preset
+  - platform: homeassistant
+    id: thermo_preset
+    entity_id: ${entity}
+    attribute: preset_mode
+    internal: true
+    on_value:
+      - script.execute: thermo_select_preset
+
+script:
+  # Arc and -/+ change the target locally; send once the user stops for a moment
+  - id: thermo_send_target
+    mode: restart
+    then:
+      - delay: 800ms
+      - homeassistant.action:
+          action: climate.set_temperature
+          data:
+            entity_id: ${entity}
+            temperature: !lambda return lv_arc_get_value(id(thermo_arc)) / 2.0f;
+  - id: thermo_update_action
+    then:
+      - lambda: |-
+          bool off = id(thermo_mode).state == "off";
+          bool heating = id(thermo_action).state == "heating";
+          lv_label_set_text(id(thermo_action_label), off ? "vypnuté" : heating ? "kúri" : "nekúri");
+          lv_obj_set_style_arc_color(id(thermo_arc), lv_color_hex(heating ? 0xF5B342 : 0x8E8E93), LV_PART_INDICATOR);
+  - id: thermo_select_preset
+    then:
+      - lambda: |-
+          auto &list = id(preset_list);
+          auto it = std::find(list.begin(), list.end(), id(thermo_preset).state);
+          if (it != list.end()) lv_dropdown_set_selected(id(thermo_preset_dropdown)->obj, it - list.begin());

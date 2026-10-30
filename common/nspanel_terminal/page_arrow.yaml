@@ -1,0 +1,21 @@
+# Page switch arrow in a top corner; floats over the page's flex layout
+# vars: icon, align, x, to (page id), hidden
+obj:
+  floating: true
+  hidden: ${hidden}
+  align: ${align}
+  x: ${x}
+  y: -16
+  width: 72
+  height: 52
+  bg_opa: TRANSP
+  border_width: 0
+  pad_all: 0
+  on_click:
+    - lvgl.page.show: ${to}
+  widgets:
+    - label:
+        text: "${icon}"
+        text_font: icon_s
+        text_color: 0xB4B4BA
+        align: CENTER

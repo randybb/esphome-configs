@@ -1,0 +1,50 @@
+---
+# nspanel-terminal version of common/nspanel_sleep_dim.yaml: the idle (dimmed) brightness drops to 0 at night
+# (sun below -6°), unless the room light is on. Uses the dimmed global, the panel display and ${dim_brightness}.
+#   packages:
+#     sleep_dim: !include
+#       file: common/nspanel_terminal/sleep_dim.yaml
+#       vars:
+#         sleep_override_entity: light.bedroom_lights
+globals:
+  # brightness the on_idle dim goes to
+  - id: idle_brightness
+    type: int
+    initial_value: ${dim_brightness}
+
+script:
+  - id: apply_sleep_dim
+    then:
+      - lambda: |-
+          bool day = id(sun_id).is_above_horizon(-6);
+          id(idle_brightness) = id(sleep_override).state == "on" || day ? ${dim_brightness} : 0;
+          if (id(dimmed))
+            id(panel).request_brightness(id(idle_brightness));
+
+time:
+  - id: !extend ha_time
+    on_time_sync:
+      - script.execute: apply_sleep_dim
+
+text_sensor:
+  # sleepOverride; text, not binary: a binary sensor drops "unavailable"
+  - platform: homeassistant
+    id: sleep_override
+    entity_id: ${sleep_override_entity}
+    internal: true
+    on_value:
+      - script.execute: apply_sleep_dim
+
+sun:
+  id: sun_id
+  time_id: ha_time
+  latitude: 48.15°
+  longitude: 17.11°
+  on_sunrise:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim
+  on_sunset:
+    - elevation: -6°
+      then:
+        - script.execute: apply_sleep_dim

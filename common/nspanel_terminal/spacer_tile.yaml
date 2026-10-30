@@ -1,0 +1,12 @@
+# Package: empty slot on a grid page (e.g. to start the next row)
+# vars: page
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        - obj:
+            clickable: false
+            width: 130
+            height: 112
+            bg_opa: TRANSP
+            border_width: 0

@@ -1,0 +1,55 @@
+# Package: gate state tile (two slots) on a grid page, and the state of the gate_open/gate_close action tiles
+# vars: page, state (select with Open/Closed/Opening/Closing)
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        # highlighted while not closed
+        - obj:
+            id: gate_state_tile
+            clickable: false
+            width: 272
+            height: 112
+            styles: tile_style
+            checked:
+              bg_color: 0xF5B342
+              text_color: 0x000000
+            disabled:
+              bg_color: 0x161618
+              text_color: 0x48484A
+            widgets:
+              - label:
+                  id: gate_state_icon
+                  text: ""
+                  text_font: icon_l
+                  align: LEFT_MID
+              - label:
+                  id: gate_state_label
+                  text: ""
+                  align: LEFT_MID
+                  x: 64
+
+text_sensor:
+  - platform: homeassistant
+    id: gate_state
+    entity_id: ${state}
+    internal: true
+    on_value:
+      - lambda: |-
+          static const char *const STATES[][3] = {{"Open", "Otvorená", "\U000F116A"},
+                                                  {"Closed", "Zatvorená", "\U000F0299"},
+                                                  {"Opening", "Otvára sa", "\U000F1169"},
+                                                  {"Closing", "Zatvára sa", "\U000F17F7"}};
+          const char *text = x.c_str(), *icon = "\U000F17F8";
+          for (auto &s : STATES)
+            if (x == s[0]) text = s[1], icon = s[2];
+          lv_label_set_text(id(gate_state_label), text);
+          lv_label_set_text(id(gate_state_icon), icon);
+          // highlighted unless closed
+          lv_obj_set_state(id(gate_state_tile), LV_STATE_CHECKED, x != "Closed");
+          // the button of the running movement
+          lv_obj_set_state(id(gate_open), LV_STATE_CHECKED, x == "Opening");
+          lv_obj_set_state(id(gate_close), LV_STATE_CHECKED, x == "Closing");
+          // gate controller offline: grey out the whole gate page
+          for (lv_obj_t *o : {(lv_obj_t *) id(gate_open), (lv_obj_t *) id(gate_close), id(gate_state_tile)})
+            lv_obj_set_state(o, LV_STATE_DISABLED, ha_unavailable(x));

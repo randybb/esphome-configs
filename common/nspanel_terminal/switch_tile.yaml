@@ -1,0 +1,25 @@
+# Package: on/off Home Assistant entity (switch, automation, ...) as a tile on a grid page, with its state.
+# Tiles fill the page in package order.
+# vars: page, id, name, entity, icon (MDI glyph, must be in icon_s), domain (tap calls <domain>.toggle)
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        - button:
+            <<: !include {file: tile.yaml, vars: {id: "${id}", name: "${name}", icon: "${icon}"}}
+            on_click:
+              - homeassistant.action:
+                  action: ${domain}.toggle
+                  data:
+                    entity_id: ${entity}
+
+text_sensor:
+  # text, not binary: a binary sensor drops "unavailable"
+  - platform: homeassistant
+    id: ${id}_state
+    entity_id: ${entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          lv_obj_set_state(id(${id}), LV_STATE_CHECKED, x == "on");
+          lv_obj_set_state(id(${id}), LV_STATE_DISABLED, ha_unavailable(x));

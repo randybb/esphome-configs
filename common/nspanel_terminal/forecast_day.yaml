@@ -1,0 +1,49 @@
+# One forecast row: day, icon, day/night temperature on two lines, all centred vertically.
+# Not clickable, so a tap falls through to the home page.
+obj:
+  clickable: false
+  width: SIZE_CONTENT
+  height: SIZE_CONTENT
+  bg_opa: TRANSP
+  border_width: 0
+  pad_all: 0
+  layout:
+    type: FLEX
+    flex_flow: ROW
+    flex_align_cross: CENTER
+    pad_column: 10
+  widgets:
+    - label:
+        id: forecast_day_${i}
+        text: ""
+        text_font: font_s
+        text_color: 0xB4B4BA
+        width: 26
+        text_align: RIGHT
+    - label:
+        id: forecast_icon_${i}
+        text: ""
+        text_font: icon_s
+        text_color: 0xFFFFFF
+    - obj:
+        clickable: false
+        width: SIZE_CONTENT
+        height: SIZE_CONTENT
+        bg_opa: TRANSP
+        border_width: 0
+        pad_all: 0
+        layout:
+          type: FLEX
+          flex_flow: COLUMN
+          pad_row: 0
+        widgets:
+          - label:
+              id: forecast_high_${i}
+              text: ""
+              text_font: font_s
+              text_color: 0xFFFFFF
+          - label:
+              id: forecast_low_${i}
+              text: ""
+              text_font: font_s
+              text_color: 0x8E8E93

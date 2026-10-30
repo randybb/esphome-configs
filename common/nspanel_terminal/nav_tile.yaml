@@ -1,0 +1,19 @@
+# Package: tile on a grid page that opens another page, a big icon only (e.g. the robot for automations)
+# vars: page, to (page id), icon (MDI glyph, must be in icon_l)
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        - button:
+            width: 130
+            height: 112
+            styles: tile_style
+            pressed:
+              bg_color: 0x48484A
+            on_click:
+              - lvgl.page.show: ${to}
+            widgets:
+              - label:
+                  text: "${icon}"
+                  text_font: icon_l
+                  align: CENTER

@@ -1,0 +1,14 @@
+# Package: tile on a grid page that calls a Home Assistant action on an entity (e.g. button.press).
+# Its checked/disabled states are up to the owner (e.g. gate.yaml). Tiles fill the page in package order.
+# vars: page, id, name, icon (MDI glyph, must be in icon_s), action, entity
+lvgl:
+  pages:
+    - id: !extend ${page}
+      widgets:
+        - button:
+            <<: !include {file: tile.yaml, vars: {id: "${id}", name: "${name}", icon: "${icon}"}}
+            on_click:
+              - homeassistant.action:
+                  action: ${action}
+                  data:
+                    entity_id: ${entity}

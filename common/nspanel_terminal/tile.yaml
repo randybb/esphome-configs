@@ -1,0 +1,25 @@
+# Look of a 2x3 grid tile (button body): icon top left, name bottom left; merge it into a button with <<:
+# checked = on (orange), disabled = entity unavailable (grey), pressed = touch feedback
+# vars: id, name, icon (MDI glyph, must be in icon_s)
+id: ${id}
+width: 130
+height: 112
+styles: tile_style
+pressed:
+  bg_color: 0x48484A
+checked:
+  bg_color: 0xF5B342
+  text_color: 0x000000
+disabled:
+  bg_color: 0x161618
+  text_color: 0x48484A
+widgets:
+  - label:
+      text: "${icon}"
+      text_font: icon_s
+      align: TOP_LEFT
+  - label:
+      text: "${name}"
+      align: BOTTOM_LEFT
+      long_mode: WRAP
+      width: 100%
