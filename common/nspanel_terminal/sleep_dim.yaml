@@ -1,5 +1,5 @@
 ---
-# nspanel-terminal version of common/nspanel_sleep_dim.yaml: the idle (dimmed) brightness drops to 0 at night
+# NSPanel sleep dim: the idle (dimmed) brightness drops to 0 at night
 # (sun below -6°), unless the room light is on. Sets the idle_brightness global of panel.yaml (${dim_brightness} or 0).
 #   packages:
 #     sleep_dim: !include
