@@ -8,43 +8,43 @@ esphome:
   name: mcu-stm32-nucleo
   friendly_name: STM32 Nucleo
 
-# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no zephyr: platform yet
-zephyr:
+# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no stm32: platform yet
+stm32:
   variant: STM32F4
   board: nucleo_f411re
   framework:
     type: zephyr
-  # no network, so no OTA: one image slot, MCUboot only verifies and boots it
-  single_slot: true
-  # NVS sector = flash page; needs >= 2 of them, so storage takes the two 16K pages (sectors 2-3)
-  kconfig_options:
-    SETTINGS_NVS_SECTOR_COUNT: 2
-  # nucleo_f411re ships no partitions at all: MCUboot in sectors 0-1, storage in 2-3, the app in 4-7.
-  # MCUboot needs the same table; the fork appends its own code-partition = &boot_partition after it
-  overlays:
-    app: &partitions |
-      &flash0 {
-        partitions {
-          compatible = "fixed-partitions";
-          #address-cells = <1>;
-          #size-cells = <1>;
-          boot_partition: partition@0 {
-            label = "mcuboot";
-            reg = <0x00000000 DT_SIZE_K(32)>;
-            read-only;
-          };
-          storage_partition: partition@8000 {
-            label = "storage";
-            reg = <0x00008000 DT_SIZE_K(32)>;
-          };
-          slot0_partition: partition@10000 {
-            label = "image-0";
-            reg = <0x00010000 DT_SIZE_K(448)>;
+    # no network, so no OTA: one image slot, MCUboot only verifies and boots it
+    single_slot: true
+    # NVS sector = flash page; needs >= 2 of them, so storage takes the two 16K pages (sectors 2-3)
+    kconfig_options:
+      SETTINGS_NVS_SECTOR_COUNT: 2
+    # nucleo_f411re ships no partitions at all: MCUboot in sectors 0-1, storage in 2-3, the app in 4-7.
+    # MCUboot needs the same table; the fork appends its own code-partition = &boot_partition after it
+    overlays:
+      app: &partitions |
+        &flash0 {
+          partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+            boot_partition: partition@0 {
+              label = "mcuboot";
+              reg = <0x00000000 DT_SIZE_K(32)>;
+              read-only;
+            };
+            storage_partition: partition@8000 {
+              label = "storage";
+              reg = <0x00008000 DT_SIZE_K(32)>;
+            };
+            slot0_partition: partition@10000 {
+              label = "image-0";
+              reg = <0x00010000 DT_SIZE_K(448)>;
+            };
           };
         };
-      };
-      / { chosen { zephyr,code-partition = &slot0_partition; }; };
-    mcuboot: *partitions
+        / { chosen { zephyr,code-partition = &slot0_partition; }; };
+      mcuboot: *partitions
 
 logger:
 

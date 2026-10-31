@@ -25,7 +25,7 @@ esphome:
   friendly_name: nRF ANT+
 
 # needs the esphomeplatformzephyr fork (esphome-zephyr); RadiANT needs NCS
-zephyr:
+nrf:
   variant: NRF52
   board: nrf52840dk/nrf52840
   framework:

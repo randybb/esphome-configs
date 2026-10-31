@@ -18,8 +18,8 @@ esphome:
   name: mcu-nrf-dk
   friendly_name: nRF DK
 
-# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no zephyr: platform yet
-zephyr:
+# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no nrf: platform yet
+nrf:
   variant: NRF52
   board: nrf52840dk/nrf52840
   framework:
