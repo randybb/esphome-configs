@@ -48,7 +48,7 @@ psram:
   ignore_not_found: false
 
 external_components:
-  - source: github://ptaru/nspanel-terminal@19fcafc0b30d4d2f75a7a170a963e6f08a13e3d9  # 0.5.0, untagged
+  - source: github://ptaru/nspanel-terminal@v0.6.0
     components: [nspanel_terminal]
 
 wifi:
