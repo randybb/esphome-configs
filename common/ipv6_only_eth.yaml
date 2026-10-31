@@ -6,7 +6,9 @@
 # WiFi devices use common/ipv6_only.yaml (this + the IPv6 SSID)
 external_components:
   # IPv6-only on wifi/ethernet with the IPv4 stack off (esphome/esphome#19750), drop once merged
-  - source: github://pr#19750
+  # pinned to be1f55d: the 2026-10-31 head breaks the IPv4-off build (IPV6_ROAM_SETTLE_MS defined under
+  # USE_WIFI_LEASE_CACHE, used under USE_NETWORK_IPV6); back to github://pr#19750 once fixed
+  - source: github://davidcoulson/esphome@be1f55d7d4f653a182980740b6d2549f22b2db87
     components: [network, wifi, ethernet]
     refresh: 1h
 

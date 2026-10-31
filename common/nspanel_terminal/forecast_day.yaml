@@ -11,7 +11,7 @@ obj:
     type: FLEX
     flex_flow: ROW
     flex_align_cross: CENTER
-    pad_column: 10
+    pad_column: 8
   widgets:
     - label:
         id: forecast_day_${i}

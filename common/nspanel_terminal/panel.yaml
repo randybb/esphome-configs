@@ -48,7 +48,7 @@ psram:
   ignore_not_found: false
 
 external_components:
-  - source: github://ptaru/nspanel-terminal@v0.4.0
+  - source: github://ptaru/nspanel-terminal@19fcafc0b30d4d2f75a7a170a963e6f08a13e3d9  # 0.5.0, untagged
     components: [nspanel_terminal]
 
 wifi:
@@ -212,7 +212,7 @@ globals:
 font:
   - file: "gfonts://Inter@500"
     id: font_clock
-    size: 112
+    size: 100
     bpp: 4
     glyphs: "0123456789:-"
   - file: "gfonts://Inter@500"
@@ -607,24 +607,23 @@ lvgl:
             id: clock_label
             text: "--:--"
             text_font: font_clock
+            # the digits' ink starts ~5 px right of and ~23 px below the label box: 16 px margin like the rest
             align: TOP_LEFT
-            x: 4
-            y: -10
+            x: -5
+            y: -23
         - label:
             id: date_label
             text: ""
             text_color: 0xB4B4BA
             align: TOP_LEFT
-            x: 10
-            y: 118
+            y: 92
         - label:
             id: nameday_label
             text: ""
             text_font: font_s
             text_color: 0x8E8E93
             align: TOP_LEFT
-            x: 10
-            y: 148
+            y: 122
         - obj:
             clickable: false
             align: TOP_RIGHT
@@ -644,7 +643,7 @@ lvgl:
         - obj:
             clickable: false
             align: BOTTOM_LEFT
-            x: 8
+            x: -2
             y: -22
             width: SIZE_CONTENT
             height: SIZE_CONTENT
@@ -672,11 +671,10 @@ lvgl:
             text_font: font_s
             text_color: 0x8E8E93
             align: BOTTOM_LEFT
-            x: 10
         - obj:
             clickable: false
             align: BOTTOM_LEFT
-            x: 158
+            x: 148
             y: -22
             width: SIZE_CONTENT
             height: SIZE_CONTENT
@@ -704,7 +702,7 @@ lvgl:
             text_font: font_s
             text_color: 0x8E8E93
             align: BOTTOM_LEFT
-            x: 160
+            x: 150
         - obj:
             clickable: false
             align: BOTTOM_RIGHT
