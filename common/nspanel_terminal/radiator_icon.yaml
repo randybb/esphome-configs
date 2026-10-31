@@ -1,0 +1,70 @@
+# Package: radiator icon in the home page icon row:
+#   disabled (grey) while the thermostat does not call for heat, off (grey) while it does but the off-peak tariff
+#   is off (the boiler is then hard off) and the fireplace is out, on (white) while it heats.
+# Hidden outside the heating season: boiler switch off and the fireplace out.
+# vars: id (prefix of its ids, unique per icon), entity (climate);
+#       defaults: boiler (switch that lets the boiler fire), fire (fireplace binary_sensor), off_peak (tariff binary_sensor)
+defaults:
+  boiler: switch.heating_enabled
+  fire: binary_sensor.heating_fireplace_fire
+  off_peak: binary_sensor.heater_off_peak
+
+lvgl:
+  pages:
+    - id: !extend page_home
+      widgets:
+        - obj:
+            id: !extend home_icons
+            widgets:
+              - label:
+                  id: ${id}_icon
+                  text: "\U000F0AD8"
+                  text_font: icon_s
+                  text_color: 0x48484A
+
+script:
+  - id: ${id}_update
+    then:
+      - lambda: |-
+          const std::string &boiler = id(${id}_boiler).state, &fire = id(${id}_fire).state;
+          const bool demand = id(${id}_action).state == "heating";
+          // the burning fireplace heats the water without the boiler
+          const bool heating = demand && (id(${id}_off_peak).state != "off" || fire == "on");
+          lv_label_set_text(id(${id}_icon), !demand ? "\U000F0AD7" : heating ? "\U000F0438" : "\U000F0AD8");
+          const bool unavailable = ha_unavailable(id(${id}_mode).state);
+          lv_obj_set_style_text_color(id(${id}_icon), lv_color_hex(heating ? 0xFFFFFF : unavailable ? 0x48484A : 0x8E8E93), 0);
+          lv_obj_set_hidden(id(${id}_icon), boiler == "off" && fire == "off");
+
+text_sensor:
+  - platform: homeassistant
+    id: ${id}_boiler
+    entity_id: ${boiler}
+    internal: true
+    on_value:
+      - script.execute: ${id}_update
+  - platform: homeassistant
+    id: ${id}_fire
+    entity_id: ${fire}
+    internal: true
+    on_value:
+      - script.execute: ${id}_update
+  - platform: homeassistant
+    id: ${id}_off_peak
+    entity_id: ${off_peak}
+    internal: true
+    on_value:
+      - script.execute: ${id}_update
+  # the climate state only tells whether the thermostat is reachable
+  - platform: homeassistant
+    id: ${id}_mode
+    entity_id: ${entity}
+    internal: true
+    on_value:
+      - script.execute: ${id}_update
+  - platform: homeassistant
+    id: ${id}_action
+    entity_id: ${entity}
+    attribute: hvac_action
+    internal: true
+    on_value:
+      - script.execute: ${id}_update

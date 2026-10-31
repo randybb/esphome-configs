@@ -76,6 +76,9 @@ packages:
   gate_auto_close: !include {file: common/nspanel_terminal/switch_tile.yaml, vars: {page: page_gate_auto, id: gate_auto_close, name: "Auto-zatváranie", entity: switch.mcu_gate_auto_close, icon: "\U000F17F7", domain: switch}}
   # Kúrenie
   thermo: !include {file: common/nspanel_terminal/thermostat.yaml, vars: {id: thermo, page: page_thermostat, title: "Kúrenie - Obývačka", prev: page_gate, next: page_status, entity: climate.bt_trv_living_room_kitchen}}
+  # home page icons, right to left
+  i_fire: !include common/nspanel_terminal/fireplace_icon.yaml
+  i_radiator: !include {file: common/nspanel_terminal/radiator_icon.yaml, vars: {id: i_radiator, entity: climate.bt_trv_living_room_kitchen}}
 
 # the grid pages; home, status and light detail come from panel.yaml, thermostat pages from thermostat.yaml
 lvgl:

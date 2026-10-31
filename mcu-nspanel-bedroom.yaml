@@ -52,6 +52,9 @@ packages:
   l_lamp_left: !include {file: common/nspanel_terminal/light_tile.yaml, vars: {page: page_bedroom, id: l_lamp_left, name: "Nočná lampa R", entity: light.mcu_bedroom_lamp_left_light, icon: "\U000F06B5", dim: true, kmin: 1701, hs: true}}
   # Kúrenie
   thermo: !include {file: common/nspanel_terminal/thermostat.yaml, vars: {id: thermo, page: page_thermostat, title: "Kúrenie - Spálňa", prev: page_bedroom, next: page_status, entity: climate.bt_trv_bedroom}}
+  # home page icons, right to left
+  i_fire: !include common/nspanel_terminal/fireplace_icon.yaml
+  i_radiator: !include {file: common/nspanel_terminal/radiator_icon.yaml, vars: {id: i_radiator, entity: climate.bt_trv_bedroom}}
 
 # the grid pages; home, status and light detail come from panel.yaml, thermostat pages from thermostat.yaml
 lvgl:

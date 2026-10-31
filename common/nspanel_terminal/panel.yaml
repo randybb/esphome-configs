@@ -291,6 +291,10 @@ font:
       - "\U000F07F4"
       - "\U000F0C6E"
       - "\U000F0DDC"
+      - "\U000F0E2E"
+      - "\U000F0E2F"
+      - "\U000F0AD7"
+      - "\U000F0AD8"
   - file:
       type: web
       url: https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf
@@ -744,6 +748,21 @@ lvgl:
                         id: today_low
                         text: ""
                         text_color: 0x8E8E93
+        # state icons above today's weather; *_icon.yaml packages add them, the first one on the right
+        - obj:
+            id: home_icons
+            clickable: false
+            align: BOTTOM_RIGHT
+            y: -90
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: FLEX
+              flex_flow: ROW_REVERSE
+              pad_column: 14
     # Status: boot screen until Home Assistant connects, then the last (diagnostic) page
     - id: page_status
       styles: page_style
