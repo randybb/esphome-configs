@@ -48,7 +48,7 @@ psram:
   ignore_not_found: false
 
 external_components:
-  - source: github://ptaru/nspanel-terminal@v0.7.0
+  - source: github://ptaru/nspanel-terminal@v0.7.1
     components: [nspanel_terminal]
 
 wifi:
@@ -179,7 +179,6 @@ touchscreen:
   - platform: nspanel_terminal
     id: panel_touch
     display: panel
-    panel_id: panel
     calibration:
       x_min: 0
       x_max: 453
