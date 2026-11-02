@@ -30,9 +30,7 @@ packages:
   ipv6_only: !include common/ipv6_only.yaml
 
 external_components:
-  - source:
-      type: local
-      path: github://randybb/esphome-components
+  - source: github://randybb/esphome-components
     components: [aixun]
 
 uart:
