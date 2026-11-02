@@ -32,7 +32,7 @@ packages:
 external_components:
   - source:
       type: local
-      path: /home/randy/Projects/repos/esphome-components/components
+      path: github://randybb/esphome-components
     components: [aixun]
 
 uart:
