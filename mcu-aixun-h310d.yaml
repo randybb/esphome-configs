@@ -1,0 +1,93 @@
+---
+# Hardware: Aixun H310D hot air station WiFi/BLE module = bare ESP32-C3 (QFN32), 4MB flash.
+# Flashed via header P2 (native USB): GND, D+(GPIO19), D-(GPIO18), 5V. Stock fw backup in ~/aixun-h310d-backup/.
+# UART0 GPIO20(RX)/GPIO21(TX) <-> GD32 main MCU, 115200. Logger on USB-Serial/JTAG.
+# The aixun component (model H310D) pairs as a BS08 remote: status, temperature/fan/presets, panel WiFi icon.
+substitutions:
+  device: aixun-h310d
+  name: Aixun H310D
+  name_short: H310D
+  area: Lab
+  comment: Hot air station
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+
+esp32:
+  variant: esp32c3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+
+packages:
+  common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+
+external_components:
+  - source:
+      type: local
+      path: /home/randy/Projects/repos/esphome-components/components
+    components: [aixun]
+
+uart:
+  id: mcu_uart
+  rx_pin: GPIO20
+  tx_pin: GPIO21
+  baud_rate: 115200
+  rx_buffer_size: 1024
+
+aixun:
+  id: h310d
+  model: H310D
+  uart_id: mcu_uart
+  update_interval: 1s
+
+text_sensor:
+  - platform: aixun
+    device_model:
+      name: MCU Model
+    firmware_version:
+      name: MCU Firmware
+    serial_number:
+      name: MCU Serial
+    heater_status:
+      name: Status
+
+sensor:
+  - platform: aixun
+    current_temperature:
+      name: Temperature
+    current_fan_speed:
+      name: Fan
+    heating_power:
+      name: Heating Power
+
+number:
+  - platform: aixun
+    target_temperature:
+      name: Target Temperature
+    fan_speed:
+      name: Fan Speed
+
+button:
+  - platform: aixun
+    preset_m1:
+      name: Preset M1
+    preset_m2:
+      name: Preset M2
+    preset_m3:
+      name: Preset M3
+
+# The panel's WiFi STA / AP menu toggles, repurposed as feature switches.
+binary_sensor:
+  - platform: aixun
+    sta_mode:
+      name: STA Toggle
+    ap_mode:
+      name: AP Toggle
