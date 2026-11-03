@@ -48,7 +48,7 @@ psram:
   ignore_not_found: false
 
 external_components:
-  - source: github://ptaru/nspanel-terminal@v0.7.1
+  - source: github://ptaru/nspanel-terminal@v0.8.0
     components: [nspanel_terminal]
 
 wifi:
@@ -168,6 +168,7 @@ display:
   - platform: nspanel_terminal
     id: panel
     uart_id: display_uart
+    lvgl_iram: true
     width: 454
     height: 320
     update_interval: never
@@ -224,11 +225,13 @@ font:
     size: 22
     bpp: 4
     glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true  # Inter has no U+030B (combining double acute)
   - file: "gfonts://Inter"
     id: font_s
     size: 17
     bpp: 4
     glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true  # Inter has no U+030B (combining double acute)
 
   - file:
       type: web
@@ -367,16 +370,16 @@ script:
           auto *wifi = wifi::global_wifi_component;
           const bool wifi_ok = wifi->is_connected();
           // diagnostics for slow connects after a cold start: seconds to connect, AP association
-          static uint32_t connected_s = 0;
+          static unsigned connected_s = 0;
           if (wifi_ok && !connected_s)
-            connected_s = std::max<uint32_t>(1, millis() / 1000);
+            connected_s = std::max<unsigned>(1, millis() / 1000);
           if (wifi_ok) {
             set(id(status_wifi), str_sprintf("WiFi: pripojené za %u s  (%d dBm)", connected_s, wifi->wifi_rssi()), OK);
           } else {
             auto bssid = wifi->wifi_bssid();
             bool associated = std::any_of(bssid.begin(), bssid.end(), [](uint8_t b) { return b != 0; });
             set(id(status_wifi),
-                str_sprintf("WiFi: pripájam...  %s, %us", associated ? "AP ok, čakám na IP" : "bez AP", millis() / 1000),
+                str_sprintf("WiFi: pripájam...  %s, %us", associated ? "AP ok, čakám na IP" : "bez AP", unsigned(millis() / 1000)),
                 WAIT);
           }
 
@@ -401,7 +404,7 @@ script:
           const bool api_ok = api::global_api_server->is_connected(true);
           set(id(status_ha), api_ok ? "Home Assistant: pripojený" : "Home Assistant: čakám...", api_ok ? OK : WAIT);
 
-          const uint32_t up = millis() / 1000;
+          const unsigned up = millis() / 1000;
           static char build[Application::BUILD_TIME_STR_SIZE] = "";
           if (!build[0])
             App.get_build_time_string(build);
