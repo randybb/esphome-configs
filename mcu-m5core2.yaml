@@ -56,7 +56,7 @@ esphome:
         # the m5stack component sets these in the AXP2101 layout: 4.1 V, 360 mA, end at 10 %
         - lambda: id(pmu_axp)->writeRegister(0x33, 0x83);
         - bm8563.read_time:
-        - lvgl.page.show: status_page
+        - lvgl.page.show: {id: status_page, lvgl_id: lvgl_main}
 
 esp32:
   variant: esp32
@@ -93,7 +93,7 @@ api:
           api.connected:
             state_subscription_only: true
         then:
-          - lvgl.page.show: main_page
+          - lvgl.page.show: {id: main_page, lvgl_id: lvgl_main}
   on_client_disconnected:
     - if:
         condition:
@@ -101,7 +101,7 @@ api:
             api.connected:
               state_subscription_only: true
         then:
-          - lvgl.page.show: status_page
+          - lvgl.page.show: {id: status_page, lvgl_id: lvgl_main}
 
 i2c:
   - id: i2c_main
@@ -155,18 +155,9 @@ display:
   - platform: m5stack_st7789v2
     id: unit_lcd
     i2c_id: i2c_port_c
-    rotation: 90
     brightness: 60%
-    update_interval: 2s
-    lambda: |-
-      it.fill(Color(0x10, 0x18, 0x30));
-      it.print(4, 4, id(font_title), Color(0xFF, 0xB3, 0x00), "${name}");
-      it.strftime(236, 4, id(font_title), Color::WHITE, TextAlign::TOP_RIGHT, "%H:%M", id(ha_time).now());
-      it.print(4, 44, id(font_status), Color(0x8C, 0x8C, 0x8C), "Last line:");
-      it.print(4, 64, id(font_status), Color::WHITE, id(keyboard_line).state.c_str());
-      it.printf(4, 131, id(font_status), id(battery_charging).state ? Color(0x4D, 0xD9, 0x66) : Color::WHITE,
-                TextAlign::BOTTOM_LEFT, "Battery %.2f V  %.0f %%%s", id(battery_voltage).state,
-                id(battery_level).state, id(battery_charging).state ? "  charging" : "");
+    update_interval: 10s  # only reconnects a lost unit, LVGL flushes drive the transfer
+    auto_clear_enabled: false
 
 touchscreen:
   - platform: ft63x6
@@ -202,7 +193,7 @@ binary_sensor:
     y_min: 240
     y_max: 300
     on_press:
-      - lvgl.page.previous:
+      - lvgl.page.previous: {lvgl_id: lvgl_main}
   - platform: touchscreen
     id: button_b
     use_raw: true
@@ -211,7 +202,7 @@ binary_sensor:
     y_min: 240
     y_max: 300
     on_press:
-      - lvgl.page.show: main_page
+      - lvgl.page.show: {id: main_page, lvgl_id: lvgl_main}
   - platform: touchscreen
     id: button_c
     use_raw: true
@@ -220,7 +211,7 @@ binary_sensor:
     y_min: 240
     y_max: 300
     on_press:
-      - lvgl.page.next:
+      - lvgl.page.next: {lvgl_id: lvgl_main}
 
 # AXP192 ADCs read directly, the m5stack component decodes them as an AXP2101
 sensor:
@@ -292,6 +283,9 @@ key_collector:
           args: [x.c_str()]
       - lvgl.label.update:
           id: last_line
+          text: !lambda return x;
+      - lvgl.label.update:
+          id: unit_last_line
           text: !lambda return x;
       - lvgl.textarea.update:
           id: input_text
@@ -396,6 +390,19 @@ interval:
           id(battery_charging).publish_state(r(0x01) & 0x40);
   - interval: 1s
     then:
+      - lvgl.label.update:
+          id: unit_time
+          text: !lambda |-
+            auto now = id(ha_time).now();
+            return now.is_valid() ? now.strftime("%H:%M") : std::string("--:--");
+      - lvgl.bar.update:
+          id: unit_battery_bar
+          value: !lambda return id(battery_level).state;
+      - lvgl.label.update:
+          id: unit_battery
+          text: !lambda |-
+            return str_sprintf("%.2f V  %.0f %%%s", id(battery_voltage).state, id(battery_level).state,
+                               id(battery_charging).state ? "  charging" : "");
       - if:
           condition:
             lvgl.page.is_showing: status_page
@@ -426,130 +433,181 @@ font:
     glyphsets: [GF_Latin_Kernel]
 
 lvgl:
-  displays: display_tft
-  touchscreens: touch_lcd
-  buffer_size: 25%
-  log_level: WARN
-  bg_color: 0x000000
-  text_color: 0xFFFFFF
-  pages:
-    # 1: keyboard demo
-    - id: main_page
-      widgets:
-        - label:
-            align: TOP_MID
-            y: 6
-            text_font: font_title
-            text: ${name}
-        - textarea:
-            id: input_text
-            align: TOP_MID
-            y: 40
-            width: 300
-            height: 70
-            text_font: font_status
-            placeholder_text: Type on the keyboard...
-        - label:
-            align: TOP_LEFT
-            x: 10
-            y: 122
-            text_font: font_status
-            text: "Last line:"
-        - label:
-            id: last_line
-            align: TOP_LEFT
-            x: 90
-            y: 122
-            width: 220
-            long_mode: DOT
-            text_font: font_status
-            text: "-"
-        - slider:
-            id: demo_slider
-            align: BOTTOM_LEFT
-            x: 20
-            y: -40
-            width: 170
-            on_value:
-              - lvgl.arc.update:
-                  id: demo_arc
-                  value: !lambda return x;
-        - arc:
-            id: demo_arc
-            align: BOTTOM_RIGHT
-            x: -15
-            y: -15
-            width: 100
-            height: 100
-            adjustable: false
+  - id: lvgl_main
+    displays: display_tft
+    touchscreens: touch_lcd
+    buffer_size: 25%
+    log_level: WARN
+    bg_color: 0x000000
+    text_color: 0xFFFFFF
+    pages:
+      # 1: keyboard demo
+      - id: main_page
+        widgets:
+          - label:
+              align: TOP_MID
+              y: 6
+              text_font: font_title
+              text: ${name}
+          - textarea:
+              id: input_text
+              align: TOP_MID
+              y: 40
+              width: 300
+              height: 70
+              text_font: font_status
+              placeholder_text: Type on the keyboard...
+          - label:
+              align: TOP_LEFT
+              x: 10
+              y: 122
+              text_font: font_status
+              text: "Last line:"
+          - label:
+              id: last_line
+              align: TOP_LEFT
+              x: 90
+              y: 122
+              width: 220
+              long_mode: DOT
+              text_font: font_status
+              text: "-"
+          - slider:
+              id: demo_slider
+              align: BOTTOM_LEFT
+              x: 20
+              y: -40
+              width: 170
+              on_value:
+                - lvgl.arc.update:
+                    id: demo_arc
+                    value: !lambda return x;
+          - arc:
+              id: demo_arc
+              align: BOTTOM_RIGHT
+              x: -15
+              y: -15
+              width: 100
+              height: 100
+              adjustable: false
 
-    # 2: AXP192 diagnostics
-    - id: axp_page
-      on_load:
-        - script.execute: update_axp
-      widgets:
-        - label:
-            align: TOP_MID
-            y: 6
-            text_font: font_title
-            text: AXP192
-        - label:
-            x: 16
-            y: 44
-            text_font: font_status
-            text_color: 0x8C8C8C
-            text: "Battery\nCurrent\nUSB (VBUS)\nM-Bus 5V (ACIN)\nAPS\nTemperature"
-        - label:
-            id: axp_values
-            x: 170
-            y: 44
-            text_font: font_status
-            text: ""
+      # 2: AXP192 diagnostics
+      - id: axp_page
+        on_load:
+          - script.execute: update_axp
+        widgets:
+          - label:
+              align: TOP_MID
+              y: 6
+              text_font: font_title
+              text: AXP192
+          - label:
+              x: 16
+              y: 44
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: "Battery\nCurrent\nUSB (VBUS)\nM-Bus 5V (ACIN)\nAPS\nTemperature"
+          - label:
+              id: axp_values
+              x: 170
+              y: 44
+              text_font: font_status
+              text: ""
 
-    # 3: status (shown until Home Assistant connects)
-    - id: status_page
-      on_load:
-        - script.execute: update_status
-      widgets:
-        - image:
-            src: esphome_logo
-            align: TOP_MID
-            y: 8
-        - label:
-            align: TOP_MID
-            y: 96
-            text_font: font_title
-            text: "${name}"
-        - obj:
-            x: 16
-            y: 132
-            width: 288
-            height: SIZE_CONTENT
-            bg_opa: TRANSP
-            border_width: 0
-            pad_all: 0
-            scrollbar_mode: "OFF"
-            layout:
-              type: flex
-              flex_flow: column
-              pad_row: 4
-            widgets:
-              - label:
-                  id: status_wifi
-                  text_font: font_status
-                  text: ""
-              - label:
-                  id: status_ips
-                  text_font: font_status
-                  text_color: 0x8C8C8C
-                  pad_left: 20
-                  text: ""
-              - label:
-                  id: status_ha
-                  text_font: font_status
-                  text: ""
-              - label:
-                  id: status_footer
-                  text_font: font_status
-                  text_color: 0x8C8C8C
-                  text: ""
+      # 3: status (shown until Home Assistant connects)
+      - id: status_page
+        on_load:
+          - script.execute: update_status
+        widgets:
+          - image:
+              src: esphome_logo
+              align: TOP_MID
+              y: 8
+          - label:
+              align: TOP_MID
+              y: 96
+              text_font: font_title
+              text: "${name}"
+          - obj:
+              x: 16
+              y: 132
+              width: 288
+              height: SIZE_CONTENT
+              bg_opa: TRANSP
+              border_width: 0
+              pad_all: 0
+              scrollbar_mode: "OFF"
+              layout:
+                type: flex
+                flex_flow: column
+                pad_row: 4
+              widgets:
+                - label:
+                    id: status_wifi
+                    text_font: font_status
+                    text: ""
+                - label:
+                    id: status_ips
+                    text_font: font_status
+                    text_color: 0x8C8C8C
+                    pad_left: 20
+                    text: ""
+                - label:
+                    id: status_ha
+                    text_font: font_status
+                    text: ""
+                - label:
+                    id: status_footer
+                    text_font: font_status
+                    text_color: 0x8C8C8C
+                    text: ""
+
+  # Unit LCD on Port C, rotated by LVGL (the display can't rotate under LVGL)
+  - id: lvgl_unit
+    displays: unit_lcd
+    rotation: 90
+    buffer_size: 100%
+    bg_color: 0x101830
+    text_color: 0xFFFFFF
+    widgets:
+      - label:
+          x: 6
+          y: 4
+          text_font: font_title
+          text_color: 0xFFB300
+          text: ${name}
+      - label:
+          id: unit_time
+          align: TOP_RIGHT
+          x: -6
+          y: 4
+          text_font: font_title
+          text: "--:--"
+      - label:
+          x: 6
+          y: 44
+          text_font: font_status
+          text_color: 0x8C8C8C
+          text: "Last line:"
+      - label:
+          id: unit_last_line
+          x: 6
+          y: 64
+          width: 228
+          long_mode: DOT
+          text_font: font_status
+          text: "-"
+      - bar:
+          id: unit_battery_bar
+          x: 6
+          y: 94
+          width: 228
+          height: 10
+          min_value: 0
+          max_value: 100
+      - label:
+          id: unit_battery
+          x: 6
+          y: 110
+          text_font: font_status
+          text: ""
