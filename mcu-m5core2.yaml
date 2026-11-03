@@ -5,15 +5,19 @@
 #   GPIO5                              -> display_tft (display mipi_spi cs_pin)
 #   GPIO15                             -> display_tft (display mipi_spi dc_pin)
 #   GPIO18                             -> spi_bus (spi clk_pin)
+#   GPIO19  M-Bus (modded NSS, stock G33) -> lora (sx127x cs_pin), LoRa868 module (Ra-01H, SX1276)
 #   GPIO21                             -> i2c_main (i2c sda), M-Bus SDA
 #   GPIO22                             -> i2c_main (i2c scl), M-Bus SCL
 #   GPIO23                             -> spi_bus (spi mosi_pin)
+#   GPIO26  M-Bus, Port B              -> lora (sx127x rst_pin)
+#   GPIO27  M-Bus (modded DIO1)        -> LoRa868 DIO1, unused (sx127x has no dio1)
+#   GPIO35  M-Bus (modded DIO0, stock G36) -> lora (sx127x dio0_pin)
 #   GPIO38                             -> spi_bus (spi miso_pin)
 #   GPIO39                             -> touch_lcd (touchscreen ft63x6 interrupt_pin)
 #   AXP192 GPIO4                       -> LCD reset (on_boot)
 # Grove (free):
 #   Port A red   (Core2)  I2C   GPIO32 SDA, GPIO33 SCL
-#   Port B black (base)   GPIO  GPIO26 out/DAC, GPIO36 in/ADC (input only)
+#   Port B black (base)   GPIO  GPIO26 out/DAC, GPIO36 in/ADC (input only); GPIO26 taken by the LoRa868 RST
 #   Port C blue  (base)   UART  GPIO13 RX, GPIO14 TX -> i2c_port_c (i2c scl GPIO13, sda GPIO14)
 # Touch buttons (below the LCD, raw y 240-280): A prev page, B keyboard page, C next page
 # I2C:
@@ -63,6 +67,10 @@ esp32:
   flash_size: 16MB
   framework:
     type: esp-idf
+    advanced:
+      flash_chip: generic
+      minimum_chip_revision: 3.0
+      sram1_as_iram: true
 
 psram:
   mode: quad
@@ -81,7 +89,7 @@ external_components:
     components: [axp192]
     refresh: 1h
   - source: github://randybb/esphome-components
-    components: [m5stack_keyboard, m5stack_st7789v2]
+    components: [m5stack_keyboard, m5stack_st7789v2, meshtastic]
     refresh: 0s
 
 api:
@@ -120,6 +128,51 @@ spi:
   clk_pin: 18
   mosi_pin: 23
   miso_pin: 38
+
+# LoRa868 module on Meshtastic EU LongFast, RSSI/SNR of every packet (relays included)
+sx127x:
+  id: lora
+  spi_id: spi_bus
+  cs_pin: GPIO19
+  rst_pin: GPIO26
+  dio0_pin: GPIO35  # modded, stock G36
+  modulation: LORA
+  frequency: 869525000  # Meshtastic EU_868 LongFast, slot 0
+  bandwidth: 250_0kHz
+  spreading_factor: 11
+  coding_rate: CR_4_5
+  preamble_size: 16
+  sync_value: 0x2B  # Meshtastic
+  crc_enable: true
+  pa_pin: BOOST
+  pa_power: 14
+  on_packet:
+    - lambda: |-
+        id(lora_count) += 1;
+        id(lora_rssi).publish_state(rssi);
+        id(lora_snr).publish_state(snr);
+    - lvgl.label.update:
+        id: lora_stats
+        text: !lambda |-
+          return str_sprintf("%.0f dBm\n%.1f dB\n%u", id(lora_rssi).state, id(lora_snr).state, id(lora_count));
+
+# Typed lines go to the LongFast channel, received texts to the LoRa page
+meshtastic:
+  id: mesh
+  long_name: randy_m5c2
+  short_name: M5C2
+  on_message:
+    - text_sensor.template.publish:
+        id: lora_packet
+        state: !lambda 'return from_name + ": " + text;'
+    - lvgl.label.update:
+        id: lora_last
+        text: !lambda 'return from_name + ": " + text;'
+
+globals:
+  - id: lora_count
+    type: uint32_t
+    initial_value: "0"
 
 axp192:
   id: pmu_axp
@@ -254,6 +307,17 @@ sensor:
     unit_of_measurement: °C
     device_class: temperature
     accuracy_decimals: 1
+  - platform: template
+    id: lora_rssi
+    name: LoRa RSSI
+    unit_of_measurement: dBm
+    device_class: signal_strength
+    accuracy_decimals: 0
+  - platform: template
+    id: lora_snr
+    name: LoRa SNR
+    unit_of_measurement: dB
+    accuracy_decimals: 1
 
 # RTC holds the time until Home Assistant connects, HA's time is written back on every sync
 time:
@@ -293,6 +357,7 @@ key_collector:
       - text_sensor.template.publish:
           id: keyboard_line
           state: !lambda return x;
+      - meshtastic.send_text: !lambda return x;
   - id: cardkb_collector
     source_id: cardkb
     end_keys: "\r\n"
@@ -327,6 +392,9 @@ text_sensor:
   - platform: template
     id: keyboard_line
     name: Keyboard Line
+  - platform: template
+    id: lora_packet
+    name: Meshtastic Message
 
 script:
   # same as mcu-lvgl
@@ -535,7 +603,42 @@ lvgl:
               text_font: font_status
               text: ""
 
-      # 3: status (shown until Home Assistant connects)
+      # 3: LoRa, last received Meshtastic packet
+      - id: lora_page
+        widgets:
+          - label:
+              align: TOP_MID
+              y: 6
+              text_font: font_title
+              text: Meshtastic LongFast
+          - label:
+              x: 16
+              y: 44
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: "RSSI\nSNR\nPackets"
+          - label:
+              id: lora_stats
+              x: 170
+              y: 44
+              text_font: font_status
+              text: "-\n-\n0"
+          - label:
+              x: 16
+              y: 120
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: "Last message:"
+          - label:
+              id: lora_last
+              x: 16
+              y: 142
+              width: 288
+              long_mode: WRAP
+              text_font: font_status
+              text: "-"
+
+      # 4: status (shown until Home Assistant connects)
       - id: status_page
         on_load:
           - script.execute: update_status
