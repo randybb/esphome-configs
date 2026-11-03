@@ -1,0 +1,396 @@
+---
+# Hardware: M5Stamp Pico + CAN transceiver on the OBD-II port
+# Pinout:
+#   GPIO33                             -> car_can (canbus esp32_can tx_pin)
+#   GPIO32                             -> car_can (canbus esp32_can rx_pin)
+# OBD-II: pin 6 CAN-H, pin 14 CAN-L, pin 5 signal ground; 5 V supply into the Stamp 5V pin
+#   (3V3 from the USB-serial programmer browns out when WiFi starts)
+substitutions:
+  device: car-can
+  name: Car CAN
+  area: DEV
+  comment: Auris CAN sniffer and OBD requests
+  # LISTENONLY to sniff first, NORMAL for the OBD requests
+  can_mode: LISTENONLY
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  on_boot:
+    # after setup, else can_tools starts its poller again
+    priority: -100
+    then:
+      - component.suspend: car
+
+esp32:
+  board: m5stamp-pico
+  framework:
+    type: esp-idf
+    advanced:
+      flash_chip: gd
+      sram1_as_iram: true
+
+packages:
+  common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+
+external_components:
+  - source: github://randybb/esphome-components
+    components: [can_tools]
+
+logger:
+  logs:
+    # a DEBUG line per frame drops most of the traffic
+    canbus: INFO
+
+globals:
+  # CAN ID -> frames seen and the last data
+  - id: frames_per_id
+    type: std::map<uint32_t, std::pair<uint32_t, std::vector<uint8_t>>>
+  - id: ecm_last_seen
+    type: uint32_t
+    initial_value: '0'
+
+canbus:
+  - platform: esp32_can
+    id: car_can
+    tx_pin: GPIO33
+    rx_pin: GPIO32
+    can_id: 0x7DF
+    use_extended_id: false
+    bit_rate: 500KBPS
+    mode: ${can_mode}
+    # ~1000 frames/s on the Auris bus
+    rx_queue_len: 64
+    max_frames_per_loop: 200
+    on_frame:
+      # every frame: count per ID, dumped by the interval below
+      - can_id: 0
+        can_id_mask: 0
+        then:
+          - lambda: |-
+              auto &seen = id(frames_per_id);
+              auto &e = seen[can_id];
+              e.first++;
+              // body frames: log every change to match it with lock/doors
+              // all but the frames whose data changes all the time
+              static const uint16_t noisy[] = {0x020, 0x024, 0x025, 0x0AA, 0x0B4, 0x1C4, 0x224, 0x260,
+                                               0x262, 0x263, 0x266, 0x2C1, 0x2C3, 0x3A0, 0x3D3, 0x4AC,
+                                               0x440, 0x442, 0x443, 0x44D, 0x640};
+              bool watch = std::find(std::begin(noisy), std::end(noisy), can_id) == std::end(noisy);
+              bool changed = e.second != x;
+              // 0x224 (brake): byte 5 counts, compare the rest
+              if (can_id == 0x224 && x.size() > 5 && e.second.size() == x.size()) {
+                watch = true;
+                auto a = x, b = e.second;
+                a[5] = b[5] = 0;
+                changed = a != b;
+              }
+              if (watch && e.first > 1 && changed) {
+                char hex[format_hex_pretty_size(8)];
+                ESP_LOGI("chg", "0x%03" PRIX32 " %s", can_id, format_hex_pretty_to(hex, x));
+              }
+              e.second = x;
+      # ECM frame, gone right after the engine stops (sniffed 2026-11-03)
+      - can_id: 0x2C1
+        then:
+          - lambda: id(ecm_last_seen) = millis();
+      # signals from opendbc toyota_2017.dbc, checked against this car where noted
+      # DOOR_LOCKS: byte 2 = unlocked doors bitmask (0x1F all, 0x10 driver, 0x08 passenger, 0x00 locked)
+      - can_id: 0x638
+        then:
+          - lambda: if (x.size() > 2) id(locked).publish_state(x[2] == 0);
+      # BODY_CONTROL_STATE: byte 5 doors open (0x20 FL checked), byte 7 0x10 parking brake, 0x40 belt unlatched
+      - can_id: 0x620
+        then:
+          - lambda: |-
+              if (x.size() < 8) return;
+              id(driver_door).publish_state(x[5] & 0x20);
+              id(passenger_door).publish_state(x[5] & 0x10);
+              id(rear_left_door).publish_state(x[5] & 0x04);
+              id(rear_right_door).publish_state(x[5] & 0x08);
+              id(parking_brake).publish_state(x[7] & 0x10);
+              id(driver_belt).publish_state(!(x[7] & 0x40));
+      # ENGINE_RPM: bytes 0-1 signed x 0.78125 (741 at idle), byte 3 0x08 engine running
+      - can_id: 0x1C4
+        then:
+          - lambda: |-
+              if (x.size() < 4) return;
+              id(engine_rpm).publish_state(int16_t(x[0] << 8 | x[1]) * 0.78125f);
+              id(engine_running).publish_state(x[3] & 0x08);
+      # SPEED: bytes 5-6 x 0.01 km/h
+      - can_id: 0x0B4
+        then:
+          - lambda: if (x.size() > 6) id(speed).publish_state((x[5] << 8 | x[6]) * 0.01f);
+      # LIGHT_STALK: byte 2 0x08 tail, byte 3 0x08 fog, 0x10 parking, 0x20 low, 0x40 high, 0x80 DRL
+      - can_id: 0x622
+        then:
+          - lambda: |-
+              if (x.size() < 4) return;
+              id(tail_light).publish_state(x[2] & 0x08);
+              id(front_fog).publish_state(x[3] & 0x08);
+              id(low_beam).publish_state(x[3] & 0x20);
+              id(high_beam).publish_state(x[3] & 0x40);
+      # BLINKERS_STATE: byte 3 bits 5-4 = 1 left, 2 right, 3 none; 0x08 hazard; bytes 6-7 trip A x 0.1 km
+      - can_id: 0x614
+        then:
+          - lambda: |-
+              if (x.size() < 8) return;
+              id(trip_a).publish_state((x[6] << 8 | x[7]) / 10.0f);
+              uint8_t t = (x[3] >> 4) & 3;
+              id(blinker_left).publish_state(t == 1);
+              id(blinker_right).publish_state(t == 2);
+              id(hazard).publish_state(x[3] & 0x08);
+      # BRAKE_MODULE (older opendbc): byte 0 0x20 = brake pressed (checked), bytes 4-5 pressure?
+      - can_id: 0x224
+        then:
+          - lambda: if (x.size() > 0) id(brake).publish_state(x[0] & 0x20);
+      # climate, sniffed: 0x380 byte 2 0x20 = A/C on
+      - can_id: 0x380
+        then:
+          - lambda: if (x.size() > 2) id(ac_on).publish_state(x[2] & 0x20);
+      # 0x381 byte 1 0x80 = fan auto, byte 2 = fan level
+      - can_id: 0x381
+        then:
+          - lambda: |-
+              if (x.size() < 3) return;
+              id(fan_auto).publish_state(x[1] & 0x80);
+              id(fan_level).publish_state(x[2]);
+      # 0x382 byte 0 = set temperature in 0.5 °C steps, 0x11 = 24 °C
+      - can_id: 0x382
+        then:
+          - lambda: if (x.size() > 0) id(climate_temp).publish_state(15.5f + x[0] / 2.0f);
+      # trip computer, sniffed: 0x615 bytes 6-7 trip B x 0.1 km
+      - can_id: 0x615
+        then:
+          - lambda: if (x.size() > 7) id(trip_b).publish_state((x[6] << 8 | x[7]) / 10.0f);
+      # 0x619 byte 4 outside temp x 0.5 °C (guess), bytes 5-6 range km
+      - can_id: 0x619
+        then:
+          - lambda: |-
+              if (x.size() < 7) return;
+              id(outside_temp).publish_state(x[4] / 2.0f);
+              id(fuel_range).publish_state(x[5] << 8 | x[6]);
+      # 0x61A byte 6 average consumption x 0.1 l/100 km
+      - can_id: 0x61A
+        then:
+          - lambda: if (x.size() > 6) id(avg_consumption).publish_state(x[6] / 10.0f);
+      # 0x61C byte 6 hours (guess), byte 7 minutes of drive time since start; FF:FE with the engine off
+      - can_id: 0x61C
+        then:
+          - lambda: if (x.size() > 7 && x[6] != 0xFF) id(drive_time).publish_state(x[6] * 60 + x[7]);
+      # 0x396 byte 0 0x02 = reverse gear (sniffed 3x), bytes 2-3 maybe parking sensors
+      - can_id: 0x396
+        then:
+          - lambda: if (x.size() > 0) id(reverse).publish_state(x[0] & 0x02);
+      # UI_SETTING: bytes 4-7 odometer
+      - can_id: 0x611
+        then:
+          - lambda: |-
+              if (x.size() < 8) return;
+              id(odometer).publish_state(uint32_t(x[4]) << 24 | x[5] << 16 | x[6] << 8 | x[7]);
+
+interval:
+  - interval: 5s
+    then:
+      - lambda: |-
+          auto &seen = id(frames_per_id);
+          auto st = id(car_can).get_status();
+          ESP_LOGI("sniff", "%u IDs in 5 s, rx_err %u, bus_err %" PRIu32 ", missed %" PRIu32, (unsigned) seen.size(),
+                   st.rx_error_counter, st.bus_error_count, st.rx_missed_count);
+          for (auto &[can_id, e] : seen) {
+            char hex[format_hex_pretty_size(8)];
+            ESP_LOGI("sniff", "  0x%03" PRIX32 " %4" PRIu32 "x  %s", can_id, e.first,
+                     format_hex_pretty_to(hex, e.second));
+          }
+          seen.clear();
+
+can_tools:
+  id: car
+  canbus_id: car_can
+  requests:
+    - id: engine_coolant
+      can_id: 0x7DF
+      data: [0x01, 0x05]
+      interval: 30s
+
+sensor:
+  - platform: template
+    id: engine_rpm
+    name: Engine RPM
+    unit_of_measurement: rpm
+    accuracy_decimals: 0
+    state_class: measurement
+    filters:
+      - throttle: 1s
+  - platform: template
+    id: speed
+    name: Speed
+    unit_of_measurement: km/h
+    accuracy_decimals: 0
+    state_class: measurement
+    filters:
+      - throttle: 1s
+  - platform: template
+    id: fan_level
+    name: Fan level
+    accuracy_decimals: 0
+    filters:
+      - delta: 1
+  - platform: template
+    id: climate_temp
+    name: Climate set temperature
+    unit_of_measurement: °C
+    device_class: temperature
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.4
+  - platform: template
+    id: trip_a
+    name: Trip A
+    unit_of_measurement: km
+    device_class: distance
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.1
+  - platform: template
+    id: trip_b
+    name: Trip B
+    unit_of_measurement: km
+    device_class: distance
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.1
+  - platform: template
+    id: outside_temp
+    name: Outside temperature
+    unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.4
+  - platform: template
+    id: fuel_range
+    name: Range
+    unit_of_measurement: km
+    device_class: distance
+    accuracy_decimals: 0
+    filters:
+      - delta: 1
+  - platform: template
+    id: avg_consumption
+    name: Average consumption
+    unit_of_measurement: l/100km
+    state_class: measurement
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.05
+  - platform: template
+    id: drive_time
+    name: Drive time
+    unit_of_measurement: min
+    device_class: duration
+    accuracy_decimals: 0
+    filters:
+      - delta: 1
+  - platform: template
+    id: odometer
+    name: Odometer
+    unit_of_measurement: km
+    accuracy_decimals: 0
+    device_class: distance
+    state_class: total_increasing
+    filters:
+      - delta: 1
+  - platform: can_tools
+    request_id: engine_coolant
+    name: Coolant
+    unit_of_measurement: °C
+    device_class: temperature
+    lambda: return data[2] - 40.0f;
+
+binary_sensor:
+  - platform: template
+    id: locked
+    name: Locked
+    device_class: lock
+    # HA lock class: on = unlocked
+    filters:
+      - invert:
+  - platform: template
+    id: driver_door
+    name: Driver door
+    device_class: door
+  - platform: template
+    id: passenger_door
+    name: Passenger door
+    device_class: door
+  - platform: template
+    id: rear_left_door
+    name: Rear left door
+    device_class: door
+  - platform: template
+    id: rear_right_door
+    name: Rear right door
+    device_class: door
+  - platform: template
+    id: parking_brake
+    name: Parking brake
+  - platform: template
+    id: driver_belt
+    name: Driver seatbelt
+  - platform: template
+    id: tail_light
+    name: Tail lights
+  - platform: template
+    id: front_fog
+    name: Front fog lights
+  - platform: template
+    id: low_beam
+    name: Low beam
+  - platform: template
+    id: high_beam
+    name: High beam
+  - platform: template
+    id: blinker_left
+    name: Blinker left
+  - platform: template
+    id: blinker_right
+    name: Blinker right
+  - platform: template
+    id: hazard
+    name: Hazard lights
+  - platform: template
+    id: brake
+    name: Brake pressed
+  - platform: template
+    id: ac_on
+    name: AC
+  - platform: template
+    id: fan_auto
+    name: Fan auto
+  - platform: template
+    id: reverse
+    name: Reverse
+  - platform: template
+    id: engine_running
+    name: Engine running
+    device_class: running
+  - platform: template
+    id: ignition
+    name: Ignition
+    lambda: return id(ecm_last_seen) != 0 && millis() - id(ecm_last_seen) < 2000;
+
+switch:
+  # OBD requests on demand while testing (needs can_mode: NORMAL); later driven by ignition
+  - platform: template
+    name: OBD requests
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - component.resume: car
+    turn_off_action:
+      - component.suspend: car
