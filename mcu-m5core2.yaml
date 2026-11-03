@@ -1,0 +1,555 @@
+# Hardware: M5Stack Core2 (AXP192) on the Faces Bottom II (600 mAh battery) with the QWERTY keyboard face
+# Pinout:
+#   GPIO2   M-Bus (Core G15 position)  -> faces_leds (light esp32_rmt_led_strip), Faces base SK6812 x10;
+#                                         also the Core2 speaker DOUT (NS4168), so no speaker while the LEDs are used
+#   GPIO5                              -> display_tft (display mipi_spi cs_pin)
+#   GPIO15                             -> display_tft (display mipi_spi dc_pin)
+#   GPIO18                             -> spi_bus (spi clk_pin)
+#   GPIO21                             -> i2c_main (i2c sda), M-Bus SDA
+#   GPIO22                             -> i2c_main (i2c scl), M-Bus SCL
+#   GPIO23                             -> spi_bus (spi mosi_pin)
+#   GPIO38                             -> spi_bus (spi miso_pin)
+#   GPIO39                             -> touch_lcd (touchscreen ft63x6 interrupt_pin)
+#   AXP192 GPIO4                       -> LCD reset (on_boot)
+# Grove (free):
+#   Port A red   (Core2)  I2C   GPIO32 SDA, GPIO33 SCL
+#   Port B black (base)   GPIO  GPIO26 out/DAC, GPIO36 in/ADC (input only)
+#   Port C blue  (base)   UART  GPIO13 RX, GPIO14 TX -> i2c_port_c (i2c scl GPIO13, sda GPIO14)
+# Touch buttons (below the LCD, raw y 240-280): A prev page, B keyboard page, C next page
+# I2C:
+#   0x08  keyboard (m5stack_keyboard), Faces QWERTY
+#   0x34  pmu_axp (axp192)
+#   0x38  touch_lcd (touchscreen ft63x6)
+#   0x51  rtc_time (time bm8563)
+# MPU6886 IMU (0x68) is cut off while the Faces base is attached
+# I2C Port C:
+#   0x3C  oled (display ssd1306_i2c), Unit OLED SH1107
+#   0x3E  unit_lcd (display m5stack_st7789v2), Unit LCD, firmware 0.3
+#   0x5F  cardkb (m5stack_keyboard), CardKB
+substitutions:
+  device: m5core2
+  name: M5Core2
+  area: DEV
+  comment: Core2 + Faces keyboard
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  on_boot:
+    # After the I2C bus, before the display: LCD power (LDO2), backlight (DC3), M-Bus 5V boost (EXTEN)
+    # for the Faces base, then the LCD reset pulse on AXP GPIO4 (open drain), as M5Core2's AXP192::begin
+    - priority: 900
+      then:
+        - lambda: |-
+            auto *axp = id(pmu_axp);
+            axp->writeRegister(0x28, (axp->readRegister(0x28) & 0x0F) | 0xF0);  // LDO2 3.3 V
+            axp->writeRegister(0x12, axp->readRegister(0x12) | 0x46);            // EXTEN, LDO2, DC3
+            axp->writeRegister(0x95, (axp->readRegister(0x95) & 0x72) | 0x84);  // GPIO4 output
+            axp->writeRegister(0x96, axp->readRegister(0x96) & ~0x02);
+            delay(100);
+            axp->writeRegister(0x96, axp->readRegister(0x96) | 0x02);
+            delay(100);
+    - priority: -100
+      then:
+        # the m5stack component sets these in the AXP2101 layout: 4.1 V, 360 mA, end at 10 %
+        - lambda: id(pmu_axp)->writeRegister(0x33, 0x83);
+        - bm8563.read_time:
+        - lvgl.page.show: status_page
+
+esp32:
+  variant: esp32
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+packages:
+  common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
+  status_led: !include
+    file: common/status_led.yaml
+    vars:
+      light_id: faces_leds
+
+external_components:
+  - source: github://m5stack/esphome-yaml
+    components: [axp192]
+    refresh: 1h
+  - source: github://randybb/esphome-components
+    components: [m5stack_keyboard, m5stack_st7789v2]
+    refresh: 0s
+
+api:
+  # status page until Home Assistant connects (log viewers don't subscribe to states)
+  on_client_connected:
+    - delay: 2s
+    - if:
+        condition:
+          api.connected:
+            state_subscription_only: true
+        then:
+          - lvgl.page.show: main_page
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+              state_subscription_only: true
+        then:
+          - lvgl.page.show: status_page
+
+i2c:
+  - id: i2c_main
+    sda: 21
+    scl: 22
+    scan: true
+  # Port C (blue) used as a second I2C bus, Grove yellow = SCL, white = SDA
+  - id: i2c_port_c
+    sda: 14
+    scl: 13
+    frequency: 400kHz
+    scan: true
+
+spi:
+  id: spi_bus
+  clk_pin: 18
+  mosi_pin: 23
+  miso_pin: 38
+
+axp192:
+  id: pmu_axp
+  i2c_id: i2c_main
+
+m5stack_keyboard:
+  - id: keyboard
+    i2c_id: i2c_main
+  - id: cardkb
+    i2c_id: i2c_port_c
+    address: 0x5F
+
+display:
+  - platform: mipi_spi
+    id: display_tft
+    model: M5CORE2
+    spi_id: spi_bus
+    auto_clear_enabled: false
+    update_interval: never
+  - platform: ssd1306_i2c
+    id: oled
+    i2c_id: i2c_port_c
+    model: "SH1107 128x64"
+    address: 0x3C
+    rotation: 90
+    offset_x: 32  # the 64 visible columns sit in the middle of the SH1107 RAM
+    update_interval: 1s
+    lambda: |-
+      auto now = id(ha_time).now();
+      it.strftime(it.get_width() / 2, 0, id(font_title), TextAlign::TOP_CENTER, "%H:%M:%S", now);
+      it.printf(0, it.get_height(), id(font_status), TextAlign::BOTTOM_LEFT, "%.2f V %.0f%%", id(battery_voltage).state,
+                id(battery_level).state);
+  - platform: m5stack_st7789v2
+    id: unit_lcd
+    i2c_id: i2c_port_c
+    rotation: 90
+    brightness: 60%
+    update_interval: 2s
+    lambda: |-
+      it.fill(Color(0x10, 0x18, 0x30));
+      it.print(4, 4, id(font_title), Color(0xFF, 0xB3, 0x00), "${name}");
+      it.strftime(236, 4, id(font_title), Color::WHITE, TextAlign::TOP_RIGHT, "%H:%M", id(ha_time).now());
+      it.print(4, 44, id(font_status), Color(0x8C, 0x8C, 0x8C), "Last line:");
+      it.print(4, 64, id(font_status), Color::WHITE, id(keyboard_line).state.c_str());
+      it.printf(4, 131, id(font_status), id(battery_charging).state ? Color(0x4D, 0xD9, 0x66) : Color::WHITE,
+                TextAlign::BOTTOM_LEFT, "Battery %.2f V  %.0f %%%s", id(battery_voltage).state,
+                id(battery_level).state, id(battery_charging).state ? "  charging" : "");
+
+touchscreen:
+  - platform: ft63x6
+    id: touch_lcd
+    display: display_tft
+    i2c_id: i2c_main
+    interrupt_pin: 39
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: faces_leds
+    name: LED Strip
+    pin: GPIO2
+    num_leds: 10
+    chipset: SK6812
+    channel_colors: GRB
+    restore_mode: ALWAYS_OFF
+    effects:
+      - addressable_rainbow:
+      - addressable_scan:
+
+binary_sensor:
+  - platform: template
+    id: battery_charging
+    name: Battery Charging
+    device_class: battery_charging
+  # the three touch buttons lie below the 240 px of the LCD, only in raw coordinates
+  - platform: touchscreen
+    id: button_a
+    use_raw: true
+    x_min: 0
+    x_max: 106
+    y_min: 240
+    y_max: 300
+    on_press:
+      - lvgl.page.previous:
+  - platform: touchscreen
+    id: button_b
+    use_raw: true
+    x_min: 107
+    x_max: 213
+    y_min: 240
+    y_max: 300
+    on_press:
+      - lvgl.page.show: main_page
+  - platform: touchscreen
+    id: button_c
+    use_raw: true
+    x_min: 214
+    x_max: 320
+    y_min: 240
+    y_max: 300
+    on_press:
+      - lvgl.page.next:
+
+# AXP192 ADCs read directly, the m5stack component decodes them as an AXP2101
+sensor:
+  - platform: template
+    id: battery_voltage
+    name: Battery Voltage
+    unit_of_measurement: V
+    device_class: voltage
+    accuracy_decimals: 2
+  - platform: template
+    id: battery_level
+    name: Battery Level
+    unit_of_measurement: "%"
+    device_class: battery
+    accuracy_decimals: 0
+  - platform: template
+    id: battery_current
+    name: Battery Current  # + charging, - discharging
+    unit_of_measurement: mA
+    device_class: current
+    accuracy_decimals: 0
+  - platform: template
+    id: vbus_voltage
+    internal: true
+  - platform: template
+    id: vbus_current
+    internal: true
+  - platform: template
+    id: acin_voltage
+    internal: true
+  - platform: template
+    id: acin_current
+    internal: true
+  - platform: template
+    id: aps_voltage
+    internal: true
+  - platform: template
+    id: pmu_temperature
+    name: PMU Temperature
+    unit_of_measurement: °C
+    device_class: temperature
+    accuracy_decimals: 1
+
+# RTC holds the time until Home Assistant connects, HA's time is written back on every sync
+time:
+  - platform: bm8563
+    id: rtc_time
+    i2c_id: i2c_main
+    update_interval: never
+  - id: !extend ha_time
+    on_time_sync:
+      - bm8563.write_time:
+
+# Typed line in the text area, Enter (CR LF) sends it, Backspace deletes
+key_collector:
+  - id: line_collector
+    source_id: keyboard
+    end_keys: "\r\n"
+    back_keys: "\b"
+    min_length: 1  # the LF after CR is an empty line
+    max_length: 64
+    on_progress: &line_progress
+      - lvgl.textarea.update:
+          id: input_text
+          text: !lambda return x;
+    on_result: &line_result
+      - logger.log:
+          format: "Line: %s"
+          args: [x.c_str()]
+      - lvgl.label.update:
+          id: last_line
+          text: !lambda return x;
+      - lvgl.textarea.update:
+          id: input_text
+          text: ""
+      - text_sensor.template.publish:
+          id: keyboard_line
+          state: !lambda return x;
+  - id: cardkb_collector
+    source_id: cardkb
+    end_keys: "\r\n"
+    back_keys: "\b"
+    min_length: 1
+    max_length: 64
+    on_progress: *line_progress
+    on_result: *line_result
+
+text_sensor:
+  - platform: template
+    id: keyboard_line
+    name: Keyboard Line
+
+script:
+  # same as mcu-lvgl
+  - id: update_status
+    then:
+      - lambda: |-
+          // same colors as the other status screens: ok green, waiting orange, details gray
+          static const uint32_t OK = 0x4DD966, WAIT = 0xFFB300;
+          auto set = [](lv_obj_t *label, const std::string &text, uint32_t color) {
+            lv_label_set_text(label, text.c_str());
+            lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
+          };
+
+          const bool wifi_ok = wifi::global_wifi_component->is_connected();
+          set(id(status_wifi),
+              wifi_ok ? str_sprintf("WiFi: connected  (%d dBm)", wifi::global_wifi_component->wifi_rssi())
+                      : std::string("WiFi: connecting..."),
+              wifi_ok ? OK : WAIT);
+
+          // IPv6 first (skip link-local), then IPv4
+          std::string ips;
+          if (wifi_ok) {
+            char buf[network::IP_ADDRESS_BUFFER_SIZE];
+            for (bool v6 : {true, false}) {
+              for (auto &ip : wifi::global_wifi_component->get_ip_addresses()) {
+                if (!ip.is_set() || ip.is_ip6() != v6)
+                  continue;
+                ip.str_to(buf);
+                if (v6 && strncmp(buf, "fe80", 4) == 0)
+                  continue;
+                if (!ips.empty())
+                  ips += "\n";
+                ips += buf;
+              }
+            }
+          }
+          lv_label_set_text(id(status_ips), ips.c_str());
+          if (ips.empty())
+            lv_obj_add_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+          else
+            lv_obj_remove_flag(id(status_ips), LV_OBJ_FLAG_HIDDEN);
+
+          const bool api_ok = api::global_api_server->is_connected();
+          set(id(status_ha), api_ok ? "Home Assistant: connected" : "Home Assistant: waiting...",
+              api_ok ? OK : WAIT);
+
+          const uint32_t up = millis() / 1000;
+          lv_label_set_text(id(status_footer),
+                            str_sprintf("ESPHome %s  ·  up %ud %02u:%02u:%02u", ESPHOME_VERSION, up / 86400,
+                                        (up / 3600) % 24, (up / 60) % 60, up % 60).c_str());
+  - id: update_axp
+    then:
+      - lvgl.label.update:
+          id: axp_values
+          text: !lambda |-
+            return str_sprintf("%.2f V  %.0f %%\n%+.0f mA%s\n%.2f V  %.0f mA\n%.2f V  %.0f mA\n%.2f V\n%.1f °C",
+                               id(battery_voltage).state, id(battery_level).state, id(battery_current).state,
+                               id(battery_charging).state ? "  charging" : "",
+                               id(vbus_voltage).state, id(vbus_current).state,
+                               id(acin_voltage).state, id(acin_current).state,
+                               id(aps_voltage).state, id(pmu_temperature).state);
+
+interval:
+  - interval: 5s
+    then:
+      - lambda: |-
+          auto *a = id(pmu_axp);
+          auto r = [a](uint8_t reg) { return a->readRegister(reg) & 0xFF; };
+          auto adc12 = [&](uint8_t h) { return (r(h) << 4) | (r(h + 1) & 0x0F); };
+          auto adc13 = [&](uint8_t h) { return (r(h) << 5) | (r(h + 1) & 0x1F); };
+          const float bat = adc12(0x78) * 1.1f / 1000;
+          id(battery_voltage).publish_state(bat);
+          // ponytail: linear 3.3-4.1 V, a discharge curve if the percentage matters
+          id(battery_level).publish_state(clamp((bat - 3.3f) / 0.8f * 100, 0.0f, 100.0f));
+          id(battery_current).publish_state(adc13(0x7A) * 0.5f - adc13(0x7C) * 0.5f);
+          id(vbus_voltage).publish_state(adc12(0x5A) * 1.7f / 1000);
+          id(vbus_current).publish_state(adc12(0x5C) * 0.375f);
+          id(acin_voltage).publish_state(adc12(0x56) * 1.7f / 1000);
+          id(acin_current).publish_state(adc12(0x58) * 0.625f);
+          id(aps_voltage).publish_state(adc12(0x7E) * 1.4f / 1000);
+          id(pmu_temperature).publish_state(adc12(0x5E) * 0.1f - 144.7f);
+          id(battery_charging).publish_state(r(0x01) & 0x40);
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lvgl.page.is_showing: status_page
+          then:
+            - script.execute: update_status
+      - if:
+          condition:
+            lvgl.page.is_showing: axp_page
+          then:
+            - script.execute: update_axp
+
+image:
+  - platform: file
+    file: assets/images/made-for-esphome-white-on-black.svg
+    id: esphome_logo
+    resize: 280x83
+    type: RGB565
+    transparency: alpha_channel
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_title
+    size: 24
+  - file: "gfonts://Roboto"
+    id: font_status
+    size: 16
+    glyphs: "·°"
+    glyphsets: [GF_Latin_Kernel]
+
+lvgl:
+  displays: display_tft
+  touchscreens: touch_lcd
+  buffer_size: 25%
+  log_level: WARN
+  bg_color: 0x000000
+  text_color: 0xFFFFFF
+  pages:
+    # 1: keyboard demo
+    - id: main_page
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 6
+            text_font: font_title
+            text: ${name}
+        - textarea:
+            id: input_text
+            align: TOP_MID
+            y: 40
+            width: 300
+            height: 70
+            text_font: font_status
+            placeholder_text: Type on the keyboard...
+        - label:
+            align: TOP_LEFT
+            x: 10
+            y: 122
+            text_font: font_status
+            text: "Last line:"
+        - label:
+            id: last_line
+            align: TOP_LEFT
+            x: 90
+            y: 122
+            width: 220
+            long_mode: DOT
+            text_font: font_status
+            text: "-"
+        - slider:
+            id: demo_slider
+            align: BOTTOM_LEFT
+            x: 20
+            y: -40
+            width: 170
+            on_value:
+              - lvgl.arc.update:
+                  id: demo_arc
+                  value: !lambda return x;
+        - arc:
+            id: demo_arc
+            align: BOTTOM_RIGHT
+            x: -15
+            y: -15
+            width: 100
+            height: 100
+            adjustable: false
+
+    # 2: AXP192 diagnostics
+    - id: axp_page
+      on_load:
+        - script.execute: update_axp
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 6
+            text_font: font_title
+            text: AXP192
+        - label:
+            x: 16
+            y: 44
+            text_font: font_status
+            text_color: 0x8C8C8C
+            text: "Battery\nCurrent\nUSB (VBUS)\nM-Bus 5V (ACIN)\nAPS\nTemperature"
+        - label:
+            id: axp_values
+            x: 170
+            y: 44
+            text_font: font_status
+            text: ""
+
+    # 3: status (shown until Home Assistant connects)
+    - id: status_page
+      on_load:
+        - script.execute: update_status
+      widgets:
+        - image:
+            src: esphome_logo
+            align: TOP_MID
+            y: 8
+        - label:
+            align: TOP_MID
+            y: 96
+            text_font: font_title
+            text: "${name}"
+        - obj:
+            x: 16
+            y: 132
+            width: 288
+            height: SIZE_CONTENT
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            layout:
+              type: flex
+              flex_flow: column
+              pad_row: 4
+            widgets:
+              - label:
+                  id: status_wifi
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_ips
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  pad_left: 20
+                  text: ""
+              - label:
+                  id: status_ha
+                  text_font: font_status
+                  text: ""
+              - label:
+                  id: status_footer
+                  text_font: font_status
+                  text_color: 0x8C8C8C
+                  text: ""
