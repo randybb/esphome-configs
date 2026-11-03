@@ -168,6 +168,22 @@ meshtastic:
     - lvgl.label.update:
         id: lora_last
         text: !lambda 'return from_name + ": " + text;'
+  # Example, off: randy_home's Meshtastic integration already gives HA every node. Without such
+  # a node this sends each node update to HA, an automation with device_tracker.see maps them.
+  # on_node:
+  #   - homeassistant.event:
+  #       event: esphome.meshtastic_node
+  #       data:
+  #         node: !lambda return node.id();
+  #         long_name: !lambda return node.long_name;
+  #         hops: !lambda 'return node.hops < 0 ? std::string() : to_string(node.hops);'
+  #         rssi: !lambda return meshtastic::num(node.rssi, 0);
+  #         latitude: !lambda return meshtastic::num(node.latitude, 7);
+  #         longitude: !lambda return meshtastic::num(node.longitude, 7);
+  #         altitude: !lambda return meshtastic::num(node.altitude, 0);
+  #         battery_level: !lambda return meshtastic::num(node.battery_level, 0);
+  #         voltage: !lambda return meshtastic::num(node.voltage, 2);
+  #         temperature: !lambda return meshtastic::num(node.temperature, 1);
 
 globals:
   - id: lora_count
