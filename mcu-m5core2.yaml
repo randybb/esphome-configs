@@ -302,6 +302,27 @@ key_collector:
     on_progress: *line_progress
     on_result: *line_result
 
+switch:
+  - platform: template
+    name: Unit LCD Invert
+    icon: mdi:invert-colors
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    on_turn_on:
+      - lambda: id(unit_lcd).set_invert(true);
+    on_turn_off:
+      - lambda: id(unit_lcd).set_invert(false);
+  - platform: template
+    name: Unit LCD Sleep
+    icon: mdi:sleep
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - lambda: id(unit_lcd).set_sleep(true);
+    on_turn_off:
+      - lambda: id(unit_lcd).set_sleep(false);
+
 text_sensor:
   - platform: template
     id: keyboard_line
