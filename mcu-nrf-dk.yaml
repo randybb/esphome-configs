@@ -13,7 +13,7 @@
 #   P0.25   Button 4 (active low)      -> Button 4 (binary_sensor gpio)
 #   P1.01   UART1 RX                   <- mcu-nrf-ant UART1 TX (P1.02), packet_transport; plus GND
 #   P1.02   UART1 TX                   -> mcu-nrf-ant UART1 RX (P1.01), packet_transport
-# ANT+ values (Garmin HRM-Pro, Concept2 PM5, Garmin Tempe, Garmin Varia RTL515) come from mcu-nrf-ant
+# ANT+ values (Garmin HRM-Pro, Concept2 PM5, Garmin Tempe, Garmin Varia RTL515, Tacx Neo 2, ...) come from mcu-nrf-ant
 esphome:
   name: mcu-nrf-dk
   friendly_name: nRF DK
@@ -49,9 +49,21 @@ uart:
   tx_pin: P1.02
   baud_rate: 115200
 
-packet_transport:
+# retransmits lost frames; the session's keep-alives show whether mcu-nrf-ant is reachable
+packet_interface:
   - platform: uart
+    id: ant_link_packets
     uart_id: ant_link
+    reliability:
+    session:
+      binary_sensor:
+        name: ANT Link
+        device_class: connectivity
+        entity_category: diagnostic
+
+packet_transport:
+  - platform: packet_interface
+    packet_interface: ant_link_packets
     providers:
       - name: mcu-nrf-ant
 
@@ -204,6 +216,24 @@ sensor:
     device_class: voltage
     accuracy_decimals: 2
     entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: neo_power
+    name: Tacx Neo 2 Power
+    internal: false
+    unit_of_measurement: W
+    device_class: power
+    filters:
+      - throttle: 1s
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: neo_cadence
+    name: Tacx Neo 2 Cadence
+    internal: false
+    unit_of_measurement: rpm
+    icon: mdi:rotate-right
+    filters:
+      - throttle: 1s
 
 output:
   - platform: gpio
@@ -280,6 +310,12 @@ binary_sensor:
     internal: false
     device_class: battery
     entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: neo_in_use
+    name: Tacx Neo 2 In Use
+    internal: false
+    device_class: running
   - platform: gpio
     name: Button 1
     pin: {number: P0.11, inverted: true, mode: {input: true, pullup: true}}

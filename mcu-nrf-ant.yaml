@@ -20,6 +20,7 @@
 #   886796   Garmin Rally RS200      power + cadence
 #   343922   Garmin Speed Sensor 2   speed
 #   42898    SRAM Force AXS          shifting (Cube Litening C:68X), battery only
+#   13888    Tacx Neo 2              fitness equipment (FE-C), basement trainer
 esphome:
   name: mcu-nrf-ant
   friendly_name: nRF ANT+
@@ -141,6 +142,17 @@ ant_plus:
       battery_low:
         id: speed2_battery_low
         name: Garmin Speed Sensor 2 Battery Low
+    - type: fitness_equipment  # Tacx Neo 2
+      device_number: 13888
+      power:
+        id: neo_power
+        name: Tacx Neo 2 Power
+      cadence:
+        id: neo_cadence
+        name: Tacx Neo 2 Cadence
+      in_use:
+        id: neo_in_use
+        name: Tacx Neo 2 In Use
     - type: shifting  # SRAM Force AXS (Cube Litening C:68X)
       device_number: 42898
       battery_low:
@@ -155,9 +167,17 @@ uart:
   rx_pin: P1.01
   baud_rate: 115200
 
-packet_transport:
+# same layers as mcu-nrf-dk, both ends must match
+packet_interface:
   - platform: uart
+    id: link_packets
     uart_id: link
+    reliability:
+    session:
+
+packet_transport:
+  - platform: packet_interface
+    packet_interface: link_packets
     update_interval: 1s
     sensors:
       - hrm_pro_heart_rate
@@ -177,6 +197,8 @@ packet_transport:
       - rally_cadence
       - speed2_speed
       - speed2_battery
+      - neo_power
+      - neo_cadence
     binary_sensors:
       - ant_connected
       - ant_unknown_device
@@ -186,3 +208,4 @@ packet_transport:
       - rally_battery_low
       - speed2_battery_low
       - sram_battery_low
+      - neo_in_use
