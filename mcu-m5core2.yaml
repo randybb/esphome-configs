@@ -61,6 +61,12 @@ esphome:
       then:
         # the m5stack component sets these in the AXP2101 layout: 4.1 V, 360 mA, end at 10 %
         - lambda: id(pmu_axp)->writeRegister(0x33, 0x83);
+        # The SH1107 once stuck showing noise (even after a power cycle) with ESPHome's init alone;
+        # M5GFX's settings that ESPHome lacks or sets otherwise brought it back, kept as insurance:
+        # end read-modify-write, POR clock, SH1107 precharge, VCOMH, DC-DC, RAM content, on
+        - lambda: |-
+            for (uint8_t c : {0xEE, 0xD5, 0x50, 0xD9, 0x20, 0xDB, 0x35, 0xAD, 0x8B, 0xA4, 0xAF})
+              id(oled).write_byte(0x00, c);
         - bm8563.read_time:
         - lvgl.page.show: {id: status_page, lvgl_id: lvgl_main}
 
