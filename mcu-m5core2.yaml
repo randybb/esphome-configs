@@ -29,7 +29,8 @@
 # I2C Port C:
 #   0x3C  oled (display ssd1306_i2c), Unit OLED SH1107
 #   0x3E  unit_lcd (display m5stack_st7789v2), Unit LCD, firmware 0.3
-#   0x5F  cardkb (m5stack_keyboard), CardKB
+#   0x33  thermal (mlx90640), MLX90640 32x24 thermal camera
+#   0x5F  cardkb (m5stack_keyboard), CardKB (unplugged for now, its warning at boot is expected)
 substitutions:
   device: m5core2
   name: M5Core2
@@ -48,6 +49,7 @@ esphome:
       then:
         - lambda: |-
             auto *axp = id(pmu_axp);
+            axp->writeRegister(0x27, (3300 - 700) / 25);                         // DC3 (LCD backlight) 3.3 V
             axp->writeRegister(0x28, (axp->readRegister(0x28) & 0x0F) | 0xF0);  // LDO2 3.3 V
             axp->writeRegister(0x12, axp->readRegister(0x12) | 0x46);            // EXTEN, LDO2, DC3
             axp->writeRegister(0x95, (axp->readRegister(0x95) & 0x72) | 0x84);  // GPIO4 output
@@ -91,6 +93,33 @@ external_components:
   - source: github://randybb/esphome-components
     components: [m5stack_keyboard, m5stack_st7789v2, meshtastic]
     refresh: 0s
+  # MLX90640, camera entity in HA (its heatmap page at /thermal needs web_server_base only)
+  - source: github://randybb/esphome-mlx-90640@optional-web-server
+    components: [mlx90640]
+
+# MLX90640 on Port C; settings changed at runtime are saved on the device
+mlx90640:
+  id: thermal
+  i2c_id: i2c_port_c
+  refresh_rate: 4Hz
+  update_interval: 10s
+  min_temperature:
+    name: Thermal Min
+  max_temperature:
+    name: Thermal Max
+  mean_temperature:
+    name: Thermal Mean
+  center_temperature:
+    name: Thermal Center
+  ambient_temperature:
+    name: Thermal Sensor Die
+  frame_rate:
+    name: Thermal Frame Rate
+  i2c_errors:
+    name: Thermal I2C Errors
+  camera:
+    name: Thermal Camera
+    resolution: 320x240
 
 api:
   # status page until Home Assistant connects (log viewers don't subscribe to states)
@@ -383,7 +412,28 @@ key_collector:
     on_progress: *line_progress
     on_result: *line_result
 
+select:
+  - platform: mlx90640
+    refresh_rate:
+      name: Thermal Refresh Rate
+    palette:
+      name: Thermal Palette
+
+number:
+  - platform: mlx90640
+    emissivity:
+      name: Thermal Emissivity
+    range_min:
+      name: Thermal Range Min
+    range_max:
+      name: Thermal Range Max
+
 switch:
+  - platform: mlx90640
+    auto_range:
+      name: Thermal Auto Range
+    mirror:
+      name: Thermal Mirror
   - platform: template
     name: Unit LCD Invert
     icon: mdi:invert-colors
@@ -493,6 +543,77 @@ interval:
           id(aps_voltage).publish_state(adc12(0x7E) * 1.4f / 1000);
           id(pmu_temperature).publish_state(adc12(0x5E) * 0.1f - 144.7f);
           id(battery_charging).publish_state(r(0x01) & 0x40);
+  # thermal page: the newest MLX90640 frame, 32x24 upscaled bilinear x8 with the iron palette
+  - interval: 125ms
+    then:
+      - if:
+          condition:
+            lvgl.page.is_showing: thermal_page
+          then:
+            - lambda: |-
+                static float px[32 * 24];
+                static uint32_t shown = 0;
+                static uint16_t palette[256];
+                static bool palette_ready = false;
+                if (!id(thermal).has_frame() || id(thermal).get_frame_count() == shown)
+                  return;
+                shown = id(thermal).get_frame_count();
+                id(thermal).copy_display_frame(px);
+                if (!palette_ready) {
+                  // iron: black, navy, magenta, orange, yellow, white
+                  const float stop[][4] = {{0, 0, 0, 0}, {0.2f, 32, 0, 140}, {0.45f, 204, 0, 119},
+                                           {0.7f, 255, 140, 0}, {0.85f, 255, 215, 0}, {1, 255, 255, 255}};
+                  for (int i = 0; i < 256; i++) {
+                    const float t = i / 255.0f;
+                    int k = 0;
+                    while (k < 4 && t > stop[k + 1][0])
+                      k++;
+                    const float f = (t - stop[k][0]) / (stop[k + 1][0] - stop[k][0]);
+                    auto mix = [&](int c) { return uint8_t(stop[k][c] + f * (stop[k + 1][c] - stop[k][c])); };
+                    palette[i] = lv_color_to_u16(lv_color_make(mix(1), mix(2), mix(3)));
+                  }
+                  palette_ready = true;
+                }
+                float lo = px[0], hi = px[0];
+                for (float v : px) {
+                  lo = std::min(lo, v);
+                  hi = std::max(hi, v);
+                }
+                const float center = (px[11 * 32 + 15] + px[11 * 32 + 16] + px[12 * 32 + 15] + px[12 * 32 + 16]) / 4;
+                float a = lo, b = hi;
+                if (b - a < 2) {  // flat scenes would show noise
+                  a = (lo + hi) / 2 - 1;
+                  b = a + 2;
+                }
+                const float k = 255 / (b - a);
+                lv_obj_t *canvas = id(thermal_canvas);
+                lv_draw_buf_t *buf = lv_canvas_get_draw_buf(canvas);
+                for (int y = 0; y < 192; y++) {
+                  const float sy = std::clamp((y + 0.5f) / 8 - 0.5f, 0.0f, 23.0f);
+                  const int y0 = int(sy), y1 = std::min(y0 + 1, 23);
+                  const float fy = sy - y0;
+                  auto *row = reinterpret_cast<uint16_t *>(buf->data + y * buf->header.stride);
+                  for (int x = 0; x < 256; x++) {
+                    const float sx = std::clamp((x + 0.5f) / 8 - 0.5f, 0.0f, 31.0f);
+                    const int x0 = int(sx), x1 = std::min(x0 + 1, 31);
+                    const float fx = sx - x0;
+                    const float top = px[y0 * 32 + x0] + fx * (px[y0 * 32 + x1] - px[y0 * 32 + x0]);
+                    const float bottom = px[y1 * 32 + x0] + fx * (px[y1 * 32 + x1] - px[y1 * 32 + x0]);
+                    row[x] = palette[std::clamp(int((top + fy * (bottom - top) - a) * k), 0, 255)];
+                  }
+                }
+                // crosshair on the center spot
+                const uint16_t white = lv_color_to_u16(lv_color_white());
+                for (int d = -6; d <= 6; d++) {
+                  if (d > -2 && d < 2)
+                    continue;
+                  reinterpret_cast<uint16_t *>(buf->data + 96 * buf->header.stride)[128 + d] = white;
+                  reinterpret_cast<uint16_t *>(buf->data + (96 + d) * buf->header.stride)[128] = white;
+                }
+                lv_obj_invalidate(canvas);
+                lv_label_set_text(id(thermal_max), str_sprintf("%.1f°", hi).c_str());
+                lv_label_set_text(id(thermal_center), str_sprintf("%.1f°", center).c_str());
+                lv_label_set_text(id(thermal_min), str_sprintf("%.1f°", lo).c_str());
   - interval: 1s
     then:
       - lvgl.label.update:
@@ -654,7 +775,61 @@ lvgl:
               text_font: font_status
               text: "-"
 
-      # 4: status (shown until Home Assistant connects)
+      # 4: MLX90640 thermal image, drawn by the 125 ms interval
+      - id: thermal_page
+        widgets:
+          - canvas:
+              id: thermal_canvas
+              x: 0
+              y: 24
+              width: 256
+              height: 192
+          - label:
+              x: 262
+              y: 24
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: Max
+          - label:
+              id: thermal_max
+              x: 262
+              y: 44
+              text_font: font_status
+              text_color: 0xFF6040
+              text: "-"
+          - label:
+              x: 262
+              y: 98
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: "Center"
+          - label:
+              id: thermal_center
+              x: 262
+              y: 118
+              text_font: font_status
+              text: "-"
+          - label:
+              x: 262
+              y: 172
+              text_font: font_status
+              text_color: 0x8C8C8C
+              text: Min
+          - label:
+              id: thermal_min
+              x: 262
+              y: 192
+              text_font: font_status
+              text_color: 0x40A0FF
+              text: "-"
+          - label:
+              align: TOP_MID
+              x: -32
+              y: 2
+              text_font: font_status
+              text: MLX90640
+
+      # 5: status (shown until Home Assistant connects)
       - id: status_page
         on_load:
           - script.execute: update_status
