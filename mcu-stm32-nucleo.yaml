@@ -4,6 +4,7 @@
 #   PA2/PA3  USART2 TX/RX              -> ST-LINK virtual COM port (logger)
 #   PA5      LD2 green (active high)   -> LED (light binary)
 #   PC13     B1 user (active low)      -> Button (binary_sensor gpio)
+# ST-LINK SN: 066BFF554954777167032417 (on-board V2-1, upload --device /dev/ttyACM0 resolves it from the VCP)
 esphome:
   name: mcu-stm32-nucleo
   friendly_name: STM32 Nucleo
@@ -66,5 +67,8 @@ binary_sensor:
     pin:
       number: PC13
       inverted: true
+    # B1 bounces, toggle fired twice per press
+    filters:
+      - delayed_on_off: 30ms
     on_press:
       light.toggle: led

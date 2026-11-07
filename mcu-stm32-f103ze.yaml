@@ -1,0 +1,75 @@
+---
+# Hardware: CZ miniSTM32F103ZE-EK (STM32F103ZET6, 512K flash, no radio), external ST-LINK/V2 on SWD
+# Pinout:
+#   PA9/PA10  USART1 TX/RX -> PL-2303 on mini-USB CN3 (logger)
+#   PE2       DS2 (active low)         -> LED (light binary)
+#   PB10      K1 (active low)          -> Button (binary_sensor gpio)
+# ST-LINK SN: 48FF6B064967515318282087 (esphome-zephyr upload can't pick a probe without VCP)
+#   flash: STM32_Programmer_CLI -c port=SWD sn=48FF6B064967515318282087 mode=UR -d <build>/.west_build/mcuboot/zephyr/zephyr.bin 0x08000000
+#          -d <build>/.west_build/zephyr/zephyr/zephyr.signed.bin 0x08010000 -v -rst
+esphome:
+  name: mcu-stm32-f103ze
+  friendly_name: STM32 F103ZE
+
+# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no stm32: platform yet
+# waveshare_open103z: same F103ZE, 8 MHz HSE, console on USART1 PA9/PA10
+stm32:
+  variant: STM32F1
+  board: waveshare_open103z
+  framework:
+    type: zephyr
+    # no network, so no OTA: one image slot, MCUboot only verifies and boots it
+    single_slot: true
+    # waveshare_open103z ships no partitions: MCUboot 32K, storage 32K (16 x 2K pages), the app in the rest.
+    # MCUboot needs the same table; the fork appends its own code-partition = &boot_partition after it
+    overlays:
+      app: &partitions |
+        &flash0 {
+          partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+            boot_partition: partition@0 {
+              label = "mcuboot";
+              reg = <0x00000000 DT_SIZE_K(32)>;
+              read-only;
+            };
+            storage_partition: partition@8000 {
+              label = "storage";
+              reg = <0x00008000 DT_SIZE_K(32)>;
+            };
+            slot0_partition: partition@10000 {
+              label = "image-0";
+              reg = <0x00010000 DT_SIZE_K(448)>;
+            };
+          };
+        };
+        / { chosen { zephyr,code-partition = &slot0_partition; }; };
+      mcuboot: *partitions
+
+logger:
+
+output:
+  - platform: gpio
+    id: led_out
+    pin:
+      number: PE2
+      inverted: true
+
+light:
+  - platform: binary
+    name: LED
+    id: led
+    output: led_out
+
+binary_sensor:
+  - platform: gpio
+    name: Button
+    pin:
+      number: PB10
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      light.toggle: led

@@ -1,0 +1,75 @@
+---
+# Hardware: ST STM32F4DISCOVERY (STM32F407VGT6, 1M flash, no radio), ST-LINK/V2 without VCP
+# Pinout:
+#   PA11/PA12  micro-USB CN5 (OTG FS)      -> logger (USB CDC)
+#   PD12       LD4 green (active high)     -> LED (light binary)
+#   PA0        B1 user (active high)       -> Button (binary_sensor gpio)
+# ST-LINK SN: 53FF6E065087545435390387 (esphome-zephyr upload can't pick a probe without VCP)
+#   flash: STM32_Programmer_CLI -c port=SWD sn=53FF6E065087545435390387 mode=UR -d <build>/.west_build/mcuboot/zephyr/zephyr.bin 0x08000000
+#          -d <build>/.west_build/zephyr/zephyr/zephyr.signed.bin 0x08010000 -v -rst
+esphome:
+  name: mcu-stm32-f4disco
+  friendly_name: STM32 F4 Discovery
+
+# needs the esphomeplatformzephyr fork (esphome-zephyr), upstream has no stm32: platform yet
+stm32:
+  variant: STM32F4
+  board: stm32f4_disco
+  framework:
+    type: zephyr
+    # no network, so no OTA: one image slot, MCUboot only verifies and boots it
+    single_slot: true
+    # NVS sector = flash page; needs >= 2 of them, so storage takes the two 16K pages (sectors 2-3)
+    kconfig_options:
+      SETTINGS_NVS_SECTOR_COUNT: 2
+    # stm32f4_disco ships no partitions at all: MCUboot in sectors 0-1, storage in 2-3, the app in 4-11.
+    # MCUboot needs the same table; the fork appends its own code-partition = &boot_partition after it
+    overlays:
+      app: &partitions |
+        &flash0 {
+          partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+            boot_partition: partition@0 {
+              label = "mcuboot";
+              reg = <0x00000000 DT_SIZE_K(32)>;
+              read-only;
+            };
+            storage_partition: partition@8000 {
+              label = "storage";
+              reg = <0x00008000 DT_SIZE_K(32)>;
+            };
+            slot0_partition: partition@10000 {
+              label = "image-0";
+              reg = <0x00010000 DT_SIZE_K(960)>;
+            };
+          };
+        };
+        / { chosen { zephyr,code-partition = &slot0_partition; }; };
+      mcuboot: *partitions
+
+logger:
+  hardware_uart: USB_CDC
+
+output:
+  - platform: gpio
+    id: led_out
+    pin: PD12
+
+light:
+  - platform: binary
+    name: LED
+    id: led
+    output: led_out
+
+# B1 has an external pull-down on the board
+binary_sensor:
+  - platform: gpio
+    name: Button
+    pin: PA0
+    # B1 bounces, toggle fired twice per press
+    filters:
+      - delayed_on_off: 30ms
+    on_press:
+      light.toggle: led
