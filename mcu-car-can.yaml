@@ -25,7 +25,7 @@ esphome:
       - component.suspend: car
 
 esp32:
-  board: m5stamp-pico
+  variant: esp32
   framework:
     type: esp-idf
     advanced:
