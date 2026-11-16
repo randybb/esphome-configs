@@ -88,12 +88,36 @@ substitutions:
   name: LVGL
   area: DEV
   comment: LVGL
+  # Pip-Boy palette
+  pip_green: "0x7DF59A"
+  pip_dim: "0x3B7A4E"
+  pip_line: "0x24432E"
+  pip_panel: "0x12261A"
+  pip_bg: "0x0A0F0B"
+  # tab bar: 4 tabs, bracket follows the active one
+  tab_w: "150"
+  tab_step: "190"
+  tab_x0: "44"
+  tab_x1: "234"
+  tab_x2: "424"
+  tab_x3: "614"
+  # MAP tab: centre and zoom of assets/images/pipboy_map.png, re-render it when changing:
+  #   python3 assets/images/make_map.py ${map_lat} ${map_lon} ${map_zoom} ${map_w} ${map_h} assets/images/pipboy_map.png
+  map_lat: "48.0538401"
+  map_lon: "17.3656273"
+  map_zoom: "14"
+  map_w: "768"
+  map_h: "316"
+  map_y: "104"
+  map_name: "KVETOSLAVOV"
 
 esphome:
   name: mcu-${device}
   friendly_name: ${name}
   area: ${area}
   comment: ${comment}
+  includes:
+    - common/nspanel_terminal/weather.h  # weather_icon()
   on_boot:
     - priority: -100
       then:
@@ -141,6 +165,10 @@ api:
         then:
           - lvgl.page.show: status_page
 
+# the USB port on this board is a CH340 on UART0, not the S3 USB-JTAG
+logger:
+  hardware_uart: UART0
+
 i2c:
   - id: i2c_main
     sda: 19
@@ -178,7 +206,182 @@ light:
     output: gpio_backlight_pwm
     restore_mode: ALWAYS_ON
 
+# Pip-Boy look (after the Fallout 4 Pip-Boy: tab bar with a bracket on the active tab, status bar at the bottom)
+#   STAT  weekday, date, weather, name day, clock
+#   DATA  weather from Home Assistant as a list
+#   MAP   map around home with Home Assistant persons
+#   SYS   status page (shown until Home Assistant connects)
+#   bottom bar: HP = WiFi signal, LEVEL = uptime days (bar: time of day), AP = free internal RAM
+sensor:
+  - platform: homeassistant
+    id: outside_temperature
+    entity_id: sensor.zigbee_outside_temperature
+    internal: true
+    on_value:
+      - script.execute: update_data
+  - platform: homeassistant
+    id: outside_humidity
+    entity_id: weather.outside
+    attribute: humidity
+    internal: true
+    on_value:
+      - script.execute: update_data
+  - platform: homeassistant
+    id: outside_pressure
+    entity_id: weather.outside
+    attribute: pressure
+    internal: true
+    on_value:
+      - script.execute: update_data
+  - platform: homeassistant
+    id: outside_wind
+    entity_id: weather.outside
+    attribute: wind_speed
+    internal: true
+    on_value:
+      - script.execute: update_data
+  # persons on the MAP tab
+  - platform: homeassistant
+    id: romanko_lat
+    entity_id: person.romanko
+    attribute: latitude
+    internal: true
+    on_value:
+      - script.execute: update_map
+  - platform: homeassistant
+    id: romanko_lon
+    entity_id: person.romanko
+    attribute: longitude
+    internal: true
+    on_value:
+      - script.execute: update_map
+  - platform: homeassistant
+    id: janko_lat
+    entity_id: person.janko
+    attribute: latitude
+    internal: true
+    on_value:
+      - script.execute: update_map
+  - platform: homeassistant
+    id: janko_lon
+    entity_id: person.janko
+    attribute: longitude
+    internal: true
+    on_value:
+      - script.execute: update_map
+
+text_sensor:
+  - platform: homeassistant
+    id: weather_state
+    entity_id: weather.outside
+    internal: true
+    on_value:
+      - script.execute: update_data
+  - platform: homeassistant
+    id: nameday
+    entity_id: sensor.nameday_sk
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: nameday_label
+          text: !lambda 'return "MENINY: " + x;'
+
 script:
+  - id: update_data
+    then:
+      - lambda: |-
+          auto num = [](sensor::Sensor *s, const char *fmt) {
+            return s->has_state() && !std::isnan(s->state) ? str_sprintf(fmt, s->state) : std::string("--");
+          };
+          const std::string cond = id(weather_state).has_state() ? id(weather_state).state : "";
+          std::string cond_up = cond.empty() ? "--" : cond;
+          for (auto &c : cond_up)
+            c = c == '-' ? ' ' : toupper(c);
+          const std::string temp = num(id(outside_temperature), "%.1f°C");
+          // STAT
+          lv_label_set_text(id(stat_icon), weather_icon(cond));
+          lv_label_set_text(id(stat_temp), temp.c_str());
+          // DATA
+          lv_label_set_text(id(row_temp_val), temp.c_str());
+          lv_label_set_text(id(row_cond_val), cond_up.c_str());
+          lv_label_set_text(id(row_hum_val), num(id(outside_humidity), "%.0f %%").c_str());
+          lv_label_set_text(id(row_press_val), num(id(outside_pressure), "%.0f hPa").c_str());
+          lv_label_set_text(id(row_wind_val), num(id(outside_wind), "%.0f km/h").c_str());
+
+  # DATA: highlight the touched row like the Pip-Boy cursor
+  - id: select_row
+    parameters:
+      row: int
+    then:
+      - lambda: |-
+          lv_obj_t *const rows[] = {id(row_temp), id(row_cond), id(row_hum), id(row_press), id(row_wind)};
+          lv_obj_t *const marks[] = {id(row_temp_mark), id(row_cond_mark), id(row_hum_mark), id(row_press_mark),
+                                     id(row_wind_mark)};
+          for (int i = 0; i < 5; i++) {
+            lv_obj_set_style_bg_opa(rows[i], i == row ? LV_OPA_COVER : LV_OPA_TRANSP, LV_PART_MAIN);
+            if (i == row)
+              lv_obj_remove_flag(marks[i], LV_OBJ_FLAG_HIDDEN);
+            else
+              lv_obj_add_flag(marks[i], LV_OBJ_FLAG_HIDDEN);
+          }
+
+  - id: update_map
+    then:
+      - lambda: |-
+          // Web Mercator, same projection as the map tiles
+          static const double N = 256.0 * (1 << ${map_zoom});
+          auto wx = [](double lon) { return (lon + 180) / 360 * N; };
+          auto wy = [](double lat) { return (1 - std::asinh(std::tan(lat * M_PI / 180)) / M_PI) / 2 * N; };
+          auto place = [&](lv_obj_t *marker, sensor::Sensor *lat, sensor::Sensor *lon) {
+            if (lat->has_state() && lon->has_state() && !std::isnan(lat->state) && !std::isnan(lon->state)) {
+              // map image is ${map_w}x${map_h} at 16,${map_y}; the marker ring (14x14) is at the container's edge
+              const int x = ${map_w} / 2 + (int) (wx(lon->state) - wx(${map_lon}));
+              const int y = ${map_h} / 2 + (int) (wy(lat->state) - wy(${map_lat}));
+              if (x >= 0 && x < ${map_w} && y >= 0 && y < ${map_h}) {
+                lv_obj_update_layout(marker);
+                const bool right = lv_obj_get_style_flex_flow(marker, LV_PART_MAIN) == LV_FLEX_FLOW_ROW_REVERSE;
+                lv_obj_set_pos(marker, 16 + (right ? x + 7 - lv_obj_get_width(marker) : x - 7),
+                               ${map_y} + y - lv_obj_get_height(marker) / 2);
+                lv_obj_remove_flag(marker, LV_OBJ_FLAG_HIDDEN);
+                return;
+              }
+            }
+            lv_obj_add_flag(marker, LV_OBJ_FLAG_HIDDEN);  // unknown or off the map
+          };
+          place(id(marker_romanko), id(romanko_lat), id(romanko_lon));
+          place(id(marker_janko), id(janko_lat), id(janko_lon));
+
+  - id: update_stat
+    then:
+      - lambda: |-
+          const bool wifi_ok = wifi::global_wifi_component->is_connected();
+          const int rssi = wifi_ok ? wifi::global_wifi_component->wifi_rssi() : -100;
+          const int hp = std::clamp(2 * (rssi + 100), 0, 100);
+          lv_label_set_text(id(hp_label), str_sprintf("HP %d/100", hp).c_str());
+
+          const uint32_t up = millis() / 1000;
+          lv_label_set_text(id(level_label), str_sprintf("LEVEL %u", up / 86400 + 1).c_str());
+          lv_bar_set_value(id(xp_bar), (up % 86400) * 100 / 86400, LV_ANIM_OFF);
+
+          const size_t total = heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
+          const int ap = total ? heap_caps_get_free_size(MALLOC_CAP_INTERNAL) * 100 / total : 0;
+          lv_label_set_text(id(ap_label), str_sprintf("AP %d/100", ap).c_str());
+
+  - id: update_clock
+    then:
+      - lambda: |-
+          auto now = id(ha_time).now();
+          if (!now.is_valid())
+            return;
+          auto upper = [](std::string s) {
+            for (auto &c : s)
+              c = toupper(c);
+            return s;
+          };
+          lv_label_set_text(id(clock_label), now.strftime("%H\n%M").c_str());
+          lv_label_set_text(id(weekday_label), upper(now.strftime("%A")).c_str());
+          lv_label_set_text(id(date_label), upper(now.strftime("%b %d %Y")).c_str());
+
   - id: update_status
     then:
       - lambda: |-
@@ -226,35 +429,98 @@ script:
           lv_label_set_text(id(status_footer),
                             str_sprintf("ESPHome %s  ·  up %ud %02u:%02u:%02u", ESPHOME_VERSION, up / 86400,
                                         (up / 3600) % 24, (up / 60) % 60, up % 60).c_str());
+
+  # move the bracket to the active tab, dim the others; called from each page's on_load, so it also
+  # follows pages shown from code (API connect/disconnect)
+  - id: select_tab
+    parameters:
+      tab: int
+    then:
+      - lambda: |-
+          lv_obj_t *const labels[] = {id(tab_stat_label), id(tab_data_label), id(tab_map_label), id(tab_sys_label)};
+          for (int i = 0; i < 4; i++)
+            lv_obj_set_style_text_color(labels[i], lv_color_hex(i == tab ? ${pip_green} : ${pip_dim}), LV_PART_MAIN);
+          lv_obj_set_x(id(tab_bracket), ${tab_x0} + tab * ${tab_step});
+          // no status bar on SYS, its page needs the room
+          if (tab == 3)
+            lv_obj_add_flag(id(bottom_bar), LV_OBJ_FLAG_HIDDEN);
+          else
+            lv_obj_remove_flag(id(bottom_bar), LV_OBJ_FLAG_HIDDEN);
+
 interval:
   - interval: 1s
     then:
-      - lvgl.label.update:
-          id: clock_label
-          text: !lambda |-
-            auto now = id(ha_time).now();
-            if (!now.is_valid())
-              return std::string("--:--");
-            return now.strftime("%H:%M");
+      - if:
+          condition:
+            lvgl.page.is_showing: main_page
+          then:
+            - script.execute: update_clock
       - if:
           condition:
             lvgl.page.is_showing: status_page
           then:
             - script.execute: update_status
+          else:
+            - script.execute: update_stat
 
 image:
   - platform: file
     file: assets/images/made-for-esphome-white-on-black.svg
     id: esphome_logo
-    resize: 400x118
+    resize: 300x88
     type: RGB565
     transparency: alpha_channel
+  - platform: file
+    file: assets/images/pipboy_map.png
+    id: pipboy_map
+    type: RGB565
 
 font:
-  - file: "gfonts://Roboto@500"
+  - file: "gfonts://Roboto Mono@500"
     id: font_clock
-    size: 200
-    glyphs: "0123456789:-"
+    size: 124
+    glyphs: "0123456789-"
+  - file: "gfonts://Roboto Mono@500"
+    id: font_tab
+    size: 30
+    glyphs: "ADMPSTY"
+  - file: "gfonts://Roboto Mono"
+    id: font_big
+    size: 40
+    glyphs: "°-"
+    glyphsets: [GF_Latin_Kernel]
+  - file: "gfonts://Roboto Mono"
+    id: font_pip
+    size: 24
+    glyphs: "°·"
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true  # only combining marks (U+0302…), Slovak uses precomposed letters
+  - file: "gfonts://Roboto Mono"
+    id: font_small
+    size: 18
+    glyphs: "©"
+    glyphsets: [GF_Latin_Kernel]
+  - file:
+      type: web
+      url: https://github.com/Templarian/MaterialDesign-Webfont/raw/v7.4.47/fonts/materialdesignicons-webfont.ttf
+    id: font_weather
+    size: 72
+    glyphs:
+      - "\U000F0594"  # mdi:weather-night
+      - "\U000F0599"  # mdi:weather-sunny
+      - "\U000F0595"  # mdi:weather-partly-cloudy
+      - "\U000F0590"  # mdi:weather-cloudy
+      - "\U000F0591"  # mdi:weather-fog
+      - "\U000F0597"  # mdi:weather-rainy
+      - "\U000F0596"  # mdi:weather-pouring
+      - "\U000F0598"  # mdi:weather-snowy
+      - "\U000F067F"  # mdi:weather-snowy-rainy
+      - "\U000F0592"  # mdi:weather-hail
+      - "\U000F0593"  # mdi:weather-lightning
+      - "\U000F067E"  # mdi:weather-lightning-rainy
+      - "\U000F059D"  # mdi:weather-windy
+      - "\U000F059E"  # mdi:weather-windy-variant
+      - "\U000F05D6"  # mdi:alert-circle-outline
   - file: "gfonts://Roboto"
     id: font_title
     size: 40
@@ -267,81 +533,391 @@ font:
 lvgl:
   log_level: WARN
   color_depth: 16
-  bg_color: 0x000000
-  text_color: 0xFFFFFF
+  bg_color: ${pip_bg}
+  text_color: ${pip_green}
+  text_font: font_pip
   theme:
-    buttonmatrix:
+    # plain boxes: layout containers, markers and bars set only what they need
+    obj:
       bg_opa: TRANSP
       border_width: 0
-      items:
-        bg_color: 0x2B2F36
-        text_color: 0xFFFFFF
-        radius: 12
-        checked:
-          bg_color: 0xE08A00
+      radius: 0
+      pad_all: 0
+      text_color: ${pip_green}  # the default theme sets a dark text color that labels inherit
+    button:
+      bg_opa: TRANSP
+      border_width: 0
+      shadow_width: 0
+      radius: 0
+      pressed:
+        bg_opa: TRANSP
   top_layer:
     widgets:
-      # same navigation bar as on mcu-lvgl-trainer
-      - buttonmatrix:
-          id: nav_bar
-          align: bottom_mid
-          width: 100%
-          height: 64
-          pad_all: 4
-          pad_column: 6
-          items:
-            text_font: montserrat_28
-          rows:
-            - buttons:
-                - id: page_prev
-                  text: "\uF053"
-                  on_press:
-                    then:
-                      lvgl.page.previous:
-                - id: page_home
-                  text: "\uF015"
-                  on_press:
-                    then:
-                      lvgl.page.show: main_page
-                - id: page_next
-                  text: "\uF054"
-                  on_press:
-                    then:
-                      lvgl.page.next:
+      # tab bar: rule with end ticks, the bracket covers the rule under the active tab
+      - obj:
+          x: 16
+          y: 56
+          width: 768
+          height: 2
+          bg_color: ${pip_green}
+          bg_opa: COVER
+      - obj:
+          x: 16
+          y: 56
+          width: 2
+          height: 10
+          bg_color: ${pip_green}
+          bg_opa: COVER
+      - obj:
+          x: 782
+          y: 56
+          width: 2
+          height: 10
+          bg_color: ${pip_green}
+          bg_opa: COVER
+      - obj:
+          id: tab_bracket
+          x: ${tab_x0}
+          y: 12
+          width: ${tab_w}
+          height: 46
+          border_side: [LEFT, RIGHT]
+          border_width: 2
+          border_color: ${pip_green}
+          bg_color: ${pip_bg}
+          bg_opa: COVER
+          widgets:
+            - obj:
+                align: TOP_LEFT
+                width: 14
+                height: 2
+                bg_color: ${pip_green}
+                bg_opa: COVER
+            - obj:
+                align: TOP_RIGHT
+                width: 14
+                height: 2
+                bg_color: ${pip_green}
+                bg_opa: COVER
+      - button:
+          x: ${tab_x0}
+          y: 12
+          width: ${tab_w}
+          height: 44
+          on_press:
+            - lvgl.page.show: main_page
+          widgets:
+            - label:
+                id: tab_stat_label
+                align: CENTER
+                text_font: font_tab
+                text: "STAT"
+      - button:
+          x: ${tab_x1}
+          y: 12
+          width: ${tab_w}
+          height: 44
+          on_press:
+            - lvgl.page.show: data_page
+          widgets:
+            - label:
+                id: tab_data_label
+                align: CENTER
+                text_font: font_tab
+                text_color: ${pip_dim}
+                text: "DATA"
+      - button:
+          x: ${tab_x2}
+          y: 12
+          width: ${tab_w}
+          height: 44
+          on_press:
+            - lvgl.page.show: map_page
+          widgets:
+            - label:
+                id: tab_map_label
+                align: CENTER
+                text_font: font_tab
+                text_color: ${pip_dim}
+                text: "MAP"
+      - button:
+          x: ${tab_x3}
+          y: 12
+          width: ${tab_w}
+          height: 44
+          on_press:
+            - lvgl.page.show: status_page
+          widgets:
+            - label:
+                id: tab_sys_label
+                align: CENTER
+                text_font: font_tab
+                text_color: ${pip_dim}
+                text: "SYS"
+      # status bar: HP | LEVEL [xp] | AP
+      - obj:
+          id: bottom_bar
+          x: 16
+          y: 432
+          width: 768
+          height: 40
+          pad_left: 14
+          pad_right: 14
+          bg_color: ${pip_panel}
+          bg_opa: COVER
+          layout:
+            type: flex
+            flex_flow: row
+            flex_align_main: SPACE_BETWEEN
+            flex_align_cross: center
+          widgets:
+            - label:
+                id: hp_label
+                text: "HP"
+            - obj:
+                width: SIZE_CONTENT
+                height: SIZE_CONTENT
+                layout:
+                  type: flex
+                  flex_flow: row
+                  flex_align_cross: center
+                  pad_column: 14
+                widgets:
+                  - label:
+                      id: level_label
+                      text: "LEVEL"
+                  - bar:
+                      id: xp_bar
+                      width: 140
+                      height: 18
+                      min_value: 0
+                      max_value: 100
+                      radius: 0
+                      pad_all: 3
+                      border_width: 2
+                      border_color: ${pip_green}
+                      bg_opa: TRANSP
+                      indicator:
+                        radius: 0
+                        bg_color: ${pip_green}
+            - label:
+                id: ap_label
+                text: "AP"
   pages:
-    # 1: clock
+    # STAT: weekday, date, weather, name day | clock
     - id: main_page
+      on_load:
+        - script.execute:
+            id: select_tab
+            tab: 0
+        - script.execute: update_clock
+        - script.execute: update_data
       widgets:
         - label:
-            id: clock_label
-            align: CENTER
-            y: -32
-            text_font: font_clock
-            text: "--:--"
+            align: TOP_MID
+            y: 68
+            text: "STATUS"
+        - label:
+            id: weekday_label
+            x: 40
+            y: 108
+            pad_left: 8
+            pad_right: 8
+            bg_color: ${pip_green}
+            bg_opa: COVER
+            text_color: ${pip_bg}
+            text_font: font_big
+            text: "--"
+        - label:
+            id: date_label
+            x: 40
+            y: 164
+            text_font: font_big
+            text: ""
+        - label:
+            id: stat_icon
+            x: 36
+            y: 222
+            text_font: font_weather
+            text: ""
+        - label:
+            id: stat_temp
+            x: 124
+            y: 236
+            text_font: font_big
+            text: "--"
+        - label:
+            id: nameday_label
+            x: 40
+            y: 320
+            width: 380
+            long_mode: WRAP
+            text_color: ${pip_dim}
+            text: ""
+        - obj:
+            x: 470
+            y: 104
+            width: 290
+            height: 316
+            border_width: 3
+            border_color: ${pip_green}
+            widgets:
+              - label:
+                  id: clock_label
+                  align: CENTER
+                  text_font: font_clock
+                  text_align: CENTER
+                  text_line_space: -16
+                  text: "--\n--"
 
-    # 2: status (shown until Home Assistant connects)
+    # DATA: weather from Home Assistant as a Pip-Boy list
+    - id: data_page
+      on_load:
+        - script.execute:
+            id: select_tab
+            tab: 1
+        - script.execute: update_data
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 68
+            text: "WEATHER"
+        - label:
+            x: 16
+            y: 106
+            width: 758
+            text_align: RIGHT
+            text_font: font_small
+            text_color: ${pip_dim}
+            text: "VALUE"
+        - obj:
+            x: 16
+            y: 130
+            width: 768
+            height: SIZE_CONTENT
+            layout:
+              type: flex
+              flex_flow: column
+            widgets:
+              - !include {file: common/pipboy_row.yaml, vars: {row: row_temp, name: TEMPERATURE, idx: 0}}
+              - !include {file: common/pipboy_row.yaml, vars: {row: row_cond, name: CONDITIONS, idx: 1}}
+              - !include {file: common/pipboy_row.yaml, vars: {row: row_hum, name: HUMIDITY, idx: 2}}
+              - !include {file: common/pipboy_row.yaml, vars: {row: row_press, name: PRESSURE, idx: 3}}
+              - !include {file: common/pipboy_row.yaml, vars: {row: row_wind, name: WIND, idx: 4}}
+
+    # MAP: baked map (no images over the native API), live person markers
+    - id: map_page
+      on_load:
+        - script.execute:
+            id: select_tab
+            tab: 2
+        - script.execute: update_map
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 68
+            text: "LOCAL MAP"
+        - image:
+            src: pipboy_map
+            x: 16
+            y: ${map_y}
+        # home: square in a square, centre of the map
+        - obj:
+            x: 391  # 16 + map_w / 2 - 9
+            y: 253  # map_y + map_h / 2 - 9
+            width: 18
+            height: 18
+            border_width: 2
+            border_color: ${pip_green}
+            widgets:
+              - obj:
+                  align: CENTER
+                  width: 6
+                  height: 6
+                  bg_color: ${pip_green}
+                  bg_opa: COVER
+        # ring + name; the second one has the name on the left so both stay readable at home
+        - obj:
+            id: marker_romanko
+            hidden: true
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            layout:
+              type: flex
+              flex_flow: ROW
+              flex_align_cross: center
+              pad_column: 6
+            widgets:
+              - obj:
+                  width: 14
+                  height: 14
+                  radius: 7
+                  border_width: 2
+                  border_color: ${pip_green}
+              - label:
+                  text_font: font_small
+                  text: "Romanko"
+        - obj:
+            id: marker_janko
+            hidden: true
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            layout:
+              type: flex
+              flex_flow: ROW_REVERSE
+              flex_align_cross: center
+              pad_column: 6
+            widgets:
+              - obj:
+                  width: 14
+                  height: 14
+                  radius: 7
+                  border_width: 2
+                  border_color: ${pip_green}
+              - label:
+                  text_font: font_small
+                  text: "Janko"
+        - label:
+            x: 26
+            y: 392  # map_y + map_h - 28
+            text_font: font_small
+            text_color: ${pip_dim}
+            text: "© OpenStreetMap"
+        - label:
+            x: 16
+            y: 388
+            width: 758
+            text_align: RIGHT
+            text: "${map_name}"
+
+    # SYS: status (shown until Home Assistant connects)
     - id: status_page
       on_load:
+        - script.execute:
+            id: select_tab
+            tab: 3
         - script.execute: update_status
       widgets:
+        - label:
+            align: TOP_MID
+            y: 68
+            text: "SYSTEM"
         - image:
             src: esphome_logo
             align: TOP_MID
-            y: 16
+            y: 104
         - label:
             align: TOP_MID
-            y: 140
+            y: 196
             text_font: font_title
+            text_color: 0xFFFFFF
             text: "${name}"
         - obj:
             id: status_lines
             x: 60
-            y: 196
+            y: 252
             width: 700
             height: SIZE_CONTENT
-            bg_opa: TRANSP
-            border_width: 0
-            pad_all: 0
             scrollbar_mode: "OFF"
             layout:
               type: flex

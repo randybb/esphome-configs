@@ -1,0 +1,36 @@
+---
+# Pip-Boy list row for mcu-lvgl's DATA tab: name left, value (id ${row}_val) right, select by touch
+# vars: row (widget id), name (left text), idx (row index for select_row)
+obj:
+  id: ${row}
+  width: 100%
+  height: 44
+  pad_left: 10
+  pad_right: 10
+  border_side: [BOTTOM]
+  border_width: 1
+  border_color: ${pip_line}
+  bg_color: ${pip_panel}
+  layout:
+    type: flex
+    flex_flow: row
+    flex_align_cross: center
+    pad_column: 12
+  on_press:
+    - script.execute:
+        id: select_row
+        row: ${idx}
+  widgets:
+    - obj:
+        id: ${row}_mark
+        width: 10
+        height: 10
+        bg_color: ${pip_green}
+        bg_opa: COVER
+        hidden: true
+    - label:
+        flex_grow: 1
+        text: "${name}"
+    - label:
+        id: ${row}_val
+        text: "--"
