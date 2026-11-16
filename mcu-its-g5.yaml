@@ -2,7 +2,7 @@
 # Hardware: Seeed Studio XIAO ESP32-C5 (host, its own radio in 802.11p for ITS-G5)
 #         + Seeed Studio XIAO ESP32-C6 (esp32_hosted co-processor, Wi-Fi uplink over SPI)
 # Wi-Fi on the C6 needs esphome/esphome#22819 and hn/esphome-its-g5#3 (external components below)
-# and the esp-hosted-mcu 3.1.0 co-processor firmware (examples/wifi/sta/cp, SPI) on the C6.
+# and the co-processor firmware from hosted/xiao-c6-spi on the C6.
 # Pinout:
 #   GPIO8   D8   -> esp32_hosted clk        -> C6 D8  GPIO19
 #   GPIO9   D9   <- esp32_hosted miso       <- C6 D9  GPIO20

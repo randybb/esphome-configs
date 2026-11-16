@@ -1,0 +1,28 @@
+= XIAO ESP32-C6 esp-hosted co-processor (SPI)
+
+esp-hosted-mcu 3.1.0 co-processor firmware (`examples/wifi/sta/cp`) for a Seeed XIAO ESP32-C6 that gives a
+XIAO ESP32-C5 its Wi-Fi over SPI (`mcu-its-g5.yaml`). The user LED (GPIO15) blinks while it runs.
+
+Wiring, D-pin to the same D-pin on both boards, plus GND and 3V3:
+
+[cols="1,1,1,1"]
+|===
+| Signal | XIAO pin | C5 GPIO | C6 GPIO
+
+| CLK | D8 | 8 | 19
+| MISO | D9 | 9 | 20
+| MOSI | D10 | 10 | 18
+| CS | D3 | 7 | 21
+| handshake | D0 | 1 | 0
+| data ready | D1 | 0 | 1
+| reset | D2 | 25 | 2 (the XIAO has no EN pin)
+|===
+
+Build with the ESP-IDF that ESPHome already downloaded, and flash over USB:
+
+----
+./build.sh /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_90:64:9B:AB:5F:DC-if00
+----
+
+Keep the esp_hosted version in `main/idf_component.yml` in step with the one ESPHome uses on the host.
+ESPHome's `update: platform: esp32_hosted` only supports ESP32-P4 and ESP32-H2 hosts, so this one is flashed by hand.
