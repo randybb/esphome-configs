@@ -27,6 +27,7 @@ substitutions:
   comment: Klipper CNC pendant
   moonraker: http://klipper.local:7125
   max_feed: "3000"  # mm/min, handwheel jog feed cap
+  autolock: "60"  # s without jogging or selecting until the handwheel locks
 
 esphome:
   name: mcu-${device}
@@ -69,13 +70,16 @@ http_request:
 globals:
   - id: axis
     type: int
-    initial_value: "0"  # 0 X, 1 Y, 2 Z
+    initial_value: "-1"  # -1 locked, 0 X, 1 Y, 2 Z
   - id: step
     type: int
     initial_value: "1"  # index into steps[] in the jog interval
   - id: wheel_sent
     type: float
     initial_value: "0"
+  - id: last_active
+    type: uint32_t
+    initial_value: "0"  # millis() of the last jog or selection, drives the autolock
 
 interval:
   # handwheel: send the counts since the last jog as one relative move
@@ -83,9 +87,12 @@ interval:
     then:
       - lambda: |-
           static const float steps[] = {0.01f, 0.1f, 1.0f};
+          if (id(axis) >= 0 && millis() - id(last_active) > ${autolock} * 1000) id(axis) = -1;
           float delta = id(handwheel).state - id(wheel_sent);
           if (delta == 0 || std::isnan(delta)) return;
           id(wheel_sent) = id(handwheel).state;
+          if (id(axis) < 0) return;  // locked: drop the counts
+          id(last_active) = millis();
           float dist = delta * steps[id(step)];
           // feed so the move takes ~100 ms, i.e. about one interval
           // ponytail: capped feed lets fast spins queue moves that keep running after the wheel stops; drop excess counts if that bites
@@ -111,9 +118,9 @@ sensor:
       number: 5
       mode: INPUT_PULLUP
     on_clockwise:
-      - lambda: 'id(axis) = std::min(id(axis) + 1, 2);'
+      - lambda: 'id(axis) = std::min(id(axis) + 1, 2); id(last_active) = millis();'
     on_anticlockwise:
-      - lambda: 'id(axis) = std::max(id(axis) - 1, 0);'
+      - lambda: 'id(axis) = std::max(id(axis) - 1, -1); id(last_active) = millis();'
   - platform: rotary_encoder
     id: step_encoder
     pin_a:
@@ -123,9 +130,9 @@ sensor:
       number: 8
       mode: INPUT_PULLUP
     on_clockwise:
-      - lambda: 'id(step) = std::min(id(step) + 1, 2);'
+      - lambda: 'id(step) = std::min(id(step) + 1, 2); id(last_active) = millis();'
     on_anticlockwise:
-      - lambda: 'id(step) = std::max(id(step) - 1, 0);'
+      - lambda: 'id(step) = std::max(id(step) - 1, 0); id(last_active) = millis();'
 
 binary_sensor:
   - platform: gpio
@@ -134,7 +141,7 @@ binary_sensor:
     pin:
       number: 0
       inverted: true
-  # axis push: zero the selected axis in work coordinates
+  # axis push: zero the selected axis in work coordinates (nothing while locked)
   - platform: gpio
     id: axis_button
     name: Axis Button
@@ -145,7 +152,7 @@ binary_sensor:
     filters:
       - delayed_on_off: 20ms
     on_press:
-      - lambda: 'moonraker::client.gcode(str_sprintf("G92 %c0", "XYZ"[id(axis)]));'
+      - lambda: 'if (id(axis) >= 0) moonraker::client.gcode(str_sprintf("G92 %c0", "XYZ"[id(axis)]));'
   - platform: gpio
     id: step_button
     name: Step Button
@@ -196,11 +203,9 @@ binary_sensor:
           - lambda: 'moonraker::client.post("/printer/emergency_stop", "", true);'
 
 font:
-  # X11 misc-fixed bitmap fonts (as in u8g2 / Marlin), 6 px wide: axis letter + "-123.456" fits 64 px
-  - file: assets/fonts/6x13.bdf
-    id: font_big
-  - file: assets/fonts/6x10.bdf
-    id: font_small
+  # Tiny5 Mono bitmap, 6x9 cell: axis letter + "-123.456" fits 64 px
+  - file: assets/fonts/Tiny5Mono.bdf
+    id: font_mono
 
 spi:
   clk_pin: 13
@@ -220,16 +225,23 @@ display:
     lambda: |-
       static const char *steps[] = {"0.01", "0.1", "1"};
       auto s = moonraker::client.status();
-      it.printf(0, 0, id(font_small), "%s", s.state.c_str());
-      it.printf(0, 10, id(font_small), "H:%s", s.homed.empty() ? "-" : s.homed.c_str());
+      it.printf(0, 0, id(font_mono), "%s", s.state.c_str());
+      it.printf(0, 10, id(font_mono), "H:%s", s.homed.empty() ? "-" : s.homed.c_str());
       for (int i = 0; i < 3; i++) {
-        int y = 22 + i * 14;
+        int y = 21 + i * 11;
         Color c = COLOR_ON;
         if (i == id(axis)) {
-          it.filled_rectangle(0, y, 64, 13);
+          it.filled_rectangle(0, y, 64, 10);
           c = COLOR_OFF;
         }
-        it.printf(1, y + 1, id(font_big), c, "%c", "XYZ"[i]);
-        it.printf(63, y + 1, id(font_big), c, TextAlign::TOP_RIGHT, "%.3f", s.pos[i]);
+        it.printf(1, y + 1, id(font_mono), c, "%c", "XYZ"[i]);
+        it.printf(63, y + 1, id(font_mono), c, TextAlign::TOP_RIGHT, "%.3f", s.pos[i]);
       }
-      it.printf(0, 118, id(font_small), "%s mm", steps[id(step)]);
+      it.printf(0, 118, id(font_mono), "%s mm", steps[id(step)]);
+      // corner: seconds until the handwheel locks, LCK once it has
+      if (id(axis) < 0) {
+        it.print(63, 118, id(font_mono), TextAlign::TOP_RIGHT, "LCK");
+      } else {
+        int left = ${autolock} - (int) ((millis() - id(last_active)) / 1000);
+        it.printf(63, 118, id(font_mono), TextAlign::TOP_RIGHT, "%d", std::max(left, 0));
+      }
