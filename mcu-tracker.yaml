@@ -507,3 +507,35 @@ interval:
             id(gnss_switch).turn_off();
             id(gnss_enable).turn_off();
           }
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 12
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    i2c_id: system_i2c
+    update_interval: 2s
+    lambda: |-
+      it.printf(0, 0, id(font_small), "%s %s", id(modem_network).has_state() ? id(modem_network).state.c_str() : "--",
+                id(modem_operator).state.c_str());
+      if (id(modem_rssi).has_state() && !std::isnan(id(modem_rssi).state))
+        it.printf(127, 0, id(font_small), TextAlign::TOP_RIGHT, "%.0f dBm", id(modem_rssi).state);
+      it.printf(0, 16, id(font_small), "PPP: %s", id(atmodem).is_connected() ? "OK" : "--");
+      it.printf(127, 16, id(font_small), TextAlign::TOP_RIGHT, "MQTT: %s", id(mqtt_client)->is_connected() ? "OK" : "--");
+      if (std::isnan(id(latitude).state))
+        it.printf(0, 32, id(font_small), "GNSS: no fix");
+      else
+        it.printf(0, 32, id(font_small), "%.5f %.5f", id(latitude).state, id(longitude).state);
+      auto now = id(sntp_time).now();
+      if (now.is_valid())
+        it.strftime(0, 48, id(font_small), "%H:%M", now);
+      else
+        it.printf(0, 48, id(font_small), "Up %.2f d", id(uptime_sensor).state);
+      // The unrounded value; HA only gets 10 % steps
+      float bat = std::isnan(id(battery_soc).state) ? id(battery_level).state : id(battery_soc).state;
+      if (!std::isnan(bat))
+        it.printf(127, 48, id(font_small), TextAlign::TOP_RIGHT, "Bat %.0f%%", bat);
