@@ -1,0 +1,213 @@
+---
+# Hardware: Seeed Studio XIAO ESP32-C5 (host, its own radio in 802.11p for ITS-G5)
+#         + Seeed Studio XIAO ESP32-C6 (esp32_hosted co-processor, Wi-Fi uplink over SPI)
+# Wi-Fi on the C6 needs esphome/esphome#22819 and hn/esphome-its-g5#3 (external components below)
+# and the esp-hosted-mcu 3.1.0 co-processor firmware (examples/wifi/sta/cp, SPI) on the C6.
+# Pinout:
+#   GPIO8   D8   -> esp32_hosted clk        -> C6 D8  GPIO19
+#   GPIO9   D9   <- esp32_hosted miso       <- C6 D9  GPIO20
+#   GPIO10  D10  -> esp32_hosted mosi       -> C6 D10 GPIO18
+#   GPIO7   D3   -> esp32_hosted cs         -> C6 D3  GPIO21
+#   GPIO1   D0   <- esp32_hosted handshake  <- C6 D0  GPIO0
+#   GPIO0   D1   <- esp32_hosted data_ready <- C6 D1  GPIO1
+#   GPIO25  D2   -> esp32_hosted reset      -> C6 D2  GPIO2 (CP firmware restarts itself on LOW)
+#   GND, 3V3 shared
+substitutions:
+  device: its-g5
+  name: ITS-G5
+  area: DEV
+  comment: ITS-G5 receiver
+  # OpenTrafficMap node ID (MQTT topics its/<node_id>/...): the reference firmware uses the MAC as
+  # lowercase hex; replace it if opentrafficmap assigned a name (e.g. "node789")
+  node_id: "3844bebe8638"
+
+esphome:
+  name: mcu-${device}
+  friendly_name: ${name}
+  area: ${area}
+  comment: ${comment}
+  includes:
+    - common/its_g5/decode.h  # its_g5_decode:: header decoding for the lambdas below
+
+esp32:
+  board: seeed_xiao_esp32c5
+  framework:
+    type: esp-idf
+
+packages:
+  common: !include common/common.yaml
+  # ipv6_only off: eppp_link (pulled in by esp_wifi_remote) needs IPv4, fix belongs in esp-protocols
+  # ipv6_only: !include common/ipv6_only.yaml
+
+external_components:
+  # Wi-Fi on the esp32_hosted co-processor of a host with its own radio
+  - source: github://pr#22819
+    components: [wifi]
+  # its_g5_receiver allowing wifi on the co-processor
+  - source: github://hn/esphome-its-g5@pull/3/head
+    components: [its_g5_receiver]
+    refresh: 1d
+
+esp32_hosted:
+  type: spi
+  variant: ESP32C6
+  clk_pin: GPIO8
+  miso_pin: GPIO9
+  mosi_pin: GPIO10
+  cs_pin: GPIO7
+  handshake_pin: GPIO1
+  data_ready_pin: GPIO0
+  reset_pin: GPIO25
+
+wifi:
+  use_coprocessor: true  # Wi-Fi on the C6, the C5 radio is for 802.11p
+  # car: ESP joins the tablet's hotspot as a client
+  min_auth_mode: WPA2
+  networks:
+    - id: !remove wifi_iot
+    - ssid: !secret wifi_ssid_0
+      password: !secret wifi_password_0
+
+# Raw 802.11 frames as UDP broadcasts; in Wireshark use the "UDP Listener"
+# (udpdump) interface on port 18511 with payload "wlan".
+udp:
+  id: its_udp
+
+# Raw frames to the OpenTrafficMap C-ITS server, as in hn's its-g5-opentrafficmap.yaml
+mqtt:
+  id: mqtt_client
+  broker: cits1.opentrafficmap.org
+  port: 8883  # TLS is mandatory; publishing is anonymous
+  discovery: false
+  # *.opentrafficmap.org wildcard certificate, the hostname check fails with MbedTLS
+  skip_cert_cn_check: true
+  certificate_authority: |
+    -----BEGIN CERTIFICATE-----
+    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
+    -----END CERTIFICATE-----
+  # Empty prefix: no entity states, no command topics (the broker is anonymous) and no log topic;
+  # only the OpenTrafficMap topics below
+  topic_prefix: null
+  log_topic: null
+  birth_message:
+    topic: its/${node_id}/status
+    payload: online
+    retain: true
+  will_message:
+    topic: its/${node_id}/status
+    payload: offline
+    retain: true
+  on_connect:
+    - delay: 3s
+    - lambda: |-
+        uint8_t mac[6];
+        get_mac_address_raw(mac);
+        char info[160];
+        int n = snprintf(info, sizeof(info),
+                         "{\"emac\":\"%02x:%02x:%02x:%02x:%02x:%02x\",\"ver\":\"%s\",\"hwv\":\"esphome\"}",
+                         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ESPHOME_VERSION);
+        id(mqtt_client).publish("its/${node_id}/info", info, n, 0, false);
+
+interval:
+  - interval: 60s
+    then:
+      - lambda: |-
+          char stats[48];
+          int n = snprintf(stats, sizeof(stats), "{\"rbt\":%llu}", millis_64() / 1000ULL);
+          id(mqtt_client).publish("its/${node_id}/stats", stats, n, 0, false);
+
+its_g5_receiver:
+  id: g5
+  channel: 5900  # G5CC
+  broadcast_only: true
+  on_packet:
+    - lambda: |-
+        id(mqtt_client).publish("its/${node_id}/packet", (const char *) x.data(), x.size(), 0, false);
+    - udp.write:
+        id: its_udp
+        data: !lambda return x;
+    - lambda: |-
+        if (!its_g5_decode::handle(x))
+          return;
+        const auto &i = its_g5_decode::stats.last;
+        ESP_LOGD("its_g5", "%s from %s %.6f,%.6f %.0f km/h %.0f deg%s, rssi %.0f dBm",
+                 its_g5_decode::port_name(i.port), its_g5_decode::station_name(i.station_type),
+                 i.lat, i.lon, i.speed_kmh, i.heading, i.secured ? ", signed" : "", rssi);
+
+sensor:
+  - platform: its_g5_receiver
+    its_g5_receiver_id: g5
+    bytes_received:
+      name: Bytes Received
+    packets_received:
+      name: Packets Received
+    packets_dropped:
+      name: Packets Dropped
+  - platform: template
+    name: CAM Received
+    state_class: total_increasing
+    accuracy_decimals: 0
+    lambda: return its_g5_decode::stats.cam;
+  - platform: template
+    name: DENM Received
+    state_class: total_increasing
+    accuracy_decimals: 0
+    lambda: return its_g5_decode::stats.denm;
+  - platform: template
+    name: SPATEM Received
+    state_class: total_increasing
+    accuracy_decimals: 0
+    lambda: return its_g5_decode::stats.spatem;
+  - platform: template
+    name: MAPEM Received
+    state_class: total_increasing
+    accuracy_decimals: 0
+    lambda: return its_g5_decode::stats.mapem;
+
+binary_sensor:
+  - platform: template
+    name: MQTT Connected
+    device_class: connectivity
+    entity_category: diagnostic
+    lambda: return id(mqtt_client).is_connected();
+
+text_sensor:
+  - platform: template
+    name: Last Station
+    update_interval: 10s
+    lambda: |-
+      const auto &i = its_g5_decode::stats.last;
+      if (i.lat == 0 && i.lon == 0)
+        return {};
+      char buf[96];
+      snprintf(buf, sizeof(buf), "%s %s %.6f,%.6f %.0f km/h %.0f°", its_g5_decode::port_name(i.port),
+               its_g5_decode::station_name(i.station_type), i.lat, i.lon, i.speed_kmh, i.heading);
+      return std::string(buf);
