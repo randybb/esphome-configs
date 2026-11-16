@@ -22,23 +22,15 @@ esphome:
 
 esp32:
   variant: esp32
-  toolchain: esp-idf
   framework:
-    advanced:
-      flash_chip: gd  # ESP32-PICO-D4, like the other M5Stamp Pico (not read from the device)
     type: esp-idf
+    advanced:
+      flash_chip: gd
+      sram1_as_iram: true
 
-external_components:
-  # - source: github://pr#3017
-  #   components: [hdmi_cec]
-  #   refresh: 1h
-  # - source: github://Palakis/esphome-hdmi-cec
-  #   refresh: 1h
-  - source: github://pr#9189
-    components: [hdmi_cec]
-    refresh: 0min
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
 debug:
 
@@ -133,10 +125,6 @@ hdmi_cec:
   address: 0x05 # Audio system
   # Promiscuous mode can be enabled to allow receiving messages not intended for us
   promiscuous_mode: false
-  # Typically the physical address is discovered based on the point-to-point
-  # topology of the HDMI connections using the DDC line. We don't have access
-  # to that so we just hardcode a physical address.
-  physical_address: 0x4000
   pin: 26
   on_message:
     - opcode: 0x36 # opcode for "Standby"
