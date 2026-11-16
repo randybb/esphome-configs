@@ -80,14 +80,11 @@ packages:
 
 external_components:
   - source: github://m5stack/esphome-yaml
-    components: [axp2101, aw88298, aw9523b, si12t, m5ioe1, ftservo, scs9009]
+    components: [axp2101, aw88298, aw9523b, si12t, ftservo, scs9009]
     refresh: 0s
   - source: github://randybb/esphome-components
-    components: [audio_spectrum]
+    components: [audio_spectrum, m5ioe1]
     refresh: 1h
-  # stop the microphone before the response with streaming STT (HA Cloud), drop once upstream
-  - source: github://randybb/esphome@va-stop-mic-streaming-stt
-    components: [voice_assistant]
 
 globals:
   - id: in_love
