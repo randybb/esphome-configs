@@ -119,6 +119,8 @@ mqtt:
   username: !secret mqtt_tracker_username
   password: !secret mqtt_tracker_password
   discovery: true
+  # MAC in the unique_id: the default ESP<type><object_id> clashes with other devices' common entities
+  discovery_unique_id_generator: mac
   # Every message costs data: logs stay on USB, and one ping per 10 min keeps the session.
   # Lower keepalive if O2's CGNAT drops idle TCP sooner (reconnects resend all discovery)
   log_topic: null

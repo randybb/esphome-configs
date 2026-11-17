@@ -2,7 +2,7 @@
 platform: uptime
 name: Uptime
 id: uptime_sensor
-unit_of_measurement: "days"
+unit_of_measurement: d  # HA unit for duration; MQTT discovery rejects "days"
 accuracy_decimals: 2
 update_interval: 60s
 filters:
