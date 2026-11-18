@@ -137,6 +137,18 @@ its_g5_receiver:
         ESP_LOGD("its_g5", "%s from %s %.6f,%.6f %.0f km/h %.0f deg%s, rssi %.0f dBm",
                  its_g5_decode::port_name(i.port), its_g5_decode::station_name(i.station_type),
                  i.lat, i.lon, i.speed_kmh, i.heading, i.secured ? ", signed" : "", rssi);
+        // Decoded header for HA/maptool, 1 Hz per station (CAMs come up to 10 Hz per vehicle)
+        if (!its_g5_decode::due(i.addr, millis(), 1000))
+          return;
+        char json[192];
+        int n = snprintf(json, sizeof(json),
+                         "{\"msg\":\"%s\",\"station\":\"%s\",\"id\":\"%016llx\",\"lat\":%.7f,\"lon\":%.7f,"
+                         "\"speed\":%.1f,\"heading\":%.1f,\"secured\":%s,\"rssi\":%.0f}",
+                         its_g5_decode::port_name(i.port), its_g5_decode::station_name(i.station_type),
+                         (unsigned long long) i.addr, i.lat, i.lon, i.speed_kmh, i.heading,
+                         i.secured ? "true" : "false", rssi);
+        // outside its/${node_id}/#, so the EMQX bridge keeps it off OpenTrafficMap
+        id(mqtt_client).publish("mcu-${device}/decoded", json, n, 0, false);
 
 sensor:
   - platform: its_g5_receiver

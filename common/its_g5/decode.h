@@ -13,6 +13,7 @@ namespace its_g5_decode {
 struct Info {
   uint16_t port{0};          // BTP destination port, 0 = none
   uint8_t station_type{0};   // ETSI station type from the GN address
+  uint64_t addr{0};          // GN address (M bit, station type, MID), identifies the station
   bool secured{false};       // carried in an ETSI TS 103 097 signed packet (signature not verified)
   double lat{0}, lon{0};     // degrees
   float speed_kmh{0};
@@ -116,6 +117,8 @@ inline bool parse(const std::vector<uint8_t> &frame, Info &out) {
 
   // Long position vector: GN address (8), timestamp (4), lat, lon (1/10 µdeg), PAI | speed, heading
   out.station_type = (f[pv] >> 2) & 0x1F;
+  for (size_t k = 0; k < 8; k++)
+    out.addr = (out.addr << 8) | f[pv + k];
   out.lat = be32(f + pv + 12) / 1e7;
   out.lon = be32(f + pv + 16) / 1e7;
   int16_t speed = be16(f + pv + 20) & 0x7FFF;
@@ -148,6 +151,28 @@ inline bool handle(const std::vector<uint8_t> &frame) {
     default: stats.other++; break;
   }
   stats.last = info;
+  return true;
+}
+
+// Rate limit per station: true if addr was not let through in the last period_ms.
+// ponytail: 32 slots, the oldest is evicted; with more stations in range some publish more often.
+inline bool due(uint64_t addr, uint32_t now, uint32_t period_ms) {
+  static struct {
+    uint64_t addr;
+    uint32_t ms;
+  } slots[32]{};
+  auto *slot = &slots[0];
+  for (auto &s : slots) {
+    if (s.addr == addr) {
+      slot = &s;
+      break;
+    }
+    if (now - s.ms > now - slot->ms)
+      slot = &s;
+  }
+  if (slot->addr == addr && now - slot->ms < period_ms)
+    return false;
+  *slot = {addr, now};
   return true;
 }
 

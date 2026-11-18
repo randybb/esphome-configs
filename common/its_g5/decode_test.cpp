@@ -25,7 +25,9 @@ int main() {
   assert(i.secured && i.port == 2001 && i.station_type == 5);
   assert(std::fabs(i.lat - 48.1528384) < 1e-7 && std::fabs(i.lon - 17.1203168) < 1e-7);
   assert(std::fabs(i.speed_kmh - 50.04f) < 0.01f && std::fabs(i.heading - 123.4f) < 0.01f);
+  assert(i.addr == 0x1400010203040506ULL);
   assert(handle(f) && stats.cam == 1);
+  assert(due(i.addr, 1000, 1000) && !due(i.addr, 1999, 1000) && due(2, 1999, 1000) && due(i.addr, 2000, 1000));
   f[30] = 0x48; assert(!parse(f, i));  // not GeoNetworking
   std::puts("ok");
 }
