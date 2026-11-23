@@ -30,7 +30,7 @@ esp32:
   toolchain: esp-idf
   framework:
     advanced:
-      flash_chip: generic  # same board as lvgl-trainer (not read from the device)
+      flash_chip: generic  # same board as mcu-trainer (not read from the device)
     type: esp-idf
 
 packages:

@@ -7,8 +7,8 @@
 #   GPIO32  Grove SDA
 #   GPIO33  Grove SCL
 substitutions:
-  device: dimmer
-  name: Dimmer
+  device: trainer-fan
+  name: Trainer Fan
   area: Basement
   comment: Pain cave fan
 

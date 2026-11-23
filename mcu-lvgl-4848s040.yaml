@@ -249,7 +249,7 @@ lvgl:
           bg_color: 0xE08A00
   top_layer:
     widgets:
-      # same navigation bar as on mcu-lvgl-trainer
+      # same navigation bar as on mcu-trainer
       - buttonmatrix:
           id: nav_bar
           align: bottom_mid

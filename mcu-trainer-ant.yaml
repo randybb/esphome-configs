@@ -1,0 +1,227 @@
+---
+# Hardware: Ebyte E104-BT5040U (nRF52840 USB dongle)
+# Flash: Open DFU bootloader (USB 1915:521f), RESET button -> blue LED blinks, then upload
+# No USB in the app: the USB stack holds HFCLK through onoff, so RadiANT's clock_control_on()
+# gets -EPERM and ANT setup fails (0x33). So no logger and no DFU touch either.
+# Pinout (LEDs and button active low):
+#   pin 17  VDD 3.3 V                  not together with USB power (datasheet)
+#   pin 18  GND
+#   pin 19  P0.04   UART TX            -> mcu-trainer GPIO18 (RX), packet_transport
+#   pin 20  P0.26   UART RX            <- mcu-trainer GPIO17 (TX), packet_transport
+#   P0.06   LED (red)                  -> ANT+ Connected (a configured device is received),
+#                                         blinks when ANT+ setup failed
+#   P0.08, P1.09, P0.12: RGB LED per datasheet, unused (only red lit reliably in tests)
+#   P1.06   function button            -> Button (binary_sensor gpio)
+# Radio: ANT+ receiver (RadiANT), no network of its own; values go over the UART link
+# ANT+ devices:
+#   655730   Garmin HRM-Pro          heart rate
+#   498521   Concept2 PM5 (rower)    fitness equipment (FE-C)
+#   1044953  Garmin Tempe            environment (temperature)
+#   604693   Garmin Varia RTL515     bike radar, battery only
+#   136052   Garmin HRM-Dual         heart rate (pain cave)
+#   334424   Garmin HRM-Tri          heart rate (bike)
+#   886796   Garmin Rally RS200      power + cadence
+#   343922   Garmin Speed Sensor 2   speed
+#   42898    SRAM Force AXS          shifting (Cube Litening C:68X), battery only
+#   13888    Tacx Neo 2              fitness equipment (FE-C), basement trainer
+esphome:
+  name: mcu-trainer-ant
+  friendly_name: Trainer ANT+
+
+# needs the esphomeplatformzephyr fork (esphome-zephyr); RadiANT needs NCS
+nrf:
+  variant: NRF52
+  board: nrf52840dongle/nrf52840
+  framework:
+    type: ncs
+    advanced:
+      # factory MBR + Open DFU bootloader stay, the app starts at 0x1000
+      bootloader: nrf
+      dfu: false
+    kconfig_options:
+      BOARD_SERIAL_BACKEND_CDC_ACM: false
+
+external_components:
+  - source: github://randybb/esphome-components
+    components: [ant_plus]
+
+output:
+  - platform: gpio
+    id: led_known
+    pin: {number: P0.06, inverted: true}
+
+binary_sensor:
+  - platform: gpio
+    id: button
+    name: Button
+    pin: {number: P1.06, mode: INPUT_PULLUP, inverted: true}
+
+ant_plus:
+  id: ant
+  network_key: !secret ant_plus_network_key
+  connected:
+    id: ant_connected
+    name: ANT+ Connected
+    on_press: {output.turn_on: led_known}
+    on_release: {output.turn_off: led_known}
+  unknown_device:
+    id: ant_unknown_device
+    name: ANT+ Unknown Device
+  devices:
+    - type: heart_rate  # Garmin HRM-Pro
+      device_number: 655730
+      heart_rate:
+        id: hrm_pro_heart_rate
+        name: Garmin HRM-Pro Heart Rate
+      battery_level:
+        id: hrm_pro_battery
+        name: Garmin HRM-Pro Battery
+    - type: fitness_equipment  # Concept2 PM5 (rower)
+      device_number: 498521
+      power:
+        id: pm5_power
+        name: Concept2 PM5 Power
+      cadence:
+        id: pm5_stroke_rate
+        name: Concept2 PM5 Stroke Rate
+      in_use:
+        id: pm5_in_use
+        name: Concept2 PM5 In Use
+    - type: temperature  # Garmin Tempe
+      device_number: 1044953
+      temperature:
+        id: tempe_temperature
+        name: Garmin Tempe Temperature
+      temperature_min:
+        id: tempe_temperature_min
+        name: Garmin Tempe Temperature 24h Min
+      temperature_max:
+        id: tempe_temperature_max
+        name: Garmin Tempe Temperature 24h Max
+      battery_voltage:
+        id: tempe_battery
+        name: Garmin Tempe Battery
+      battery_low:
+        id: tempe_battery_low
+        name: Garmin Tempe Battery Low
+    - type: bike_radar  # Garmin Varia RTL515
+      device_number: 604693
+      battery_voltage:
+        id: varia_battery
+        name: Garmin Varia RTL515 Battery
+      battery_low:
+        id: varia_battery_low
+        name: Garmin Varia RTL515 Battery Low
+    - type: heart_rate  # Garmin HRM-Dual
+      device_number: 136052
+      heart_rate:
+        id: hrm_dual_heart_rate
+        name: Garmin HRM-Dual Heart Rate
+      battery_level:
+        id: hrm_dual_battery
+        name: Garmin HRM-Dual Battery
+    - type: heart_rate  # Garmin HRM-Tri
+      device_number: 334424
+      heart_rate:
+        id: hrm_tri_heart_rate
+        name: Garmin HRM-Tri Heart Rate
+      battery_level:
+        id: hrm_tri_battery
+        name: Garmin HRM-Tri Battery
+    - type: power  # Garmin Rally RS200 (a battery in each pedal)
+      device_number: 886796
+      power:
+        id: rally_power
+        name: Garmin Rally RS200 Power
+      cadence:
+        id: rally_cadence
+        name: Garmin Rally RS200 Cadence
+      battery_low:
+        id: rally_battery_low
+        name: Garmin Rally RS200 Battery Low
+    - type: speed  # Garmin Speed Sensor 2
+      device_number: 343922
+      speed:
+        id: speed2_speed
+        name: Garmin Speed Sensor 2 Speed
+      battery_voltage:
+        id: speed2_battery
+        name: Garmin Speed Sensor 2 Battery
+      battery_low:
+        id: speed2_battery_low
+        name: Garmin Speed Sensor 2 Battery Low
+    - type: fitness_equipment  # Tacx Neo 2
+      device_number: 13888
+      power:
+        id: neo_power
+        name: Tacx Neo 2 Power
+      cadence:
+        id: neo_cadence
+        name: Tacx Neo 2 Cadence
+      in_use:
+        id: neo_in_use
+        name: Tacx Neo 2 In Use
+    - type: shifting  # SRAM Force AXS (Cube Litening C:68X)
+      device_number: 42898
+      battery_low:
+        id: sram_battery_low
+        name: SRAM Force AXS Battery Low
+
+uart:
+  id: link
+  port: UART1
+  tx_pin: P0.04
+  rx_pin: P0.26
+  baud_rate: 115200
+
+# same layers as the receiving end, both ends must match
+packet_interface:
+  - platform: uart
+    id: link_packets
+    uart_id: link
+    reliability:
+    session:
+
+packet_transport:
+  - platform: packet_interface
+    packet_interface: link_packets
+    update_interval: 1s
+    sensors:
+      - hrm_pro_heart_rate
+      - hrm_pro_battery
+      - pm5_power
+      - pm5_stroke_rate
+      - tempe_temperature
+      - tempe_temperature_min
+      - tempe_temperature_max
+      - tempe_battery
+      - varia_battery
+      - hrm_dual_heart_rate
+      - hrm_dual_battery
+      - hrm_tri_heart_rate
+      - hrm_tri_battery
+      - rally_power
+      - rally_cadence
+      - speed2_speed
+      - speed2_battery
+      - neo_power
+      - neo_cadence
+    binary_sensors:
+      - button
+      - ant_connected
+      - ant_unknown_device
+      - pm5_in_use
+      - tempe_battery_low
+      - varia_battery_low
+      - rally_battery_low
+      - speed2_battery_low
+      - sram_battery_low
+      - neo_in_use
+
+# blink the red LED when ANT+ setup failed (no logger without USB)
+interval:
+  - interval: 500ms
+    then:
+      - lambda: |-
+          static bool on = false;
+          if (id(ant).is_failed()) { on = !on; if (on) id(led_known).turn_on(); else id(led_known).turn_off(); }
