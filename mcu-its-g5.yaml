@@ -39,6 +39,11 @@ packages:
   # ipv6_only off: eppp_link (pulled in by esp_wifi_remote) needs IPv4, fix belongs in esp-protocols
   # ipv6_only: !include common/ipv6_only.yaml
 
+# IPv4 only: the car hotspot (O2 SK) has no IPv6, but MQTT prefers the broker's AAAA record whenever
+# IPv6 is enabled, even with only a link-local address, and never falls back to IPv4
+network:
+  enable_ipv6: false
+
 # MQTT only: HA can't reach the API on the car hotspot, and both would duplicate the entities
 api: !remove
 time: !remove  # homeassistant time needs the API
