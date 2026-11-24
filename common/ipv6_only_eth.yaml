@@ -4,19 +4,13 @@
 #     common_eth: !include common/common_eth.yaml
 #     ipv6_only: !include common/ipv6_only_eth.yaml
 # WiFi devices use common/ipv6_only.yaml (this + the IPv6 SSID)
-external_components:
-  # IPv6-only on wifi/ethernet with the IPv4 stack off (esphome/esphome#19750), drop once merged
-  - source: github://pr#19750
-    components: [network, wifi, ethernet]
-    refresh: 1h
-
 esp32:
   framework:
     components:
-      # IDF v5.5.5 lwip + .local resolution over IPv6 (espressif/esp-lwip#94), drop once in IDF
+      # IDF v6.1.1 lwip + .local resolution over IPv6 (espressif/esp-lwip#94), drop once in IDF
       - name: lwip
         source: https://github.com/randybb/esp-lwip.git
-        ref: idf-v5.5.5-lwip-component
+        ref: idf-v6.1.1-lwip-component
         path: lwip
 
 network:
