@@ -97,16 +97,14 @@ external_components:
     components: [axp192]
     refresh: 1h
   - source: github://randybb/esphome-components
-    components: [m5stack_keyboard, m5stack_st7789v2, meshtastic]
+    components: [m5stack_keyboard, m5stack_st7789v2, meshtastic, mlx90640]
     refresh: 0s
-  # MLX90640, camera entity in HA (its heatmap page at /thermal needs web_server_base only)
-  - source: github://randybb/esphome-mlx-90640@optional-web-server
-    components: [mlx90640]
 
 # MLX90640 on Port C; settings changed at runtime are saved on the device
 mlx90640:
   id: thermal
   i2c_id: i2c_port_c
+  web_ui: false  # the heatmap page at /thermal would pull in web_server_base
   refresh_rate: 4Hz
   update_interval: 10s
   min_temperature:
