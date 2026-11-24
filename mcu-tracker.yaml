@@ -74,6 +74,9 @@ esp32:
   # ipv6_only: !include common/ipv6_only.yaml
 
 external_components:
+  # modem from before esphome#22817: its CFUN=0 at start powers the SIM7600's SIM down for good (SIM failure)
+  - source: github://esphome/esphome@200bf69035292853fa427d2e737d0b2da7de25d0
+    components: [modem]
   - source: github://m5stack/esphome-yaml
     components: [axp192]
     refresh: 1h
