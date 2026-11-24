@@ -7,6 +7,7 @@
 #   P0.06   UART0 TX                   -> logger (J-Link VCOM)
 #   P0.13   LED 1 (active low)         -> ANT+ Connected (a configured device is received)
 #   P0.14   LED 2 (active low)         -> ANT+ Unknown Device (an unconfigured one is in range)
+#   NFC1/2  NFC antenna connector      -> nfc_tag (Type 2 tag, HA tag URL)
 #   P1.01   UART1 RX                   <- mcu-nrf-dk UART1 TX (P1.02), packet_transport
 #   P1.02   UART1 TX                   -> mcu-nrf-dk UART1 RX (P1.01), packet_transport; plus GND
 # Radio: ANT+ receiver (RadiANT), no network of its own; values go to mcu-nrf-dk
@@ -37,7 +38,7 @@ logger:
 
 external_components:
   - source: github://randybb/esphome-components
-    components: [ant_plus]
+    components: [ant_plus, nfc_tag]
 
 output:
   - platform: gpio
@@ -46,6 +47,9 @@ output:
   - platform: gpio
     id: led_unknown
     pin: {number: P0.14, inverted: true}
+
+nfc_tag:
+  url: https://www.home-assistant.io/tag/mcu-nrf-ant
 
 ant_plus:
   network_key: !secret ant_plus_network_key
