@@ -1,22 +1,16 @@
 ---
-# Hardware: M5Stack M5Stamp C3
+# Hardware: M5Stack M5Stamp C3, GNSS test bench with two receivers
 # Pinout:
-#   GPIO0   I2C SCL                    -> i2c_grove (i2c scl)
-#   GPIO1   I2C SDA, BUTTON            -> i2c_grove (i2c sda)
-#   GPIO2   RGB
-#   GPIO4   GPIO
-#   GPIO5   GPIO
-#   GPIO6   GPIO
-#   GPIO7   GPIO
-#   GPIO8   GPIO
-#   GPIO9   GPIO
-#   GPIO10  GPIO
-#   GPIO18  UART RX                    -> uart_hdmi_switch (uart rx_pin)
-#   GPIO19  UART TX                    -> uart_hdmi_switch (uart tx_pin)
-#   GPIO20  UART RX, LOGGER            -> uart_log (uart rx_pin)
-#   GPIO21  UART TX, LOGGER            -> uart_log (uart tx_pin)
-# I2C:
-#   0x20  pcf8574_hub (pcf8574)
+#   GPIO0   Grove A pin 4, UART TX     -> uart_m10 (uart tx_pin)
+#   GPIO1   Grove A pin 3, UART RX     -> uart_m10 (uart rx_pin)
+#   GPIO18  Grove B pin 4 (USB D-), UART TX -> uart_neo6m (uart tx_pin)
+#   GPIO19  Grove B pin 3 (USB D+), UART RX -> uart_neo6m (uart rx_pin)
+#   GPIO20  UART0 RX (on-board USB to UART), unused: logger is API only
+#   GPIO21  UART0 TX (on-board USB to UART), unused: logger is API only
+# Grove pin order: GND, 5V, signal, signal
+# Receivers:
+#   Grove A  XYZ GNSS YM-250, u-blox M10 (ROM SPG 5.10, PROTVER 34.10), 38400 baud -> gnss_m10 (ubx)
+#   Grove B  APM NEO-6M, u-blox 6 (7.03), 9600 baud                                 -> gnss_neo6m (nmea)
 substitutions:
   device: eworkbench
   name: Electronics Workbench
@@ -36,237 +30,176 @@ esp32:
   toolchain: esp-idf
   framework:
     type: esp-idf
+    advanced:
+      flash_chip: generic
 
 packages:
   common: !include common/common.yaml
+  ipv6_only: !include common/ipv6_only.yaml
 
-i2c:
-  - id: i2c_grove
-    sda: 1
-    scl: 0
-    scan: true
-  # - id: i2c_grove_2
-  #   sda: 19
-  #   scl: 18
-  #   scan: true
+external_components:
+  # gnss hub + nmea and ubx platforms, esphome/esphome#23301 (stacked on #23293)
+  - source: github://pr#23301
+    components: [gnss, nmea, ubx]
+
+logger:
+  # The C3 has two UARTs and both receivers need one; logs go over the API only
+  baud_rate: 0
 
 uart:
-  - id: uart_log
-    rx_pin: 20
-    tx_pin: 21
-    baud_rate: 115200
-  - id: uart_hdmi_switch
-    rx_pin: 18
-    tx_pin: 19
+  - id: uart_m10
+    rx_pin: 1
+    tx_pin: 0
+    baud_rate: 38400
+    # Test aid: decode the answers to the polls in interval below
+    debug:
+      direction: RX
+      after:
+        bytes: 1024
+        timeout: 50ms
+      sequence:
+        - lambda: |-
+            for (size_t i = 0; i + 8 <= bytes.size(); i++) {
+              if (bytes[i] != 0xB5 || bytes[i + 1] != 0x62)
+                continue;
+              const uint8_t cls = bytes[i + 2], id = bytes[i + 3];
+              const size_t len = bytes[i + 4] | (bytes[i + 5] << 8);
+              if (i + 6 + len > bytes.size())
+                break;
+              const uint8_t *p = bytes.data() + i + 6;
+              if (cls == 0x0A && id == 0x28 && len >= 8) {
+                ESP_LOGI("ubxdbg", "MON-GNSS supported 0x%02X default 0x%02X enabled 0x%02X (bit0 GPS 1 GLO 2 BDS 3 GAL), max %u at once",
+                         p[1], p[2], p[3], p[4]);
+              } else if (cls == 0x01 && id == 0x35 && len >= 8) {
+                static const char *const NAMES[] = {"GPS", "SBAS", "GAL", "BDS", "IMES", "QZSS", "GLO", "NAVIC"};
+                int tracked[8] = {0}, used[8] = {0}, sbas_corr = 0;
+                std::string sbas;
+                const uint8_t num = p[5];
+                for (uint8_t k = 0; k < num && 8 + 12 * (k + 1) <= len; k++) {
+                  const uint8_t *b = p + 8 + 12 * k;
+                  const uint32_t flags = b[8] | (b[9] << 8) | (b[10] << 16) | ((uint32_t) b[11] << 24);
+                  const uint8_t g = b[0] & 7;
+                  if (b[2] > 0)
+                    tracked[g]++;
+                  if (flags & (1u << 3))
+                    used[g]++;
+                  if (flags & (1u << 16))
+                    sbas_corr++;
+                  if (b[0] == 1 && b[2] > 0) {
+                    char buf[16];
+                    snprintf(buf, sizeof(buf), " %u:%u", b[1], b[2]);
+                    sbas += buf;
+                  }
+                }
+                std::string summary;
+                for (int g = 0; g < 8; g++) {
+                  if (tracked[g] == 0)
+                    continue;
+                  char buf[24];
+                  snprintf(buf, sizeof(buf), " %s %d/%d", NAMES[g], used[g], tracked[g]);
+                  summary += buf;
+                }
+                ESP_LOGI("ubxdbg", "NAV-SAT used/tracked:%s; SBAS-corrected %d; SBAS PRN:cno%s", summary.c_str(), sbas_corr,
+                         sbas.c_str());
+              }
+              i += 5 + len;
+            }
+  - id: uart_neo6m
+    rx_pin: 19
+    tx_pin: 18
     baud_rate: 9600
 
-pcf8574:
-  - id: 'pcf8574_hub'
-    address: 0x20
-    pcf8575: true
+gnss:
+  - platform: ubx
+    id: gnss_m10
+    uart_id: uart_m10
+    update_interval: 10s
+  - platform: nmea
+    id: gnss_neo6m
+    uart_id: uart_neo6m
+    update_interval: 10s
 
-switch:
-  - platform: gpio
-    name: "PCF8574 Pin #0"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 0
-      # One of INPUT or OUTPUT
-      mode:
-        output: true
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #1"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 1
-      # One of INPUT or OUTPUT
-      mode:
-        output: true
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #7"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 7
-      # One of INPUT or OUTPUT
-      mode:
-        output: true
-      inverted: false
+sensor:
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: latitude
+    name: M10 Latitude
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: longitude
+    name: M10 Longitude
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: altitude
+    name: M10 Altitude
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: speed
+    name: M10 Speed
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: course
+    name: M10 Course
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: satellites
+    name: M10 Satellites
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: hdop
+    name: M10 HDOP
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: horizontal_accuracy
+    name: M10 Horizontal Accuracy
+  - platform: gnss
+    gnss_id: gnss_m10
+    type: vertical_accuracy
+    name: M10 Vertical Accuracy
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: latitude
+    name: NEO-6M Latitude
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: longitude
+    name: NEO-6M Longitude
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: altitude
+    name: NEO-6M Altitude
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: speed
+    name: NEO-6M Speed
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: course
+    name: NEO-6M Course
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: satellites
+    name: NEO-6M Satellites
+  - platform: gnss
+    gnss_id: gnss_neo6m
+    type: hdop
+    name: NEO-6M HDOP
 
-binary_sensor:
-  - platform: gpio
-    name: "PCF8574 Pin #10"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 8
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #11"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 9
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #12"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 10
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #13"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 11
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #14"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 12
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #15"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 13
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #16"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 14
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
-  - platform: gpio
-    name: "PCF8574 Pin #17"
-    pin:
-      pcf8574: pcf8574_hub
-      number: 15
-      # One of INPUT or OUTPUT
-      mode: INPUT
-      inverted: false
+time:
+  - platform: gnss
+    id: gnss_time
+    gnss_id: gnss_m10
+    on_time_sync:
+      - logger.log: GNSS time synced
 
-# binary_sensor:
-#   - platform: gpio
-#     id: rotary_encoder_button
-#     pin:
-#       number: 6
-#       # mode: INPUT_PULLUP
-#       inverted: true
-#     filters:
-#       - delayed_on: 30ms
-#       - delayed_off: 30ms
-#     on_press:
-#       - display_menu.enter:
-
-# display:
-#   - platform: lcd_pcf8574
-#     id: my_lcd
-#     i2c_id: i2c_grove
-#     dimensions: 20x4
-#     address: 0x27
-#     user_characters:
-#       - position: 0
-#         data:  # mark_back symbol
-#           - 0b00100
-#           - 0b01000
-#           - 0b11110
-#           - 0b01001
-#           - 0b00101
-#           - 0b00001
-#           - 0b11110
-#           - 0b00000
-#     lambda: |-
-#       id(my_lcd_menu).draw();
-#       if (!id(my_lcd_menu).is_active())
-#         it.print("Menu is not active");
-
-# lcd_menu:
-#   id: my_lcd_menu
-#   display_id: my_lcd
-#   active: true
-#   mode: rotary
-#   mark_back: 0x08
-#   mark_selected: 0x3e
-#   mark_editing: 0x2a
-#   mark_submenu: 0x7e
-#   items:
-#     - type: back
-#       text: 'Back'
-#     - type: label
-#       text: 'Label 1'
-#     - type: label
-#       text: !lambda |-
-#         return "Templated label";
-
-# select:
-#   - platform: template
-#     id: hdmi_switch
-#     optimistic: true
-#     options:
-#       - PC1
-#       - PC2
-#       - PC3
-#       - PC4
-#     initial_option: PC1
-#     # set_action:
-#     #   - logger.log:
-#     #         format: "Chosen option: %s (index %d)"
-#     #         args: ["x.c_str()", "i"]
-#       # - uart.write:
-#       #     id: uart_hdmi_switch
-#       #     data: [0x47, 0x30, 0x31, 0x67, 0x41, 0x00]
-
-# sensor:
-#   - platform: rotary_encoder
-#     id: rotary_encoder_sensor
-#     pin_a: 4
-#     pin_b: 5
-#     filters:
-#       debounce: 30ms
-#     on_anticlockwise:
-#       - display_menu.up:
-#     on_clockwise:
-#       - display_menu.down:
-
-# display:
-#   - platform: tm1637
-#     id: tm1637_display
-#     clk_pin: 4
-#     dio_pin: 5
-#     update_interval: 500ms
-#     # intensity: 0
-#     lambda: |-
-#       static int i = 0;
-#       i++;
-#       if (id(alarm_id)) {
-#         if ((i % 2) == 0)
-#           it.print("8 8 ");
-#         else
-#           it.print(" 8 8");
-#       } else {
-#         if (((i / 10) % 2) == 0) {
-#           //it.set_intensity(7);
-#           if ((i % 2) == 0)
-#             it.strftime("%H.%M", id(ha_time).now());
-#           else
-#             it.strftime("%H%M", id(ha_time).now());
-#         } else {
-#           //it.set_intensity(1);
-#           it.printf("%.0f~C", id(temperature).state);
-#         }
-#       }
+interval:
+  # Test aid: constellations and satellites of the M10
+  - interval: 60s
+    then:
+      - uart.write:
+          id: uart_m10
+          data: [0xB5, 0x62, 0x0A, 0x28, 0x00, 0x00, 0x32, 0xA0]
+      - delay: 2s
+      - uart.write:
+          id: uart_m10
+          data: [0xB5, 0x62, 0x01, 0x35, 0x00, 0x00, 0x36, 0xA3]
