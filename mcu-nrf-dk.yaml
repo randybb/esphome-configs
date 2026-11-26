@@ -147,6 +147,29 @@ sensor:
     entity_category: diagnostic
   - platform: packet_transport
     provider: mcu-nrf-ant
+    remote_id: varia_vehicles
+    name: Garmin Varia RTL515 Vehicles
+    internal: false
+    icon: mdi:car-multiple
+    accuracy_decimals: 0
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: varia_distance
+    name: Garmin Varia RTL515 Vehicle Distance
+    internal: false
+    unit_of_measurement: m
+    device_class: distance
+    accuracy_decimals: 1
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: varia_speed
+    name: Garmin Varia RTL515 Closing Speed
+    internal: false
+    unit_of_measurement: m/s
+    device_class: speed
+    accuracy_decimals: 2
+  - platform: packet_transport
+    provider: mcu-nrf-ant
     remote_id: hrm_dual_heart_rate
     name: Garmin HRM-Dual Heart Rate
     internal: false
@@ -289,6 +312,12 @@ binary_sensor:
     internal: false
     device_class: battery
     entity_category: diagnostic
+  - platform: packet_transport
+    provider: mcu-nrf-ant
+    remote_id: varia_fast
+    name: Garmin Varia RTL515 Fast Vehicle
+    internal: false
+    icon: mdi:car-emergency
   - platform: packet_transport
     provider: mcu-nrf-ant
     remote_id: rally_battery_low

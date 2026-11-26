@@ -15,7 +15,7 @@
 #   655730   Garmin HRM-Pro          heart rate
 #   498521   Concept2 PM5 (rower)    fitness equipment (FE-C)
 #   1044953  Garmin Tempe            environment (temperature)
-#   604693   Garmin Varia RTL515     bike radar, battery only
+#   604693   Garmin Varia RTL515     bike radar: vehicles, nearest distance + closing speed, battery
 #   136052   Garmin HRM-Dual         heart rate (pain cave)
 #   334424   Garmin HRM-Tri          heart rate (bike)
 #   886796   Garmin Rally RS200      power + cadence
@@ -108,6 +108,18 @@ ant_plus:
       battery_low:
         id: varia_battery_low
         name: Garmin Varia RTL515 Battery Low
+      targets:
+        id: varia_vehicles
+        name: Garmin Varia RTL515 Vehicles
+      distance:
+        id: varia_distance
+        name: Garmin Varia RTL515 Vehicle Distance
+      speed:
+        id: varia_speed
+        name: Garmin Varia RTL515 Closing Speed
+      fast_approach:
+        id: varia_fast
+        name: Garmin Varia RTL515 Fast Vehicle
     - type: heart_rate  # Garmin HRM-Dual
       device_number: 136052
       heart_rate:
@@ -193,6 +205,9 @@ packet_transport:
       - tempe_temperature_max
       - tempe_battery
       - varia_battery
+      - varia_vehicles
+      - varia_distance
+      - varia_speed
       - hrm_dual_heart_rate
       - hrm_dual_battery
       - hrm_tri_heart_rate
@@ -209,6 +224,7 @@ packet_transport:
       - pm5_in_use
       - tempe_battery_low
       - varia_battery_low
+      - varia_fast
       - rally_battery_low
       - speed2_battery_low
       - sram_battery_low
