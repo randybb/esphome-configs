@@ -35,8 +35,10 @@
 #   0x40  es7210_adc (audio_adc es7210)
 #   0x41  sensor ina226 (sensor ina226)
 #   0x51  rtc_time (time bm8563)
+#   0x50  nfc_reader (st25r_i2c)
 #   0x58  aw9523b_hub (aw9523b)
 #   0x68  touch_hub (si12t)
+#   0x69  imu (motion bmi270)
 #   0x6F  m5ioe1_hub (m5ioe1)
 substitutions:
   device: stackchan
@@ -50,6 +52,10 @@ esphome:
   area: ${area}
   comment: ${comment}
   on_boot:
+    # the 5 V BUS after the expander parked its pins low (HARDWARE) and before si12t/st25r probe it (DATA)
+    - priority: 700
+      then:
+        - script.execute: bus_power_on
     - priority: -100
       then:
         - light.turn_on:
@@ -85,6 +91,10 @@ external_components:
   - source: github://randybb/esphome-components
     components: [audio_spectrum, m5ioe1]
     refresh: 1h
+  # st25r upstream has SPI only, st25r_i2c is still on this branch
+  - source: github://m5stack/esphome@feat-st25r3916
+    components: [st25r, st25r_i2c]
+    refresh: 1d
 
 globals:
   - id: in_love
@@ -110,6 +120,17 @@ globals:
     initial_value: '0'
   - id: gaze_y
     type: int
+    initial_value: '0'
+  - id: dizzy
+    type: bool
+    initial_value: 'false'
+  - id: surprised
+    type: bool
+    initial_value: 'false'
+  - id: speech
+    type: std::string
+  - id: nfc_changed_ms
+    type: uint32_t
     initial_value: '0'
 
 i2c:
@@ -178,7 +199,7 @@ switch:
     pin:
       aw9523b_id: aw9523b_hub
       number: 15
-    restore_mode: RESTORE_DEFAULT_ON
+    restore_mode: ALWAYS_OFF  # switched on by bus_power_on
   - platform: gpio
     id: usb_otg_en
     name: USB OTG
@@ -194,7 +215,7 @@ switch:
     pin:
       aw9523b_id: aw9523b_hub
       number: 1
-    restore_mode: RESTORE_DEFAULT_ON
+    restore_mode: ALWAYS_OFF  # switched on by bus_power_on
   - platform: gpio
     id: light_bar_en
     internal: true
@@ -372,12 +393,71 @@ voice_assistant:
     - light.turn_on: {id: light_bar, brightness: 60%, red: 100%, green: 0%, blue: 0%}
 
 script:
-  # short tap on the head starts the assistant
-  - id: head_tap
+  # Powers the 5 V BUS from the battery (as in m5stack/esphome-yaml stackchan base).
+  # The BUS is a capacitive load: switched on at once it pulls a converter under its
+  # UVP threshold and the AXP2101 powers itself off (red LED, off on battery only).
+  - id: bus_power_on
     then:
+      - lambda: |-
+          // REG 23H bits 4:0: DCDC1-5 under-voltage power-off, POR value all set
+          uint8_t reg;
+          if (id(axp2101_pmu)->read_byte(0x23, &reg))
+            id(axp2101_pmu)->write_byte(0x23, reg & ~0x1F);
+          id(boost_en).turn_on();
+          delay(50);
+          // eight pulses of growing on-time bring the cold BUS up to a few volts
+          for (int pulse = 0; pulse < 8; ++pulse) {
+            id(bus_out_en).turn_on();
+            delayMicroseconds(pulse * 16);
+            id(bus_out_en).turn_off();
+            delayMicroseconds(1000);
+          }
+          id(bus_out_en).turn_on();
+          delay(100);
+  # shake: dizzy eyes for a while
+  - id: shake_reaction
+    mode: restart
+    then:
+      - lambda: id(dizzy) = true;
+      - component.update: display_tft
+      - delay: 3s
+      - lambda: id(dizzy) = false;
+      - component.update: display_tft
+  # a card laid on the head: big round eyes and an O mouth
+  - id: surprise_reaction
+    mode: restart
+    then:
+      - lambda: id(surprised) = true;
+      - component.update: display_tft
+      - delay: 3s
+      - lambda: id(surprised) = false;
+      - component.update: display_tft
+  # text under the face with the mouth moving
+  - id: say
+    mode: restart
+    parameters:
+      message: string
+    then:
+      - lambda: |-
+          id(speech) = message;
+          id(speaking) = true;
+      - component.update: display_tft
+      - delay: 8s
+      - lambda: |-
+          id(speech).clear();
+          id(speaking) = false;
+      - component.update: display_tft
+  # short tap on the head starts the assistant; a card laid on or taken off the head
+  # touches the pads too, so a tap within 1.5 s of a tag change is ignored
+  - id: head_tap
+    mode: single
+    then:
+      - delay: 400ms  # 2 NFC polls, so a card just laid on is already seen
       - if:
           condition:
-            not: voice_assistant.is_running
+            and:
+              - not: voice_assistant.is_running
+              - lambda: return millis() - id(nfc_changed_ms) > 1500;
           then:
             - voice_assistant.start:
   # stroking the head shows the in-love face for a while
@@ -649,8 +729,9 @@ display:
         bar_drawn = false;
         spectrum_reset = true;
       } else if (!music) {
-        it.filled_rectangle(70, 78, 181, 31, id(face_bg));   // eyes including gaze range
+        it.filled_rectangle(66, 74, 189, 39, id(face_bg));   // eyes including gaze range and surprised eyes
         it.filled_rectangle(105, 130, 111, 38, id(face_bg)); // mouth
+        it.filled_rectangle(0, 184, 320, 30, id(face_bg));   // speech text
         if (dot_shown && !id(listening)) {
           it.filled_rectangle(254, 2, 28, 28, id(face_bg));
         }
@@ -760,6 +841,16 @@ display:
           it.filled_circle(160 + ex / 2, 132 + ey / 2, 30, id(face_fg));
           it.filled_circle(160 + ex / 2, 122 + ey / 2, 30, id(face_bg));
         }
+      } else if (id(surprised)) {
+        it.filled_circle(lx, eye_y, 11, id(face_fg));
+        it.filled_circle(rx, eye_y, 11, id(face_fg));
+      } else if (id(dizzy)) {
+        // X eyes, 3 px thick
+        for (int cx : {lx, rx})
+          for (int d = -1; d <= 1; d++) {
+            it.line(cx - 9 + d, eye_y - 9, cx + 9 + d, eye_y + 9, id(face_fg));
+            it.line(cx - 9 + d, eye_y + 9, cx + 9 + d, eye_y - 9, id(face_fg));
+          }
       } else if (id(eyes_open)) {
         it.filled_circle(lx, eye_y, eye_r, id(face_fg));
         it.filled_circle(rx, eye_y, eye_r, id(face_fg));
@@ -769,15 +860,77 @@ display:
       }
 
       const float m = id(mouth_open);
-      if (!love || id(speaking)) {
+      if (id(surprised) && !id(speaking)) {
+        it.filled_circle(160 + ex / 2, 148 + ey / 2, 15, id(face_fg));
+        it.filled_circle(160 + ex / 2, 148 + ey / 2, 9, id(face_bg));
+      } else if (!love || id(speaking)) {
         const int mw = 90 - (int) (40 * m);
         const int mh = 4 + (int) (26 * m);
         it.filled_rectangle(160 - mw / 2 + ex / 2, 148 - mh / 2 + ey / 2, mw, mh, id(face_fg));
       }
 
+      if (!id(speech).empty()) {
+        it.print(160, 186, id(font_status), id(face_fg), TextAlign::TOP_CENTER, id(speech).c_str());
+      }
+
       if (id(listening)) {
         it.image(254, 2, id(icon_listening), id(face_fg), id(face_bg));  // left of the wifi bars
       }
+
+motion:
+  - platform: bmi270
+    id: imu
+    i2c_id: i2c_bsp
+    address: 0x69
+    update_interval: 50ms
+    accelerometer_range: 4G
+    accelerometer_odr: 100HZ
+
+event:
+  - platform: motion
+    id: imu_shake
+    name: Shake
+    threshold: 1.5
+    cooldown: 500ms
+    on_event:
+      - script.execute: shake_reaction
+
+st25r_i2c:
+  id: nfc_reader
+  i2c_id: i2c_bsp
+  update_interval: 200ms
+  on_tag:
+    - lambda: |-
+        id(nfc_changed_ms) = millis();
+        id(speech) = x;  // UID under the face while the card lies there
+    - script.execute: surprise_reaction
+    - text_sensor.template.publish:
+        id: nfc_tag
+        state: !lambda return x;
+  on_tag_removed:
+    - lambda: |-
+        id(nfc_changed_ms) = millis();
+        id(speech).clear();
+    - component.update: display_tft
+    - text_sensor.template.publish:
+        id: nfc_tag
+        state: ""
+
+api:
+  actions:
+    - action: stackchan_say
+      variables:
+        message: string
+      then:
+        - script.execute:
+            id: say
+            message: !lambda return message;
+    - action: stackchan_pet
+      then:
+        - script.execute: head_stroke
+    - action: stackchan_shake
+      then:
+        - script.execute: shake_reaction
 
 touchscreen:
   - platform: ft63x6
@@ -861,6 +1014,10 @@ si12t:
   intr_level: OUTPUT_ALL
 
 text_sensor:
+  - platform: template
+    id: nfc_tag
+    name: NFC Tag
+    icon: mdi:nfc
   - platform: si12t
     id: head_touch_1
     name: Head Touch 1
