@@ -38,9 +38,9 @@ packages:
   ipv6_only: !include common/ipv6_only.yaml
 
 external_components:
-  # gnss hub + nmea and ubx platforms, esphome/esphome#23301 (stacked on #23293)
+  # geolocation hub + nmea and ubx platforms, esphome/esphome#23301 (stacked on #23293)
   - source: github://pr#23301
-    components: [gnss, nmea, ubx]
+    components: [geolocation, nmea, ubx]
 
 logger:
   # The C3 has two UARTs and both receivers need one; logs go over the API only
@@ -109,7 +109,7 @@ uart:
     tx_pin: 18
     baud_rate: 9600
 
-gnss:
+geolocation:
   - platform: ubx
     id: gnss_m10
     uart_id: uart_m10
@@ -120,75 +120,75 @@ gnss:
     update_interval: 10s
 
 sensor:
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: latitude
     name: M10 Latitude
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: longitude
     name: M10 Longitude
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: altitude
     name: M10 Altitude
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: speed
     name: M10 Speed
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: course
     name: M10 Course
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: satellites
     name: M10 Satellites
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: hdop
     name: M10 HDOP
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: horizontal_accuracy
     name: M10 Horizontal Accuracy
-  - platform: gnss
-    gnss_id: gnss_m10
+  - platform: geolocation
+    geolocation_id: gnss_m10
     type: vertical_accuracy
     name: M10 Vertical Accuracy
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: latitude
     name: NEO-6M Latitude
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: longitude
     name: NEO-6M Longitude
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: altitude
     name: NEO-6M Altitude
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: speed
     name: NEO-6M Speed
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: course
     name: NEO-6M Course
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: satellites
     name: NEO-6M Satellites
-  - platform: gnss
-    gnss_id: gnss_neo6m
+  - platform: geolocation
+    geolocation_id: gnss_neo6m
     type: hdop
     name: NEO-6M HDOP
 
 time:
-  - platform: gnss
+  - platform: geolocation
     id: gnss_time
-    gnss_id: gnss_m10
+    geolocation_id: gnss_m10
     on_time_sync:
       - logger.log: GNSS time synced
 
